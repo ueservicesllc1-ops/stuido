@@ -68,7 +68,7 @@ export default function MultitrackMixerPage() {
   const [masterVolume, setMasterVolume] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const tracksRef = useRef(tracks);
-  const Tone = useRef<typeof import('tone') | null>(null);
+  const Tone = useRef<any>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -101,7 +101,7 @@ export default function MultitrackMixerPage() {
     try {
       const ToneModule = await import('tone');
       Tone.current = ToneModule;
-      await Tone.current.start();
+      await ToneModule.start();
       Tone.current.getDestination().volume.value = masterVolume;
       Tone.current.Transport.bpm.value = tempo;
       setIsReady(true);
