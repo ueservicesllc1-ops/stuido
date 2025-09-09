@@ -18,7 +18,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { Toaster } from "@/components/ui/toaster"
-import axios from 'axios';
+import { uploadSong } from '@/actions/upload';
+
 
 export default function AudioPlayerPage() {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -31,6 +32,7 @@ export default function AudioPlayerPage() {
   const [songFile, setSongFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // URL de ejemplo. Más adelante podemos hacerla dinámica.
   const audioSrc = 'https://storage.googleapis.com/studiopublic/boom-bap-hip-hop.mp3';
@@ -83,14 +85,10 @@ export default function AudioPlayerPage() {
       formData.append('file', songFile);
       formData.append('songName', songName);
 
-      const response = await axios.post('/api/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const result = await uploadSong(formData);
 
-      if (!response.data.success) {
-        throw new Error(response.data.error || 'Error en el servidor al subir el archivo.');
+      if (!result.success) {
+        throw new Error(result.error || 'Error en el servidor al subir el archivo.');
       }
 
       toast({
@@ -103,14 +101,15 @@ export default function AudioPlayerPage() {
       // Reset form
       setSongName('');
       setSongFile(null);
-      const fileInput = document.getElementById('song-file') as HTMLInputElement;
-      if (fileInput) fileInput.value = '';
+      if(fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
 
     } catch (err: any) {
       toast({
         variant: 'destructive',
         title: 'Error en la subida',
-        description: err.response?.data?.error || err.message || 'Ocurrió un problema al intentar subir la canción.',
+        description: err.message || 'Ocurrió un problema al intentar subir la canción.',
       });
     } finally {
       setIsUploading(false);
@@ -239,6 +238,7 @@ export default function AudioPlayerPage() {
                   <Label htmlFor="song-file">Archivo de audio</Label>
                   <Input 
                     id="song-file" 
+                    ref={fileInputRef}
                     type="file" 
                     accept="audio/*" 
                     onChange={(e) => setSongFile(e.target.files ? e.target.files[0] : null)}
