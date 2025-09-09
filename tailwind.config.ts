@@ -10,9 +10,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['Inter', 'sans-serif'],
-        headline: ['Inter', 'sans-serif'],
-        code: ['monospace'],
+        sans: ["var(--font-inter)", "sans-serif"],
+        mono: ["var(--font-roboto-mono)", "monospace"],
       },
       colors: {
         border: 'hsl(var(--border))',
@@ -49,7 +48,7 @@ export default {
           foreground: 'hsl(var(--card-foreground))',
         },
         yellow: {
-          500: '#f59e0b',
+          '500': '#EAB308', // Added for Solo button
         }
       },
       borderRadius: {
