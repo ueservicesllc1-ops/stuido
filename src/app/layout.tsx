@@ -1,10 +1,9 @@
 import type {Metadata} from 'next';
 import './globals.css';
-import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'Multitrack Mixer',
-  description: 'An AI-powered multitrack audio player and mixer.',
+  title: 'Mi Aplicación',
+  description: 'Creado con Firebase Studio',
 };
 
 export default function RootLayout({
@@ -13,15 +12,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
-      </head>
+    <html lang="es" className="dark">
       <body className="font-body antialiased">
         {children}
-        <Toaster />
       </body>
     </html>
   );
