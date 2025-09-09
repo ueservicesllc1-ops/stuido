@@ -45,9 +45,9 @@ export default {
           DEFAULT: 'hsl(var(--destructive))',
           foreground: 'hsl(var(--destructive-foreground))',
         },
-        yellow: { // Custom color for Solo button
+        yellow: { 
             DEFAULT: '#f5b942',
-            foreground: '#010816',
+            foreground: 'hsl(var(--background))',
         },
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',

@@ -4,6 +4,7 @@ import React, { useState, useRef, useImperativeHandle, forwardRef, useEffect } f
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
+import { buttonVariants } from './ui/button';
 
 interface Song {
   id: string;
@@ -32,10 +33,20 @@ const MixerTrack = forwardRef<MixerTrackHandle, MixerTrackProps>(({ name, song, 
   // This effect will simulate a volume meter
   useEffect(() => {
     let animationFrameId: number;
-    if (isPlaying) {
+    const audio = audioRef.current;
+    if (isPlaying && audio) {
+       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+       const analyser = audioContext.createAnalyser();
+       const source = audioContext.createMediaElementSource(audio);
+       source.connect(analyser);
+       analyser.connect(audioContext.destination);
+       analyser.fftSize = 32;
+       const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
       const updateVolume = () => {
-        // This is a fake meter for visual purposes
-        setVolume(Math.random() * 80 + 20); 
+        analyser.getByteFrequencyData(dataArray);
+        const average = dataArray.reduce((acc, val) => acc + val, 0) / dataArray.length;
+        setVolume((average / 255) * 100); 
         animationFrameId = requestAnimationFrame(updateVolume);
       };
       updateVolume();
@@ -71,31 +82,30 @@ const MixerTrack = forwardRef<MixerTrackHandle, MixerTrackProps>(({ name, song, 
     }
     setIsPlaying(!isPlaying);
   }
-
-  const bgColor = color === 'accent' ? 'bg-accent' : 'bg-primary';
+  
+  const bgColor = song ? (color === 'accent' ? 'bg-accent' : 'bg-primary') : 'bg-card';
   const progressColor = color === 'accent' ? 'bg-accent/50' : 'bg-primary/50';
 
   return (
     <div className="flex flex-col items-center gap-2">
-      {song && <audio ref={audioRef} src={song.url} loop muted={isMuted} onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} />}
+      {song && <audio ref={audioRef} src={song.url} loop muted={isMuted} onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} crossOrigin="anonymous" />}
       <span className="text-xs font-bold uppercase tracking-wider">{name}</span>
-      <div className={cn("w-full h-24 rounded-md flex flex-col justify-end p-1 cursor-pointer", song ? bgColor : 'bg-muted/20')} onClick={handlePadClick}>
-         <Progress value={volume} className={cn("h-2", progressColor)} indicatorClassName={bgColor} />
+      <div className={cn("w-full h-24 rounded-md flex flex-col justify-end p-1 cursor-pointer relative overflow-hidden", bgColor)} onClick={handlePadClick}>
+         <Progress value={volume} className="h-1 absolute bottom-1 left-1 right-1 w-auto" />
       </div>
       <div className="flex justify-center items-center gap-1 w-full">
         <Button 
           size="sm" 
           variant={isMuted ? 'destructive' : 'secondary'} 
           className="flex-1 h-8 text-xs font-bold"
-          onClick={() => setIsMuted(!isMuted)}
+          onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
         >
           M
         </Button>
         <Button 
           size="sm" 
-          variant={isSolo ? 'yellow' : 'secondary'} // Needs custom yellow variant
-          className="flex-1 h-8 text-xs font-bold"
-          onClick={() => setIsSolo(!isSolo)}
+          className={cn("flex-1 h-8 text-xs font-bold", buttonVariants({ variant: isSolo ? 'yellow' : 'secondary' }))}
+          onClick={(e) => { e.stopPropagation(); setIsSolo(!isSolo); }}
         >
           S
         </Button>
@@ -105,20 +115,5 @@ const MixerTrack = forwardRef<MixerTrackHandle, MixerTrackProps>(({ name, song, 
 });
 
 MixerTrack.displayName = "MixerTrack";
-
-// A small helper for progress bar custom color
-const ProgressIndicator = React.forwardRef<
-    React.ElementRef<typeof Progress>,
-    React.ComponentPropsWithoutRef<typeof Progress> & { indicatorClassName?: string }
->(({ className, value, indicatorClassName, ...props }, ref) => (
-  <Progress ref={ref} className={className} {...props} value={value}>
-    <Progress.Indicator
-      className={cn("h-full w-full flex-1 transition-all", indicatorClassName)}
-      style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
-    />
-  </Progress>
-))
-ProgressIndicator.displayName = "ProgressIndicatorWithCustomColor"
-
 
 export default MixerTrack;
