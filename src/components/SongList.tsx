@@ -1,11 +1,14 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
-import { AlignJustify, Library, MoreHorizontal, Music, Loader2 } from 'lucide-react';
+import { AlignJustify, Library, MoreHorizontal, Music, Loader2, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { getSongs } from '@/actions/songs';
 import CreateSetlistDialog from './CreateSetlistDialog';
+import { getSetlists, Setlist } from '@/actions/setlists';
+import { format } from 'date-fns';
+
 
 interface Song {
   id: string;
@@ -16,23 +19,46 @@ interface Song {
 
 const SongList = () => {
   const [songs, setSongs] = useState<Song[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoadingSongs, setIsLoadingSongs] = useState(false);
+  const [songsError, setSongsError] = useState<string | null>(null);
+
+  const [setlists, setSetlists] = useState<Setlist[]>([]);
+  const [isLoadingSetlists, setIsLoadingSetlists] = useState(false);
+  const [setlistsError, setSetlistsError] = useState<string | null>(null);
 
   const handleFetchSongs = async () => {
-    setIsLoading(true);
-    setError(null);
+    setIsLoadingSongs(true);
+    setSongsError(null);
     try {
       const result = await getSongs();
       if (result.success && result.songs) {
         setSongs(result.songs);
       } else {
-        setError(result.error || 'No se pudieron cargar las canciones.');
+        setSongsError(result.error || 'No se pudieron cargar las canciones.');
       }
     } catch (err) {
-      setError('Ocurrió un error al buscar las canciones.');
+      setSongsError('Ocurrió un error al buscar las canciones.');
     } finally {
-      setIsLoading(false);
+      setIsLoadingSongs(false);
+    }
+  };
+
+  const handleFetchSetlists = async () => {
+    setIsLoadingSetlists(true);
+    setSetlistsError(null);
+    // NOTA: El userId está hardcodeado. Se deberá reemplazar con el del usuario autenticado.
+    const userId = 'user_placeholder_id'; 
+    try {
+      const result = await getSetlists(userId);
+      if (result.success && result.setlists) {
+        setSetlists(result.setlists);
+      } else {
+        setSetlistsError(result.error || 'No se pudieron cargar los setlists.');
+      }
+    } catch (err) {
+      setSetlistsError('Ocurrió un error al buscar los setlists.');
+    } finally {
+      setIsLoadingSetlists(false);
     }
   };
 
@@ -43,7 +69,7 @@ const SongList = () => {
         <h2 className="font-bold text-foreground">Nuevas betel</h2>
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="sm" className="gap-2 text-primary">
+            <Button variant="ghost" size="sm" className="gap-2 text-primary" onClick={handleFetchSetlists}>
               <AlignJustify className="w-4 h-4" />
               Setlists
             </Button>
@@ -53,10 +79,28 @@ const SongList = () => {
                 <SheetTitle>Setlists</SheetTitle>
               </SheetHeader>
               <div className="py-4 h-full flex flex-col">
-                <div className="flex-grow text-center text-muted-foreground pt-10">
-                  <p>Aún no has creado un setlist.</p>
+                <div className="flex-grow space-y-2">
+                   {isLoadingSetlists ? (
+                    <div className="flex justify-center items-center h-full">
+                      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                    </div>
+                  ) : setlistsError ? (
+                    <div className="text-destructive text-center">{setlistsError}</div>
+                  ) : setlists.length > 0 ? (
+                    setlists.map((setlist) => (
+                      <div key={setlist.id} className="flex flex-col p-2 rounded-md hover:bg-accent gap-1">
+                        <p className="font-semibold text-foreground flex-grow">{setlist.name}</p>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Calendar className="w-4 h-4" />
+                          <p className="text-xs">{format(setlist.date, 'dd/MM/yyyy')}</p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-muted-foreground text-center pt-10">Aún no has creado un setlist.</p>
+                  )}
                 </div>
-                <CreateSetlistDialog />
+                <CreateSetlistDialog onSetlistCreated={handleFetchSetlists} />
               </div>
           </SheetContent>
         </Sheet>
@@ -77,12 +121,12 @@ const SongList = () => {
               <SheetTitle>Biblioteca de Canciones</SheetTitle>
             </SheetHeader>
             <div className="py-4 h-full">
-              {isLoading ? (
+              {isLoadingSongs ? (
                 <div className="flex justify-center items-center h-full">
                   <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </div>
-              ) : error ? (
-                 <div className="text-destructive text-center">{error}</div>
+              ) : songsError ? (
+                 <div className="text-destructive text-center">{songsError}</div>
               ) : (
                 <div className="space-y-2">
                   {songs.length > 0 ? (

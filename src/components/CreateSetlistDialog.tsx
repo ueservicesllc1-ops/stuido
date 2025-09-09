@@ -47,7 +47,11 @@ const setlistFormSchema = z.object({
 
 type SetlistFormValues = z.infer<typeof setlistFormSchema>;
 
-const CreateSetlistDialog = () => {
+interface CreateSetlistDialogProps {
+  onSetlistCreated: () => void;
+}
+
+const CreateSetlistDialog: React.FC<CreateSetlistDialogProps> = ({ onSetlistCreated }) => {
   const [open, setOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
@@ -73,6 +77,7 @@ const CreateSetlistDialog = () => {
         });
         setOpen(false);
         form.reset();
+        onSetlistCreated(); // Llama a la función para refrescar la lista
       } else {
         throw new Error(result.error || 'Error desconocido al guardar.');
       }
