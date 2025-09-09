@@ -10,12 +10,15 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
-import { Play, Pause, Music, Database, Server, Upload } from 'lucide-react';
+import { Play, Pause, Music, Database, Server, Upload, Loader } from 'lucide-react';
 import { checkB2Connection } from '@/actions/b2';
 import { db } from '@/lib/firebase';
 import { getDoc, doc } from 'firebase/firestore';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { getSignedUploadUrl } from '@/actions/upload';
+import { useToast } from '@/components/ui/use-toast';
+import { Toaster } from "@/components/ui/toaster"
 
 export default function AudioPlayerPage() {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -24,6 +27,10 @@ export default function AudioPlayerPage() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [firebaseStatus, setFirebaseStatus] = useState<'pending' | 'success' | 'error'>('pending');
   const [b2Status, setB2Status] = useState<'pending' | 'success' | 'error'>('pending');
+  const [songName, setSongName] = useState('');
+  const [songFile, setSongFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const { toast } = useToast();
 
   // URL de ejemplo. Más adelante podemos hacerla dinámica.
   const audioSrc = 'https://storage.googleapis.com/studiopublic/boom-bap-hip-hop.mp3';
@@ -32,12 +39,9 @@ export default function AudioPlayerPage() {
     // Check Firebase connection
     const checkFirebase = async () => {
       try {
-        // A simple read operation to a non-existent doc to check permissions and connectivity
         await getDoc(doc(db, 'health-check', 'status'));
         setFirebaseStatus('success');
       } catch (error: any) {
-        // Firestore throws permission-denied if rules are set, but that still means connection is ok.
-        // We'll count it as success if it's a permission error, otherwise as a failure.
         if (error.code === 'permission-denied') {
             setFirebaseStatus('success');
         } else {
@@ -60,6 +64,66 @@ export default function AudioPlayerPage() {
     checkFirebase();
     checkB2();
   }, []);
+
+  const handleUpload = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!songFile || !songName) {
+      toast({
+        variant: 'destructive',
+        title: 'Faltan campos',
+        description: 'Por favor, proporciona un nombre y un archivo de canción.',
+      });
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      // 1. Get a signed URL from our server
+      const { success, url, error } = await getSignedUploadUrl(songFile.name, songFile.type);
+
+      if (!success || !url) {
+        throw new Error(error || 'No se pudo obtener la URL de subida.');
+      }
+      
+      // 2. Upload the file to B2 using the signed URL
+      const uploadResponse = await fetch(url, {
+        method: 'PUT',
+        body: songFile,
+        headers: {
+          'Content-Type': songFile.type,
+        },
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error(`Error al subir el archivo: ${uploadResponse.statusText}`);
+      }
+
+      toast({
+        title: '¡Subida exitosa!',
+        description: `"${songName}" se ha subido correctamente.`,
+      });
+
+      // TODO: Here we should save the song metadata (name, B2 URL) to Firestore.
+
+      // Reset form
+      setSongName('');
+      setSongFile(null);
+      const fileInput = document.getElementById('song-file') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+
+
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error en la subida',
+        description: err.message || 'Ocurrió un problema al intentar subir la canción.',
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
 
   const togglePlayPause = () => {
     if (audioRef.current) {
@@ -105,6 +169,7 @@ export default function AudioPlayerPage() {
 
   return (
     <>
+      <Toaster />
       <div className="absolute top-4 right-4 flex items-center gap-4">
         <div className="flex items-center gap-2" title={`Firebase: ${firebaseStatus}`}>
             <Database className={getStatusColor(firebaseStatus)} />
@@ -165,17 +230,35 @@ export default function AudioPlayerPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form className="flex flex-col gap-4">
+              <form onSubmit={handleUpload} className="flex flex-col gap-4">
                 <div className="grid w-full items-center gap-2">
                   <Label htmlFor="song-name">Nombre de la canción</Label>
-                  <Input id="song-name" type="text" placeholder="Mi increíble canción" />
+                  <Input 
+                    id="song-name" 
+                    type="text" 
+                    placeholder="Mi increíble canción" 
+                    value={songName}
+                    onChange={(e) => setSongName(e.target.value)}
+                    disabled={isUploading}
+                  />
                 </div>
                 <div className="grid w-full items-center gap-2">
                   <Label htmlFor="song-file">Archivo de audio</Label>
-                  <Input id="song-file" type="file" accept="audio/*" />
+                  <Input 
+                    id="song-file" 
+                    type="file" 
+                    accept="audio/*" 
+                    onChange={(e) => setSongFile(e.target.files ? e.target.files[0] : null)}
+                    disabled={isUploading}
+                  />
                 </div>
-                <Button type="submit">
-                  <Upload className="mr-2 h-4 w-4" /> Subir
+                <Button type="submit" disabled={isUploading}>
+                  {isUploading ? (
+                    <Loader className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="mr-2 h-4 w-4" />
+                  )}
+                  {isUploading ? 'Subiendo...' : 'Subir'}
                 </Button>
               </form>
             </CardContent>
