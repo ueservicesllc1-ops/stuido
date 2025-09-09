@@ -1,10 +1,11 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
-import { AlignJustify, Library, MoreHorizontal, Music, PlusCircle, Loader2 } from 'lucide-react';
+import { AlignJustify, Library, MoreHorizontal, Music, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { getSongs } from '@/actions/songs';
+import CreateSetlistDialog from './CreateSetlistDialog';
 
 interface Song {
   id: string;
@@ -12,8 +13,6 @@ interface Song {
   url: string;
   fileKey: string;
 }
-
-const initialSongs: { title: string; key: string; bpm: string | number }[] = [];
 
 const SongList = () => {
   const [songs, setSongs] = useState<Song[]>([]);
@@ -57,35 +56,13 @@ const SongList = () => {
                 <div className="flex-grow text-center text-muted-foreground pt-10">
                   <p>Aún no has creado un setlist.</p>
                 </div>
-                <Button className="mt-auto gap-2">
-                  <PlusCircle className="w-4 h-4" />
-                  Crear nuevo setlist
-                </Button>
+                <CreateSetlistDialog />
               </div>
           </SheetContent>
         </Sheet>
       </div>
       <div className="flex-grow space-y-1 overflow-y-auto">
-        {initialSongs.map((song, index) => (
-          <div
-            key={index}
-            className={cn(
-              'flex items-center gap-3 p-2 rounded-md transition-colors cursor-pointer',
-              index === 0 ? 'bg-primary/20' : 'hover:bg-accent'
-            )}
-          >
-            <span className="text-muted-foreground font-mono text-sm">{index + 1}</span>
-            <Music className="w-5 h-5 text-muted-foreground" />
-            <div className="flex-grow">
-              <p className="font-semibold text-foreground">{song.title}</p>
-              <p className="text-xs text-muted-foreground">Original</p>
-            </div>
-            <Button variant="ghost" size="icon" className="w-6 h-6"><MoreHorizontal className="w-4 h-4" /></Button>
-            <span className="w-6 text-center font-mono text-xs text-muted-foreground">{song.key}</span>
-            <span className="w-8 text-right font-mono text-xs text-muted-foreground">{song.bpm}</span>
-            <div className="w-4 h-4 border-2 border-muted-foreground rounded-sm"></div>
-          </div>
-        ))}
+        {/* Los datos de ejemplo se han eliminado */}
       </div>
       <div className="pt-3 mt-auto border-t border-border/50 flex justify-between items-center">
         <Sheet>
