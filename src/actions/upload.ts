@@ -2,6 +2,8 @@
 
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export async function uploadSong(formData: FormData) {
   try {
@@ -22,7 +24,7 @@ export async function uploadSong(formData: FormData) {
     const s3 = new S3Client({
       endpoint: `https://${B2_ENDPOINT}`,
       region: B2_REGION,
-      forcePathStyle: true, // <-- Esta es la corrección clave
+      forcePathStyle: true,
       credentials: {
         accessKeyId: process.env.B2_KEY_ID!,
         secretAccessKey: process.env.B2_APPLICATION_KEY!,
@@ -47,10 +49,19 @@ export async function uploadSong(formData: FormData) {
     
     const fileUrl = `https://${B2_BUCKET_NAME}.${B2_ENDPOINT}/${key}`;
 
-    return { success: true, key, fileUrl };
+    // Guardar en Firestore
+    const songsCollection = collection(db, 'songs');
+    const newSongDoc = await addDoc(songsCollection, {
+      name: songName,
+      url: fileUrl,
+      key: key,
+      createdAt: serverTimestamp(),
+    });
+
+    return { success: true, id: newSongDoc.id, name: songName, url: fileUrl };
 
   } catch (error) {
-    console.error('Error subiendo el archivo a B2:', error);
+    console.error('Error subiendo el archivo o guardando en Firestore:', error);
     return { success: false, error: (error as Error).message };
   }
 }

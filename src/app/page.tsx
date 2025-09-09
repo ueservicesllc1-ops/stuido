@@ -13,14 +13,16 @@ import { Slider } from '@/components/ui/slider';
 import { Play, Pause, Music, Database, Server, Upload, Loader, ListMusic } from 'lucide-react';
 import { checkB2Connection } from '@/actions/b2';
 import { db } from '@/lib/firebase';
-import { getDoc, doc } from 'firebase/firestore';
+import { getDoc, doc, collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { Toaster } from "@/components/ui/toaster"
 import { uploadSong } from '@/actions/upload';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface Song {
+  id: string;
   name: string;
   url: string;
 }
@@ -41,14 +43,33 @@ export default function AudioPlayerPage() {
   const [playlist, setPlaylist] = useState<Song[]>([]);
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
 
+  const fetchSongs = async () => {
+    try {
+      const songsCollection = collection(db, 'songs');
+      const q = query(songsCollection, orderBy('createdAt', 'desc'));
+      const songsSnapshot = await getDocs(q);
+      const songsList = songsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Song));
+      setPlaylist(songsList);
+      if(songsList.length > 0 && !currentSong) {
+        setCurrentSong(songsList[0]);
+      }
+    } catch (error) {
+        console.error("Error fetching songs from Firestore:", error);
+        toast({
+            variant: "destructive",
+            title: "Error al cargar canciones",
+            description: "No se pudieron obtener las canciones de la base de datos."
+        })
+    }
+  };
+
   useEffect(() => {
-    // Check Firebase connection
     const checkFirebase = async () => {
       try {
         await getDoc(doc(db, 'health-check', 'status'));
         setFirebaseStatus('success');
       } catch (error: any) {
-        if (error.code === 'permission-denied') {
+        if (error.code === 'permission-denied' || error.code === 'not-found') {
             setFirebaseStatus('success');
         } else {
             console.error('Firebase connection error:', error);
@@ -57,29 +78,26 @@ export default function AudioPlayerPage() {
       }
     };
 
-    // Check Backblaze B2 connection
     const checkB2 = async () => {
       const { success } = await checkB2Connection();
-      if (success) {
-        setB2Status('success');
-      } else {
-        setB2Status('error');
-      }
+      setB2Status(success ? 'success' : 'error');
     };
 
     checkFirebase();
     checkB2();
+    fetchSongs();
   }, []);
 
   useEffect(() => {
     if (currentSong && audioRef.current) {
+        const wasPlaying = isPlaying;
         audioRef.current.load();
-        audioRef.current.play().then(() => {
-            setIsPlaying(true);
-        }).catch(e => {
-            console.error("Audio playback failed:", e);
-            setIsPlaying(false);
-        });
+        if (wasPlaying) {
+          audioRef.current.play().catch(e => {
+              console.error("Audio playback failed:", e);
+              setIsPlaying(false);
+          });
+        }
     }
   }, [currentSong]);
 
@@ -101,21 +119,24 @@ export default function AudioPlayerPage() {
     try {
       const result = await uploadSong(formData);
 
-      if (!result.success || !result.fileUrl) {
+      if (!result.success || !result.url) {
         throw new Error(result.error || 'Error en el servidor al subir el archivo.');
       }
       
       const newSong: Song = {
-        name: name,
-        url: result.fileUrl,
+        id: result.id!,
+        name: result.name!,
+        url: result.url!,
       };
       
-      setPlaylist(prev => [...prev, newSong]);
+      // Refrescar lista y reproducir
+      await fetchSongs();
       setCurrentSong(newSong);
+      setIsPlaying(true); // Auto-play new song
 
       toast({
         title: '¡Subida exitosa!',
-        description: `"${name}" se ha añadido a la lista y se está reproduciendo.`,
+        description: `"${name}" se ha añadido y se está reproduciendo.`,
       });
 
       // Reset form
@@ -199,7 +220,7 @@ export default function AudioPlayerPage() {
                   Reproductor de Audio
                 </CardTitle>
                 <CardDescription>
-                  {currentSong ? `Reproduciendo: ${currentSong.name}` : 'Sube una canción para empezar'}
+                  {currentSong ? `Reproduciendo: ${currentSong.name}` : 'Sube o selecciona una canción'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -208,7 +229,10 @@ export default function AudioPlayerPage() {
                   src={currentSong?.url}
                   onTimeUpdate={handleTimeUpdate}
                   onLoadedMetadata={handleLoadedMetadata}
+                  onPlay={() => setIsPlaying(true)}
+                  onPause={() => setIsPlaying(false)}
                   onEnded={() => setIsPlaying(false)}
+                  autoPlay
                 />
 
                 <div className="flex items-center gap-4">
@@ -289,19 +313,21 @@ export default function AudioPlayerPage() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <ul className="flex flex-col gap-2">
-                                {playlist.map((song, index) => (
-                                    <li key={index}>
-                                        <Button 
-                                            variant={currentSong?.url === song.url ? 'secondary' : 'ghost'}
-                                            className="w-full justify-start"
-                                            onClick={() => setCurrentSong(song)}>
-                                            {currentSong?.url === song.url && isPlaying ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
-                                            {song.name}
-                                        </Button>
-                                    </li>
-                                ))}
-                            </ul>
+                            <ScrollArea className="h-48">
+                                <ul className="flex flex-col gap-2 pr-4">
+                                    {playlist.map((song) => (
+                                        <li key={song.id}>
+                                            <Button 
+                                                variant={currentSong?.id === song.id ? 'secondary' : 'ghost'}
+                                                className="w-full justify-start text-left h-auto"
+                                                onClick={() => setCurrentSong(song)}>
+                                                {currentSong?.id === song.id && isPlaying ? <Pause className="mr-2 h-4 w-4 flex-shrink-0" /> : <Play className="mr-2 h-4 w-4 flex-shrink-0" />}
+                                                <span className="truncate">{song.name}</span>
+                                            </Button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </ScrollArea>
                         </CardContent>
                     </Card>
                 )}
@@ -311,3 +337,4 @@ export default function AudioPlayerPage() {
     </>
   );
 }
+
