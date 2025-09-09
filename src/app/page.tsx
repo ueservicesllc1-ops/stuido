@@ -101,7 +101,7 @@ export default function MultitrackMixerPage() {
     try {
       const ToneModule = await import('tone');
       Tone.current = ToneModule;
-      await ToneModule.start();
+      await Tone.current.start();
       Tone.current.getDestination().volume.value = masterVolume;
       Tone.current.Transport.bpm.value = tempo;
       setIsReady(true);
