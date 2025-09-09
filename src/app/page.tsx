@@ -195,7 +195,7 @@ const DawPage = () => {
             onVolumeChange={handleVolumeChange}
             isPlaying={isPlaying}
             playbackPosition={playbackPosition}
-            audioRefs={audioRefs}
+            duration={duration}
           />
         </div>
         <div className="col-span-12 lg:col-span-3">

@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Slider } from './ui/slider';
 import { cn } from '@/lib/utils';
@@ -15,6 +15,9 @@ interface TrackPadProps {
   onVolumeChange: (volume: number) => void;
   onMuteToggle: () => void;
   onSoloToggle: () => void;
+  isPlaying: boolean;
+  playbackPosition: number;
+  duration: number;
 }
 
 const TrackPad: React.FC<TrackPadProps> = ({
@@ -26,23 +29,43 @@ const TrackPad: React.FC<TrackPadProps> = ({
   onVolumeChange,
   onMuteToggle,
   onSoloToggle,
+  isPlaying,
+  playbackPosition,
+  duration
 }) => {
-  const { name, id } = track;
-  // Define color based on track name for specific tracks
-  const color = (name.toUpperCase() === 'CLICK' || name.toUpperCase() === 'CUES') ? 'destructive' : 'primary';
+  const { name } = track;
+  const sliderRef = useRef<HTMLDivElement>(null);
+  const [sliderHeight, setSliderHeight] = useState(0);
 
-  const sliderColorClass = {
-    primary: 'data-[state=active]:bg-primary',
-    destructive: 'data-[state=active]:bg-destructive',
-  };
+  useEffect(() => {
+    if (sliderRef.current) {
+      setSliderHeight(sliderRef.current.offsetHeight);
+    }
+  }, [sliderRef]);
+
+  const color = (name.toUpperCase() === 'CLICK' || name.toUpperCase() === 'CUES') ? 'destructive' : 'primary';
 
   const handleVolumeChange = (value: number[]) => {
     onVolumeChange(value[0]);
   };
+  
+  const progressPercentage = duration > 0 ? (playbackPosition / duration) * 100 : 0;
+  // We subtract the indicator height (8px) from the total height to keep it within bounds
+  const indicatorPosition = (progressPercentage / 100) * (sliderHeight - 8); 
+
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <div className="h-40 flex justify-center items-center">
+      <div className="relative h-40 flex justify-center items-center" ref={sliderRef}>
+         {isPlaying && duration > 0 && (
+          <div 
+            className="absolute left-1/2 -translate-x-1/2 w-4 h-2 rounded-full bg-green-400 z-10"
+            style={{ 
+              top: `${indicatorPosition}px`,
+              boxShadow: '0 0 8px rgba(134, 239, 172, 0.8)' 
+            }}
+          />
+        )}
         <Slider
           defaultValue={[volume]}
           max={100}

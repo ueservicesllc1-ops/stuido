@@ -14,7 +14,7 @@ interface MixerGridProps {
   onVolumeChange: (trackId: string, volume: number) => void;
   isPlaying: boolean;
   playbackPosition: number;
-  audioRefs: React.MutableRefObject<{[key: string]: HTMLAudioElement | null} >
+  duration: number;
 }
 
 const MixerGrid: React.FC<MixerGridProps> = ({ 
@@ -28,7 +28,7 @@ const MixerGrid: React.FC<MixerGridProps> = ({
   onVolumeChange,
   isPlaying,
   playbackPosition,
-  audioRefs
+  duration
 }) => {
   return (
     <div className="grid grid-cols-6 gap-4">
@@ -43,6 +43,9 @@ const MixerGrid: React.FC<MixerGridProps> = ({
           onMuteToggle={() => onMuteToggle(track.id)}
           onSoloToggle={() => onSoloToggle(track.id)}
           onVolumeChange={(newVolume) => onVolumeChange(track.id, newVolume)}
+          isPlaying={isPlaying}
+          playbackPosition={playbackPosition}
+          duration={duration}
         />
       ))}
     </div>
