@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
@@ -18,7 +19,11 @@ interface Song {
   fileKey: string;
 }
 
-const SongList = () => {
+interface SongListProps {
+  initialSetlist?: Setlist | null;
+}
+
+const SongList: React.FC<SongListProps> = ({ initialSetlist }) => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [isLoadingSongs, setIsLoadingSongs] = useState(false);
   const [songsError, setSongsError] = useState<string | null>(null);
@@ -31,6 +36,12 @@ const SongList = () => {
   const [isSetlistSheetOpen, setIsSetlistSheetOpen] = useState(false);
   const [isLibrarySheetOpen, setIsLibrarySheetOpen] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (initialSetlist) {
+      setSelectedSetlist(initialSetlist);
+    }
+  }, [initialSetlist]);
 
   const handleFetchSongs = async () => {
     setIsLoadingSongs(true);

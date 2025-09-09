@@ -1,15 +1,32 @@
+
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import MixerGrid from '@/components/MixerGrid';
 import SongList from '@/components/SongList';
 import TonicPad from '@/components/TonicPad';
 import Image from 'next/image';
+import { getSetlists, Setlist } from '@/actions/setlists';
 
 const DawPage = () => {
   const [activeTracks, setActiveTracks] = useState<string[]>([]);
   const [soloTracks, setSoloTracks] = useState<string[]>([]);
   const [mutedTracks, setMutedTracks] = useState<string[]>([]);
+  const [initialSetlist, setInitialSetlist] = useState<Setlist | null>(null);
+
+  useEffect(() => {
+    const fetchLastSetlist = async () => {
+      // NOTA: El userId está hardcodeado. Se deberá reemplazar con el del usuario autenticado.
+      const userId = 'user_placeholder_id';
+      const result = await getSetlists(userId);
+      if (result.success && result.setlists && result.setlists.length > 0) {
+        setInitialSetlist(result.setlists[0]); // El primero es el más reciente
+      }
+    };
+
+    fetchLastSetlist();
+  }, []);
+
 
   const initialTracks: { name: string, color?: 'primary' | 'destructive' }[] = [];
 
@@ -68,7 +85,7 @@ const DawPage = () => {
           />
         </div>
         <div className="col-span-12 lg:col-span-3">
-          <SongList />
+          <SongList initialSetlist={initialSetlist} />
         </div>
         <div className="col-span-12 lg:col-span-2">
           <TonicPad />
