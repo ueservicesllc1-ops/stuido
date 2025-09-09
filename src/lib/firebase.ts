@@ -6,10 +6,10 @@ import { getFirestore } from "firebase/firestore";
 const firebaseConfig = {
   "projectId": "studio-6535297076-d41dd",
   "appId": "1:422491258476:web:30cb91a9f529989b56a249",
-  "storageBucket": "studio-6535297076-d41dd.firebasestorage.app",
+  "storageBucket": "studio-6535297076-d41dd.appspot.com",
   "apiKey": "AIzaSyA-LyWDGq-VnM1WwbkwtD0x8cOD6L7tIc0",
   "authDomain": "studio-6535297076-d41dd.firebaseapp.com",
-  "measurementId": "",
+  "measurementId": "G-5G12932W8E",
   "messagingSenderId": "422491258476"
 };
 
