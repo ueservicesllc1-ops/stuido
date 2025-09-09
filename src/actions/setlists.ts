@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 
 export interface NewSetlist {
   name: string;
@@ -9,9 +9,17 @@ export interface NewSetlist {
   userId: string;
 }
 
+// Interfaz para una canción dentro de un setlist
+export interface SetlistSong {
+  id: string;
+  name: string;
+  url: string;
+  fileKey: string;
+}
+
 export interface Setlist extends NewSetlist {
     id: string;
-    songs: any[]; // Se definirá más adelante
+    songs: SetlistSong[]; 
 }
 
 
@@ -52,7 +60,7 @@ export async function getSetlists(userId: string) {
                 name: data.name,
                 date: data.date.toDate(), // Convertir Timestamp a Date
                 userId: data.userId,
-                songs: data.songs,
+                songs: data.songs || [],
             } as Setlist;
         });
 
@@ -61,4 +69,20 @@ export async function getSetlists(userId: string) {
         console.error("Error obteniendo setlists de Firestore:", error);
         return { success: false, error: (error as Error).message, setlists: [] };
     }
+}
+
+export async function addSongToSetlist(setlistId: string, song: SetlistSong) {
+  try {
+    const setlistRef = doc(db, 'setlists', setlistId);
+    
+    // Atomically add a new song to the "songs" array field.
+    await updateDoc(setlistRef, {
+      songs: arrayUnion(song)
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error añadiendo canción al setlist:', error);
+    return { success: false, error: (error as Error).message };
+  }
 }

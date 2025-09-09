@@ -6,8 +6,9 @@ import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { getSongs } from '@/actions/songs';
 import CreateSetlistDialog from './CreateSetlistDialog';
-import { getSetlists, Setlist } from '@/actions/setlists';
+import { getSetlists, Setlist, addSongToSetlist, SetlistSong } from '@/actions/setlists';
 import { format } from 'date-fns';
+import { useToast } from './ui/use-toast';
 
 
 interface Song {
@@ -29,6 +30,7 @@ const SongList = () => {
   const [selectedSetlist, setSelectedSetlist] = useState<Setlist | null>(null);
   const [isSetlistSheetOpen, setIsSetlistSheetOpen] = useState(false);
   const [isLibrarySheetOpen, setIsLibrarySheetOpen] = useState(false);
+  const { toast } = useToast();
 
   const handleFetchSongs = async () => {
     setIsLoadingSongs(true);
@@ -74,6 +76,50 @@ const SongList = () => {
   const clearSelectedSetlist = () => {
     setSelectedSetlist(null);
   }
+
+  const handleAddSongToSetlist = async (song: Song) => {
+    if (!selectedSetlist) return;
+
+    const songToAdd: SetlistSong = {
+        id: song.id,
+        name: song.name,
+        url: song.url,
+        fileKey: song.fileKey
+    }
+
+    // Check if song is already in the setlist
+    if (selectedSetlist.songs.some(s => s.id === song.id)) {
+        toast({
+            variant: 'destructive',
+            title: 'Canción duplicada',
+            description: `"${song.name}" ya está en el setlist.`,
+        });
+        return;
+    }
+
+    const result = await addSongToSetlist(selectedSetlist.id, songToAdd);
+
+    if (result.success) {
+      // Update state locally for instant feedback
+      setSelectedSetlist(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          songs: [...prev.songs, songToAdd]
+        }
+      });
+      toast({
+        title: '¡Canción añadida!',
+        description: `"${song.name}" se ha añadido a "${selectedSetlist.name}".`,
+      });
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: result.error || 'No se pudo añadir la canción.',
+      });
+    }
+  };
 
 
   return (
@@ -161,10 +207,10 @@ const SongList = () => {
                                 <div className="space-y-2">
                                 {songs.length > 0 ? (
                                     songs.map((song) => (
-                                    <div key={song.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent cursor-pointer">
+                                    <div key={song.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent">
                                         <Music className="w-5 h-5 text-muted-foreground" />
                                         <p className="font-semibold text-foreground flex-grow">{song.name}</p>
-                                        <Button variant="ghost" size="icon" className="w-8 h-8">
+                                        <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => handleAddSongToSetlist(song)}>
                                             <PlusCircle className="w-5 h-5 text-primary" />
                                         </Button>
                                     </div>
@@ -216,11 +262,11 @@ const SongList = () => {
               <div className="space-y-2">
                 {songs.length > 0 ? (
                   songs.map((song) => (
-                    <div key={song.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent cursor-pointer">
+                    <div key={song.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent">
                       <Music className="w-5 h-5 text-muted-foreground" />
                       <p className="font-semibold text-foreground flex-grow">{song.name}</p>
                       {selectedSetlist && (
-                        <Button variant="ghost" size="icon" className="w-8 h-8">
+                        <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => handleAddSongToSetlist(song)}>
                             <PlusCircle className="w-5 h-5 text-primary" />
                         </Button>
                       )}
