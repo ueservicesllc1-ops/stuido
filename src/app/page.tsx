@@ -9,340 +9,167 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Slider } from '@/components/ui/slider';
-import { Play, Pause, Music, Database, Server, Upload, Loader, ListMusic } from 'lucide-react';
-import { checkB2Connection } from '@/actions/b2';
-import { db } from '@/lib/firebase';
-import { getDoc, doc, collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { Toaster } from "@/components/ui/toaster"
-import { uploadSong } from '@/actions/upload';
+import { saveSong, getSongs } from '@/actions/songs';
+import { Loader, Music, ListMusic, User } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface Song {
   id: string;
   name: string;
-  url: string;
+  artist: string;
 }
 
-export default function AudioPlayerPage() {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [duration, setDuration] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [firebaseStatus, setFirebaseStatus] = useState<'pending' | 'success' | 'error'>('pending');
-  const [b2Status, setB2Status] = useState<'pending' | 'success' | 'error'>('pending');
-  const [songName, setSongName] = useState('');
-  const [songFile, setSongFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
+export default function FirestorePage() {
+  const [isSaving, setIsSaving] = useState(false);
+  const [songs, setSongs] = useState<Song[]>([]);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
-  
-  const [playlist, setPlaylist] = useState<Song[]>([]);
-  const [currentSong, setCurrentSong] = useState<Song | null>(null);
 
   const fetchSongs = async () => {
-    try {
-      const songsCollection = collection(db, 'songs');
-      const q = query(songsCollection, orderBy('createdAt', 'desc'));
-      const songsSnapshot = await getDocs(q);
-      const songsList = songsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Song));
-      setPlaylist(songsList);
-      if(songsList.length > 0 && !currentSong) {
-        setCurrentSong(songsList[0]);
-      }
-    } catch (error) {
-        console.error("Error fetching songs from Firestore:", error);
-        toast({
-            variant: "destructive",
-            title: "Error al cargar canciones",
-            description: "No se pudieron obtener las canciones de la base de datos."
-        })
+    const result = await getSongs();
+    if (result.success && result.songs) {
+      setSongs(result.songs);
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Error al cargar canciones",
+        description: result.error,
+      });
     }
   };
 
   useEffect(() => {
-    const checkFirebase = async () => {
-      try {
-        await getDoc(doc(db, 'health-check', 'status'));
-        setFirebaseStatus('success');
-      } catch (error: any) {
-        if (error.code === 'permission-denied' || error.code === 'not-found') {
-            setFirebaseStatus('success');
-        } else {
-            console.error('Firebase connection error:', error);
-            setFirebaseStatus('error');
-        }
-      }
-    };
-
-    const checkB2 = async () => {
-      const { success } = await checkB2Connection();
-      setB2Status(success ? 'success' : 'error');
-    };
-
-    checkFirebase();
-    checkB2();
     fetchSongs();
   }, []);
 
-  useEffect(() => {
-    if (currentSong && audioRef.current) {
-        const wasPlaying = isPlaying;
-        audioRef.current.load();
-        if (wasPlaying) {
-          audioRef.current.play().catch(e => {
-              console.error("Audio playback failed:", e);
-              setIsPlaying(false);
-          });
-        }
-    }
-  }, [currentSong]);
-
-  const handleUpload = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!songFile || !songName) {
+    setIsSaving(true);
+    
+    const formData = new FormData(event.currentTarget);
+    const name = formData.get('name') as string;
+    const artist = formData.get('artist') as string;
+
+    if (!name || !artist) {
       toast({
         variant: 'destructive',
         title: 'Faltan campos',
-        description: 'Por favor, proporciona un nombre y un archivo de canción.',
+        description: 'Por favor, completa el nombre y el artista.',
       });
+      setIsSaving(false);
       return;
     }
 
-    setIsUploading(true);
-
-    const formData = new FormData();
-    formData.append('file', songFile);
-    formData.append('songName', songName);
-
     try {
-      const result = await uploadSong(formData);
+      const result = await saveSong({ name, artist });
 
-      if (!result.success || !result.id) {
-        throw new Error(result.error || 'Error en el servidor al subir el archivo.');
+      if (result.success) {
+        toast({
+          title: '¡Guardado!',
+          description: `"${name}" de ${artist} se ha guardado en Firestore.`,
+        });
+        formRef.current?.reset();
+        await fetchSongs(); // Refresh the list
+      } else {
+        throw new Error(result.error);
       }
-      
-      const newSong: Song = {
-        id: result.id!,
-        name: result.name!,
-        url: result.url!,
-      };
-      
-      toast({
-        title: '¡Subida exitosa!',
-        description: `"${newSong.name}" se ha añadido a la lista.`,
-      });
-      
-      await fetchSongs();
-      setCurrentSong(newSong);
-      setIsPlaying(true); 
-
-      // Reset form
-      formRef.current?.reset();
-      setSongName('');
-      setSongFile(null);
-
     } catch (err: any) {
       toast({
         variant: 'destructive',
-        title: 'Error en la subida',
-        description: err.message || 'Ocurrió un problema al intentar subir la canción.',
+        title: 'Error al guardar',
+        description: err.message || 'Ocurrió un problema al intentar guardar en Firestore.',
       });
     } finally {
-      setIsUploading(false);
+      setIsSaving(false);
     }
   };
-
-
-  const togglePlayPause = () => {
-    if (audioRef.current && currentSong) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
-
-  const handleTimeUpdate = () => {
-    if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
-    }
-  };
-
-  const handleLoadedMetadata = () => {
-    if (audioRef.current) {
-      setDuration(audioRef.current.duration);
-    }
-  };
-
-  const handleSliderChange = (value: number[]) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = value[0];
-      setCurrentTime(value[0]);
-    }
-  };
-
-  const formatTime = (time: number) => {
-    if (isNaN(time)) return '0:00';
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
-  
-  const getStatusColor = (status: 'pending' | 'success' | 'error') => {
-    if (status === 'success') return 'text-green-500';
-    if (status === 'error') return 'text-red-500';
-    return 'text-gray-500';
-  }
-
-  const handlePlaylistClick = (song: Song) => {
-    if (currentSong?.id === song.id) {
-        togglePlayPause();
-    } else {
-        setCurrentSong(song);
-        setIsPlaying(true);
-    }
-  }
 
   return (
     <>
       <Toaster />
-      <div className="absolute top-4 right-4 flex items-center gap-4">
-        <div className="flex items-center gap-2" title={`Firebase: ${firebaseStatus}`}>
-            <Database className={getStatusColor(firebaseStatus)} />
-            <span className="sr-only">Firebase Status: {firebaseStatus}</span>
-        </div>
-        <div className="flex items-center gap-2" title={`Backblaze B2: ${b2Status}`}>
-            <Server className={getStatusColor(b2Status)} />
-            <span className="sr-only">Backblaze B2 Status: {b2Status}</span>
-        </div>
-      </div>
       <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 md:p-24 gap-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
             <Card className="w-full">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Music />
-                  Reproductor de Audio
+                  Añadir Nueva Canción
                 </CardTitle>
                 <CardDescription>
-                  {currentSong ? `Reproduciendo: ${currentSong.name}` : 'Sube o selecciona una canción'}
+                  Guarda la información de una canción directamente en Firestore.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <audio
-                  ref={audioRef}
-                  src={currentSong?.url}
-                  onTimeUpdate={handleTimeUpdate}
-                  onLoadedMetadata={handleLoadedMetadata}
-                  onPlay={() => setIsPlaying(true)}
-                  onPause={() => setIsPlaying(false)}
-                  onEnded={() => setIsPlaying(false)}
-                  autoPlay={isPlaying}
-                />
-
-                <div className="flex items-center gap-4">
-                  <Button onClick={togglePlayPause} size="icon" disabled={!currentSong}>
-                    {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                  </Button>
-                  <div className="flex w-full items-center gap-2">
-                      <span className="text-xs font-mono">{formatTime(currentTime)}</span>
-                      <Slider
-                          value={[currentTime]}
-                          max={duration || 1}
-                          step={1}
-                          onValueChange={handleSliderChange}
-                          disabled={!currentSong}
-                      />
-                      <span className="text-xs font-mono">{formatTime(duration)}</span>
+                <form ref={formRef} onSubmit={handleSave} className="flex flex-col gap-4">
+                  <div className="grid w-full items-center gap-2">
+                    <Label htmlFor="name">
+                      <Music className="inline-block mr-2 h-4 w-4" />
+                      Nombre de la canción
+                    </Label>
+                    <Input 
+                      id="name"
+                      name="name" 
+                      type="text" 
+                      placeholder="Mi increíble canción" 
+                      disabled={isSaving}
+                      required
+                    />
                   </div>
-                </div>
+                  <div className="grid w-full items-center gap-2">
+                    <Label htmlFor="artist">
+                       <User className="inline-block mr-2 h-4 w-4" />
+                       Artista
+                    </Label>
+                    <Input 
+                      id="artist"
+                      name="artist"
+                      type="text" 
+                      placeholder="El mejor artista"
+                      disabled={isSaving}
+                      required
+                    />
+                  </div>
+                  <Button type="submit" disabled={isSaving}>
+                    {isSaving && <Loader className="mr-2 h-4 w-4 animate-spin" />}
+                    {isSaving ? 'Guardando...' : 'Guardar en Firestore'}
+                  </Button>
+                </form>
               </CardContent>
             </Card>
             
-            <div className="flex flex-col gap-8">
-                <Card className="w-full">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Upload />
-                        Subir Canción
-                      </CardTitle>
-                      <CardDescription>
-                        Añade una nueva canción a tu biblioteca.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <form ref={formRef} onSubmit={handleUpload} className="flex flex-col gap-4">
-                        <div className="grid w-full items-center gap-2">
-                          <Label htmlFor="song-name">Nombre de la canción</Label>
-                          <Input 
-                            id="song-name"
-                            name="songName" 
-                            type="text" 
-                            placeholder="Mi increíble canción" 
-                            value={songName}
-                            onChange={(e) => setSongName(e.target.value)}
-                            disabled={isUploading}
-                            required
-                          />
-                        </div>
-                        <div className="grid w-full items-center gap-2">
-                          <Label htmlFor="song-file">Archivo de audio</Label>
-                          <Input 
-                            id="song-file"
-                            name="file"
-                            type="file" 
-                            accept="audio/*" 
-                            onChange={(e) => setSongFile(e.target.files ? e.target.files[0] : null)}
-                            disabled={isUploading}
-                            required
-                          />
-                        </div>
-                        <Button type="submit" disabled={isUploading || !songFile || !songName}>
-                          {isUploading ? (
-                            <Loader className="mr-2 h-4 w-4 animate-spin" />
-                          ) : (
-                            <Upload className="mr-2 h-4 w-4" />
-                          )}
-                          {isUploading ? 'Subiendo...' : 'Subir'}
-                        </Button>
-                      </form>
-                    </CardContent>
-                </Card>
-
-                {playlist.length > 0 && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <ListMusic />
-                                Lista de Reproducción
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <ScrollArea className="h-48">
-                                <ul className="flex flex-col gap-2 pr-4">
-                                    {playlist.map((song) => (
-                                        <li key={song.id}>
-                                            <Button 
-                                                variant={currentSong?.id === song.id ? 'secondary' : 'ghost'}
-                                                className="w-full justify-start text-left h-auto"
-                                                onClick={() => handlePlaylistClick(song)}>
-                                                {currentSong?.id === song.id && isPlaying ? <Pause className="mr-2 h-4 w-4 flex-shrink-0" /> : <Play className="mr-2 h-4 w-4 flex-shrink-0" />}
-                                                <span className="truncate">{song.name}</span>
-                                            </Button>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </ScrollArea>
-                        </CardContent>
-                    </Card>
-                )}
-            </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <ListMusic />
+                        Canciones Guardadas
+                    </CardTitle>
+                    <CardDescription>
+                        Lista de canciones desde Firestore.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <ScrollArea className="h-72">
+                        {songs.length > 0 ? (
+                             <ul className="flex flex-col gap-2 pr-4">
+                                {songs.map((song) => (
+                                    <li key={song.id} className="flex items-center justify-between p-2 rounded-md border">
+                                        <div>
+                                            <p className="font-semibold truncate">{song.name}</p>
+                                            <p className="text-sm text-muted-foreground truncate">{song.artist}</p>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p className="text-sm text-muted-foreground text-center py-8">No hay canciones en la base de datos.</p>
+                        )}
+                    </ScrollArea>
+                </CardContent>
+            </Card>
         </div>
       </main>
     </>
