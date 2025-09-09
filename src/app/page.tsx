@@ -1,113 +1,100 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { db } from '@/lib/firebase';
-import {
-  collection,
-  addDoc,
-  getDocs,
-  DocumentData,
-  query,
-  orderBy,
-  onSnapshot,
-} from 'firebase/firestore';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
+import { Slider } from '@/components/ui/slider';
+import { Play, Pause, Music } from 'lucide-react';
 
-export default function DashboardPage() {
-  const [newItem, setNewItem] = useState('');
-  const [items, setItems] = useState<DocumentData[]>([]);
-  const [loading, setLoading] = useState(false);
+export default function AudioPlayerPage() {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
-  const itemsCollectionRef = collection(db, 'items');
+  // URL de ejemplo. Más adelante podemos hacerla dinámica.
+  const audioSrc = 'https://storage.googleapis.com/studiopublic/boom-bap-hip-hop.mp3';
 
-  const getItems = useCallback(() => {
-    const q = query(itemsCollectionRef, orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const itemsData = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setItems(itemsData);
-    });
-    return unsubscribe;
-  }, [itemsCollectionRef]);
-
-  useEffect(() => {
-    const unsubscribe = getItems();
-    return () => unsubscribe();
-  }, [getItems]);
-
-  const addItem = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newItem.trim() === '') return;
-    setLoading(true);
-    try {
-      await addDoc(itemsCollectionRef, {
-        name: newItem,
-        createdAt: new Date(),
-      });
-      setNewItem('');
-    } catch (error) {
-      console.error('Error adding document: ', error);
-    } finally {
-      setLoading(false);
+  const togglePlayPause = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
     }
+  };
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime);
+    }
+  };
+
+  const handleLoadedMetadata = () => {
+    if (audioRef.current) {
+      setDuration(audioRef.current.duration);
+    }
+  };
+
+  const handleSliderChange = (value: number[]) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = value[0];
+      setCurrentTime(value[0]);
+    }
+  };
+
+  const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 md:p-24">
-      <Card className="w-full max-w-2xl">
+      <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Mi Lista de Tareas</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Music />
+            Reproductor de Audio
+          </CardTitle>
           <CardDescription>
-            Agrega un nuevo elemento a tu lista en Firestore.
+            Reproduce la pista de audio cargada.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={addItem} className="flex gap-2">
-            <Input
-              type="text"
-              placeholder="Nueva tarea..."
-              value={newItem}
-              onChange={(e) => setNewItem(e.target.value)}
-              disabled={loading}
-            />
-            <Button type="submit" disabled={loading || newItem.trim() === ''}>
-              {loading ? 'Agregando...' : 'Agregar'}
+          <audio
+            ref={audioRef}
+            src={audioSrc}
+            onTimeUpdate={handleTimeUpdate}
+            onLoadedMetadata={handleLoadedMetadata}
+            onEnded={() => setIsPlaying(false)}
+          />
+
+          <div className="flex items-center gap-4">
+            <Button onClick={togglePlayPause} size="icon" disabled={!duration}>
+              {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
             </Button>
-          </form>
-          <Separator className="my-4" />
-          <h3 className="text-lg font-semibold mb-2">Tareas Pendientes</h3>
-          <ScrollArea className="h-60 w-full rounded-md border p-4">
-            {items.length > 0 ? (
-              items.map((item) => (
-                <div key={item.id} className="py-2">
-                  {item.name}
-                </div>
-              ))
-            ) : (
-              <p className="text-muted-foreground">
-                No hay tareas. ¡Agrega una!
-              </p>
-            )}
-          </ScrollArea>
+            <div className="flex w-full items-center gap-2">
+                <span className="text-xs font-mono">{formatTime(currentTime)}</span>
+                <Slider
+                    value={[currentTime]}
+                    max={duration || 1}
+                    step={1}
+                    onValueChange={handleSliderChange}
+                    disabled={!duration}
+                />
+                <span className="text-xs font-mono">{formatTime(duration)}</span>
+            </div>
+          </div>
         </CardContent>
-        <CardFooter>
-          <p className="text-xs text-muted-foreground">
-            Datos guardados en tiempo real con Firebase Firestore.
-          </p>
-        </CardFooter>
       </Card>
     </main>
   );
