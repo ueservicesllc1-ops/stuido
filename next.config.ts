@@ -27,6 +27,9 @@ const nextConfig: NextConfig = {
   devIndicators: {
     allowedDevOrigins: ['*'],
   },
+  serverActions: {
+    bodySizeLimit: '50mb',
+  },
 };
 
 export default nextConfig;
