@@ -1,9 +1,13 @@
 import type {Metadata} from 'next';
+import { Inter } from 'next/font/google';
 import './globals.css';
+import { Toaster } from "@/components/ui/toaster";
+
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Mi Aplicación',
-  description: 'Creado con Firebase Studio',
+  title: 'Multitrack Player',
+  description: 'DAW in your browser',
 };
 
 export default function RootLayout({
@@ -13,8 +17,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className="dark">
-      <body className="font-body antialiased">
+      <body className={`${inter.className} bg-background overflow-hidden`}>
         {children}
+        <Toaster />
       </body>
     </html>
   );
