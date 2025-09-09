@@ -2,24 +2,28 @@
 
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
-function getRegionFromEndpoint(endpoint: string): string {
+function getRegionFromEndpoint(endpoint: string | undefined): string {
+  if (!endpoint) {
+    console.error("B2_ENDPOINT no está definido en las variables de entorno.");
+    // Devuelve un valor por defecto o lanza un error más descriptivo
+    throw new Error("La configuración del endpoint de B2 está incompleta.");
+  }
   try {
     const url = new URL(endpoint);
     // e.g. s3.us-east-005.backblazeb2.com -> us-east-005
     const region = url.hostname.split('.')[1];
     if (!region) {
-      throw new Error('Region could not be determined from endpoint');
+      throw new Error('No se pudo determinar la región desde el endpoint');
     }
     return region;
   } catch (error) {
-    console.error("Invalid B2_ENDPOINT URL:", error);
-    // Fallback or default region if needed, though it's better to fail fast
-    return 'us-east-005'; 
+    console.error("URL de B2_ENDPOINT inválida:", error);
+    throw new Error("La URL del endpoint de B2 proporcionada no es válida.");
   }
 }
 
 const s3Client = new S3Client({
-  region: getRegionFromEndpoint(process.env.B2_ENDPOINT!),
+  region: getRegionFromEndpoint(process.env.B2_ENDPOINT),
   endpoint: process.env.B2_ENDPOINT,
   credentials: {
     accessKeyId: process.env.B2_KEY_ID!,
