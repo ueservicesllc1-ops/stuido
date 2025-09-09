@@ -49,20 +49,21 @@ export async function POST(req: Request) {
 
     // Adaptamos el archivo de formidable al tipo File esperado por la acción
     const fileContent = await fs.readFile(file.filepath);
-    const blob = new Blob([fileContent], { type: file.mimetype || 'application/octet-stream' });
-    const fileToUpload = new File([blob], file.originalFilename || 'untitled', { type: file.mimetype || 'application/octet-stream' });
+    const fileToUpload = new File([fileContent], file.originalFilename || 'untitled', { type: file.mimetype || 'application/octet-stream' });
+
 
     // 1. Subir el archivo a B2
     const uploadResult = await uploadFileToB2(fileToUpload);
-    if (!uploadResult.success) {
-      return NextResponse.json({ success: false, error: uploadResult.error }, { status: 500 });
+    if (!uploadResult.success || !uploadResult.url || !uploadResult.fileKey) {
+      console.error("Error en la subida a B2:", uploadResult.error);
+      return NextResponse.json({ success: false, error: uploadResult.error || "No se pudo obtener la URL del archivo de B2." }, { status: 500 });
     }
 
     // 2. Guardar la información en Firestore
     const songData = {
       name: name,
-      url: uploadResult.url!,
-      fileKey: uploadResult.fileKey!,
+      url: uploadResult.url,
+      fileKey: uploadResult.fileKey,
     };
     const saveResult = await saveSong(songData);
 
