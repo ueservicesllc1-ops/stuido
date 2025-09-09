@@ -2,21 +2,21 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { Toaster } from "@/components/ui/toaster";
 import { getSongs } from '@/actions/songs';
-import { Loader, Music, ListMusic, UploadCloud, Play, Pause } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import Track, { type TrackHandle } from '@/components/Track';
+import { Loader, Play, Pause, Upload, Settings } from 'lucide-react';
+import MixerTrack, { type MixerTrackHandle } from '@/components/MixerTrack';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Label } from '@/components/ui/label';
 
 interface Song {
   id: string;
@@ -24,12 +24,29 @@ interface Song {
   url: string;
 }
 
+const initialTracks = [
+  { id: 'click', name: 'CLICK', color: 'accent' },
+  { id: 'cues', name: 'CUES', color: 'accent' },
+  { id: 'ag', name: 'AG' },
+  { id: 'bass', name: 'BASS' },
+  { id: 'bgvs', name: 'BGVS' },
+  { id: 'drums', name: 'DRUMS' },
+  { id: 'eg1', name: 'EG 1' },
+  { id: 'eg2', name: 'EG 2' },
+  { id: 'eg3', name: 'EG 3' },
+  { id: 'eg4', name: 'EG 4' },
+  { id: 'keys1', name: 'KEYS1' },
+  { id: 'keys2', name: 'KEYS2' },
+];
+
+
 export default function MultitrackPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [songs, setSongs] = useState<Song[]>([]);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
-  const trackRefs = useRef<Map<string, TrackHandle>>(new Map());
+  const trackRefs = useRef<Map<string, MixerTrackHandle>>(new Map());
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const fetchSongs = async () => {
     const result = await getSongs();
@@ -47,7 +64,7 @@ export default function MultitrackPage() {
   useEffect(() => {
     fetchSongs();
   }, []);
-
+  
   const handleUpload = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsUploading(true);
@@ -80,10 +97,8 @@ export default function MultitrackPage() {
           description: `"${result.song.name}" está lista.`,
         });
         formRef.current?.reset();
-        
-        // Actualizar la lista de canciones
         setSongs(prevSongs => [result.song, ...prevSongs]);
-
+        setIsDialogOpen(false);
       } else {
         throw new Error(result.error || 'Error desconocido en la subida.');
       }
@@ -97,118 +112,98 @@ export default function MultitrackPage() {
       setIsUploading(false);
     }
   };
-  
-  const playAll = () => {
-    trackRefs.current.forEach(ref => ref.play());
-  };
 
-  const pauseAll = () => {
-    trackRefs.current.forEach(ref => ref.pause());
-  };
+  const playAll = () => trackRefs.current.forEach(ref => ref.play());
+  const pauseAll = () => trackRefs.current.forEach(ref => ref.pause());
 
+  const getSongForTrack = (trackName: string) => {
+    return songs.find(s => s.name.toLowerCase() === trackName.toLowerCase());
+  }
 
   return (
     <>
       <Toaster />
-      <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 md:p-12 gap-8">
-        <div className="w-full max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <Card className="w-full">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <UploadCloud />
-                  Subir Nueva Pista
-                </CardTitle>
-                <CardDescription>
-                  Sube un archivo de audio para añadirlo como una nueva pista.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form ref={formRef} onSubmit={handleUpload} className="flex flex-col gap-4">
+      <div className="flex flex-col h-screen bg-background text-foreground p-4 gap-4">
+        {/* Header Section */}
+        <header className="flex-shrink-0 flex items-center justify-between p-2 bg-card rounded-md">
+           <div className="flex items-center gap-2">
+             <Button variant="outline" className="font-bold">MASTER</Button>
+           </div>
+           <div className="flex items-center gap-2">
+              <Button size="icon" variant="secondary"><Play className="rotate-180" /></Button>
+              <Button size="icon" variant="secondary" className="w-20 h-12"><Play /></Button>
+              <Button size="icon" variant="secondary"><div className="w-4 h-4 bg-foreground" /></Button>
+              <Button size="icon" variant="secondary"><Play /></Button>
+           </div>
+            <div className="text-2xl font-mono">
+              00:00 / 00:00
+            </div>
+           <div className="flex items-center gap-2">
+            <Button variant="outline">MIDI IN</Button>
+            <Button variant="outline">OUTS</Button>
+            <Button size="icon" variant="ghost"><Settings /></Button>
+          </div>
+        </header>
+
+        {/* Waveform Display */}
+        <div className="flex-shrink-0 h-32 bg-card rounded-md flex items-center justify-center">
+            <p className="text-muted-foreground">Waveform Display</p>
+        </div>
+
+
+        {/* Mixer Grid */}
+        <main className="flex-grow grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-12 gap-4">
+          {initialTracks.map(track => {
+            const song = getSongForTrack(track.name);
+            return <MixerTrack key={track.id} name={track.name} color={track.color as any} song={song} />;
+          })}
+           {songs.filter(s => !initialTracks.some(t => t.name.toLowerCase() === s.name.toLowerCase())).map(song => (
+            <MixerTrack 
+              key={song.id} 
+              name={song.name} 
+              song={song} 
+              ref={ref => {
+                if (ref) trackRefs.current.set(song.id, ref);
+                else trackRefs.current.delete(song.id);
+              }}
+            />
+          ))}
+        </main>
+        
+        {/* Footer for Upload */}
+        <footer className="flex-shrink-0 p-2 bg-card rounded-md flex items-center justify-center">
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="primary">
+                <Upload className="mr-2"/>
+                Añadir Pista al Mezclador
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Subir Nueva Pista</DialogTitle>
+                <DialogDescription>
+                  Sube un archivo de audio para añadirlo como una nueva pista al mezclador.
+                </DialogDescription>
+              </DialogHeader>
+              <form ref={formRef} onSubmit={handleUpload} className="flex flex-col gap-4">
                   <div className="grid w-full items-center gap-2">
-                    <Label htmlFor="name">
-                      <Music className="inline-block mr-2 h-4 w-4" />
-                      Nombre de la Pista
-                    </Label>
-                    <Input 
-                      id="name"
-                      name="name" 
-                      type="text" 
-                      placeholder="Ej: Guitarra Principal" 
-                      disabled={isUploading}
-                      required
-                    />
+                    <Label htmlFor="name">Nombre de la Pista</Label>
+                    <Input id="name" name="name" type="text" placeholder="Ej: Guitarra Principal" disabled={isUploading} required/>
                   </div>
                   <div className="grid w-full items-center gap-2">
-                    <Label htmlFor="file">
-                       <UploadCloud className="inline-block mr-2 h-4 w-4" />
-                       Archivo de Audio
-                    </Label>
-                    <Input 
-                      id="file"
-                      name="file"
-                      type="file" 
-                      accept="audio/*"
-                      disabled={isUploading}
-                      required
-                    />
+                    <Label htmlFor="file">Archivo de Audio</Label>
+                    <Input id="file" name="file" type="file" accept="audio/*" disabled={isUploading} required />
                   </div>
                   <Button type="submit" disabled={isUploading}>
                     {isUploading && <Loader className="mr-2 h-4 w-4 animate-spin" />}
                     {isUploading ? 'Subiendo...' : 'Subir Pista'}
                   </Button>
                 </form>
-              </CardContent>
-            </Card>
-            
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <ListMusic />
-                          Pistas del Proyecto
-                        </div>
-                        <div className="flex gap-2">
-                          <Button size="icon" variant="outline" onClick={playAll} title="Reproducir Todo">
-                            <Play />
-                          </Button>
-                          <Button size="icon" variant="outline" onClick={pauseAll} title="Pausar Todo">
-                            <Pause />
-                          </Button>
-                        </div>
-                    </CardTitle>
-                    <CardDescription>
-                        Controla cada pista individualmente o todas a la vez.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <ScrollArea className="h-96">
-                        {songs.length > 0 ? (
-                             <ul className="flex flex-col gap-4 pr-4">
-                                {songs.map((song) => (
-                                    <li key={song.id}>
-                                       <Track
-                                          ref={ref => {
-                                            if (ref) {
-                                              trackRefs.current.set(song.id, ref);
-                                            } else {
-                                              trackRefs.current.delete(song.id);
-                                            }
-                                          }}
-                                          song={song}
-                                        />
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <p className="text-sm text-muted-foreground text-center py-8">Aún no has subido ninguna pista.</p>
-                        )}
-                    </ScrollArea>
-                </CardContent>
-            </Card>
-          </div>
-        </div>
-      </main>
+            </DialogContent>
+          </Dialog>
+        </footer>
+      </div>
     </>
   );
 }
