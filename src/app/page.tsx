@@ -212,6 +212,22 @@ const DawPage = () => {
           }
       }
   }
+
+  // Effect to explicitly load audio when a URL becomes available
+  useEffect(() => {
+    Object.keys(trackUrls).forEach(trackId => {
+      const audio = audioRefs.current[trackId];
+      if (audio && audio.src !== trackUrls[trackId]) {
+        // console.log(`Loading new src for track ${trackId}: ${trackUrls[trackId]}`);
+        audio.src = trackUrls[trackId];
+        audio.load(); // Explicitly load the new source
+        if (isPlaying) {
+          audio.currentTime = playbackPosition;
+          audio.play().catch(e => console.error("Error playing newly loaded track:", e));
+        }
+      }
+    });
+  }, [trackUrls, isPlaying, playbackPosition]);
   
   // Cleanup Object URLs on unmount
   useEffect(() => {
