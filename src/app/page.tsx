@@ -101,11 +101,9 @@ export default function AudioPlayerPage() {
     }
   }, [currentSong]);
 
-  const handleUpload = async (formData: FormData) => {
-    const file = formData.get('file') as File;
-    const name = formData.get('songName') as string;
-    
-    if (!file || file.size === 0 || !name) {
+  const handleUpload = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!songFile || !songName) {
       toast({
         variant: 'destructive',
         title: 'Faltan campos',
@@ -116,10 +114,14 @@ export default function AudioPlayerPage() {
 
     setIsUploading(true);
 
+    const formData = new FormData();
+    formData.append('file', songFile);
+    formData.append('songName', songName);
+
     try {
       const result = await uploadSong(formData);
 
-      if (!result.success || !result.url) {
+      if (!result.success || !result.id) {
         throw new Error(result.error || 'Error en el servidor al subir el archivo.');
       }
       
@@ -129,15 +131,14 @@ export default function AudioPlayerPage() {
         url: result.url!,
       };
       
-      // Refrescar lista y reproducir
-      await fetchSongs();
-      setCurrentSong(newSong);
-      setIsPlaying(true); // Auto-play new song
-
       toast({
         title: '¡Subida exitosa!',
-        description: `"${name}" se ha añadido y se está reproduciendo.`,
+        description: `"${newSong.name}" se ha añadido a la lista.`,
       });
+      
+      await fetchSongs();
+      setCurrentSong(newSong);
+      setIsPlaying(true); 
 
       // Reset form
       formRef.current?.reset();
@@ -157,7 +158,7 @@ export default function AudioPlayerPage() {
 
 
   const togglePlayPause = () => {
-    if (audioRef.current) {
+    if (audioRef.current && currentSong) {
       if (isPlaying) {
         audioRef.current.pause();
       } else {
@@ -187,6 +188,7 @@ export default function AudioPlayerPage() {
   };
 
   const formatTime = (time: number) => {
+    if (isNaN(time)) return '0:00';
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
@@ -196,6 +198,15 @@ export default function AudioPlayerPage() {
     if (status === 'success') return 'text-green-500';
     if (status === 'error') return 'text-red-500';
     return 'text-gray-500';
+  }
+
+  const handlePlaylistClick = (song: Song) => {
+    if (currentSong?.id === song.id) {
+        togglePlayPause();
+    } else {
+        setCurrentSong(song);
+        setIsPlaying(true);
+    }
   }
 
   return (
@@ -232,7 +243,7 @@ export default function AudioPlayerPage() {
                   onPlay={() => setIsPlaying(true)}
                   onPause={() => setIsPlaying(false)}
                   onEnded={() => setIsPlaying(false)}
-                  autoPlay
+                  autoPlay={isPlaying}
                 />
 
                 <div className="flex items-center gap-4">
@@ -266,7 +277,7 @@ export default function AudioPlayerPage() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <form ref={formRef} action={handleUpload} className="flex flex-col gap-4">
+                      <form ref={formRef} onSubmit={handleUpload} className="flex flex-col gap-4">
                         <div className="grid w-full items-center gap-2">
                           <Label htmlFor="song-name">Nombre de la canción</Label>
                           <Input 
@@ -320,7 +331,7 @@ export default function AudioPlayerPage() {
                                             <Button 
                                                 variant={currentSong?.id === song.id ? 'secondary' : 'ghost'}
                                                 className="w-full justify-start text-left h-auto"
-                                                onClick={() => setCurrentSong(song)}>
+                                                onClick={() => handlePlaylistClick(song)}>
                                                 {currentSong?.id === song.id && isPlaying ? <Pause className="mr-2 h-4 w-4 flex-shrink-0" /> : <Play className="mr-2 h-4 w-4 flex-shrink-0" />}
                                                 <span className="truncate">{song.name}</span>
                                             </Button>
@@ -337,4 +348,3 @@ export default function AudioPlayerPage() {
     </>
   );
 }
-
