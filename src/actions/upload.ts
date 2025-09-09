@@ -5,7 +5,6 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 function getRegionFromEndpoint(endpoint: string | undefined): string {
   if (!endpoint) {
     console.error("B2_ENDPOINT no está definido en las variables de entorno.");
-    // Devuelve un valor por defecto o lanza un error más descriptivo
     throw new Error("La configuración del endpoint de B2 está incompleta.");
   }
   try {

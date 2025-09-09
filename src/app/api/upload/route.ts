@@ -5,7 +5,7 @@ import { saveSong } from '@/actions/songs';
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: '50mb',
+      sizeLimit: '50mb', // Aumentar el límite a 50MB
     },
   },
 };
