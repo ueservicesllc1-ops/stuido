@@ -6,7 +6,6 @@ import { Loader2 } from 'lucide-react';
 
 interface MixerGridProps {
   tracks: SetlistSong[];
-  activeTracks: string[];
   soloTracks: string[];
   mutedTracks: string[];
   volumes: { [key: string]: number };
@@ -21,7 +20,6 @@ interface MixerGridProps {
 
 const MixerGrid: React.FC<MixerGridProps> = ({ 
   tracks, 
-  activeTracks, 
   soloTracks, 
   mutedTracks, 
   volumes,
@@ -39,7 +37,6 @@ const MixerGrid: React.FC<MixerGridProps> = ({
         <TrackPad
           key={track.id}
           track={track}
-          isActive={activeTracks.includes(track.id)}
           isMuted={mutedTracks.includes(track.id)}
           isSolo={soloTracks.includes(track.id)}
           volume={volumes[track.id] ?? 75}
@@ -49,7 +46,6 @@ const MixerGrid: React.FC<MixerGridProps> = ({
           isPlaying={isPlaying}
           playbackPosition={playbackPosition}
           duration={duration}
-          isLoading={loadingTracks[track.id] || false}
         />
       ))}
     </div>

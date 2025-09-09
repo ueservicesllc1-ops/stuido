@@ -15,7 +15,7 @@ const DawPage = () => {
   const [trackUrls, setTrackUrls] = useState<{[key: string]: string}>({});
   const [loadingTracks, setLoadingTracks] = useState<{[key: string]: boolean}>({});
   
-  const [activeTracks, setActiveTracks] = useState<string[]>([]);
+  const [activeTrackIds, setActiveTrackIds] = useState<string[]>([]);
   const [soloTracks, setSoloTracks] = useState<string[]>([]);
   const [mutedTracks, setMutedTracks] = useState<string[]>([]);
   const [initialSetlist, setInitialSetlist] = useState<Setlist | null>(null);
@@ -40,6 +40,11 @@ const DawPage = () => {
   }, []);
 
   const loadTrack = async (track: SetlistSong) => {
+    // Avoid reloading if already loaded or currently loading
+    if (trackUrls[track.id] || loadingTracks[track.id]) {
+      return;
+    }
+
     setLoadingTracks(prev => ({ ...prev, [track.id]: true }));
     try {
       let audioBlob = await getCachedAudio(track.url);
@@ -68,31 +73,44 @@ const DawPage = () => {
   useEffect(() => {
     if (initialSetlist && initialSetlist.songs) {
       setTracks(initialSetlist.songs);
-      setActiveTracks(initialSetlist.songs.map(t => t.id));
       
-      // Reset states but preserve already loaded URLs
-      setTrackUrls(prev => {
+      // Reset states but preserve already loaded URLs and active tracks
+      setTrackUrls(prevUrls => {
         const newUrls: {[key: string]: string} = {};
         initialSetlist.songs.forEach(song => {
-          if (prev[song.id]) {
-            newUrls[song.id] = prev[song.id];
+          if (prevUrls[song.id]) {
+            newUrls[song.id] = prevUrls[song.id];
           }
         });
         return newUrls;
       });
+
+      // Tracks that already have a URL are considered active
+      setActiveTrackIds(initialSetlist.songs.filter(s => !!trackUrls[s.id]).map(s => s.id));
+      
       setLoadingTracks({});
 
       // Load all tracks from the new setlist that are not already loaded
       initialSetlist.songs.forEach(track => {
-        if (!trackUrls[track.id]) {
-          loadTrack(track);
-        }
+        loadTrack(track);
       });
 
     } else {
       setTracks([]);
+      setActiveTrackIds([]);
     }
   }, [initialSetlist]);
+
+
+  // When a track's URL becomes available, add it to the active tracks
+  useEffect(() => {
+    const loadedTrackIds = Object.keys(trackUrls);
+    setActiveTrackIds(prev => {
+        const newIds = loadedTrackIds.filter(id => !prev.includes(id));
+        return [...prev, ...newIds];
+    });
+  }, [trackUrls]);
+
 
   const [volumes, setVolumes] = useState<{ [key: string]: number }>({});
 
@@ -244,6 +262,8 @@ const DawPage = () => {
     setInitialSetlist(setlist);
   };
 
+  const activeTracksData = tracks.filter(t => activeTrackIds.includes(t.id));
+
   return (
     <div className="flex flex-col h-screen bg-background font-sans text-sm">
       {/* Hidden Audio Elements */}
@@ -279,8 +299,7 @@ const DawPage = () => {
       <main className="flex-grow grid grid-cols-12 gap-4 px-4 pb-4 pt-20">
         <div className="col-span-12 lg:col-span-7">
           <MixerGrid 
-            tracks={tracks}
-            activeTracks={activeTracks}
+            tracks={activeTracksData}
             soloTracks={soloTracks}
             mutedTracks={mutedTracks}
             volumes={volumes}
@@ -298,6 +317,7 @@ const DawPage = () => {
             initialSetlist={initialSetlist} 
             onSetlistSelected={handleSetlistUpdate}
             onLoadTrack={loadTrack}
+            loadingTracks={loadingTracks}
           />
         </div>
         <div className="col-span-12 lg:col-span-2">
