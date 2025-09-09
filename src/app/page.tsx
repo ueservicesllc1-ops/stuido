@@ -10,10 +10,12 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
-import { Play, Pause, Music, Database, Server } from 'lucide-react';
+import { Play, Pause, Music, Database, Server, Upload } from 'lucide-react';
 import { checkB2Connection } from '@/actions/b2';
 import { db } from '@/lib/firebase';
 import { getDoc, doc } from 'firebase/firestore';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export default function AudioPlayerPage() {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -113,7 +115,7 @@ export default function AudioPlayerPage() {
             <span className="sr-only">Backblaze B2 Status: {b2Status}</span>
         </div>
       </div>
-      <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 md:p-24">
+      <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 md:p-24 gap-8">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -151,6 +153,33 @@ export default function AudioPlayerPage() {
             </div>
           </CardContent>
         </Card>
+
+        <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Upload />
+                Subir Canción
+              </CardTitle>
+              <CardDescription>
+                Añade una nueva canción a tu biblioteca.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form className="flex flex-col gap-4">
+                <div className="grid w-full items-center gap-2">
+                  <Label htmlFor="song-name">Nombre de la canción</Label>
+                  <Input id="song-name" type="text" placeholder="Mi increíble canción" />
+                </div>
+                <div className="grid w-full items-center gap-2">
+                  <Label htmlFor="song-file">Archivo de audio</Label>
+                  <Input id="song-file" type="file" accept="audio/*" />
+                </div>
+                <Button type="submit">
+                  <Upload className="mr-2 h-4 w-4" /> Subir
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
       </main>
     </>
   );
