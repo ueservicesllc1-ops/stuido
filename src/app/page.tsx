@@ -7,15 +7,11 @@ import TonicPad from '@/components/TonicPad';
 import Image from 'next/image';
 
 const DawPage = () => {
-  const [activeTracks, setActiveTracks] = useState<string[]>(['AG', 'BASS']);
+  const [activeTracks, setActiveTracks] = useState<string[]>([]);
   const [soloTracks, setSoloTracks] = useState<string[]>([]);
-  const [mutedTracks, setMutedTracks] = useState<string[]>(['BGVS', 'DRUMS']);
+  const [mutedTracks, setMutedTracks] = useState<string[]>([]);
 
-  const initialTracks = [
-    { name: 'CLICK', color: 'destructive' }, { name: 'CUES', color: 'destructive' }, { name: 'AG' }, { name: 'BASS' }, { name: 'BGVS' }, { name: 'DRUMS' },
-    { name: 'EG 1' }, { name: 'EG 2' }, { name: 'EG 3' }, { name: 'EG 4' }, { name: 'KEYS1' }, { name: 'KEYS2' },
-    { name: 'KEYS3' }, { name: 'KEYS4' }, { name: 'ORGAN' }, { name: 'PERC' }, { name: 'PIANO' }, { name: 'SYNTH B...' },
-  ];
+  const initialTracks: { name: string, color?: 'primary' | 'destructive' }[] = [];
 
   // Initialize volumes for each track
   const [volumes, setVolumes] = useState<{ [key: string]: number }>(() => {

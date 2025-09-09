@@ -4,15 +4,7 @@ import { Button } from './ui/button';
 import { AlignJustify, Library, MoreHorizontal, Music, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const songs = [
-    { title: 'ECO', key: 'D', bpm: 104 },
-    { title: 'YAWEH', key: 'C', bpm: 138 },
-    { title: 'ESTAR CONTIGO', key: 'G', bpm: 130 },
-    { title: 'ALABARE', key: 'G', bpm: 134 },
-    { title: 'SOCORRO', key: 'D', bpm: '1...' },
-    { title: 'GRACIA SUBLIME', key: 'B', bpm: 101 },
-    { title: 'REY DE MI CORAZON', key: '...', bpm: 68 },
-];
+const songs: { title: string; key: string; bpm: string | number }[] = [];
 
 const SongList = () => {
   return (
