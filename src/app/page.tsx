@@ -1,97 +1,180 @@
 
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Header from '@/components/Header';
 import MixerGrid from '@/components/MixerGrid';
 import SongList from '@/components/SongList';
 import TonicPad from '@/components/TonicPad';
 import Image from 'next/image';
-import { getSetlists, Setlist } from '@/actions/setlists';
-
-interface TrackInfo {
-  name: string;
-  color?: 'primary' | 'destructive';
-}
-
+import { getSetlists, Setlist, SetlistSong } from '@/actions/setlists';
 
 const DawPage = () => {
-  const [tracks, setTracks] = useState<TrackInfo[]>([]);
+  const [tracks, setTracks] = useState<SetlistSong[]>([]);
   const [activeTracks, setActiveTracks] = useState<string[]>([]);
   const [soloTracks, setSoloTracks] = useState<string[]>([]);
   const [mutedTracks, setMutedTracks] = useState<string[]>([]);
   const [initialSetlist, setInitialSetlist] = useState<Setlist | null>(null);
 
+  // --- Audio State ---
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackPosition, setPlaybackPosition] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const audioRefs = useRef<{[key: string]: HTMLAudioElement | null}>({});
+  const animationFrameRef = useRef<number>();
+
+
   useEffect(() => {
     const fetchLastSetlist = async () => {
-      // NOTA: El userId está hardcodeado. Se deberá reemplazar con el del usuario autenticado.
       const userId = 'user_placeholder_id';
       const result = await getSetlists(userId);
       if (result.success && result.setlists && result.setlists.length > 0) {
-        setInitialSetlist(result.setlists[0]); // El primero es el más reciente
+        setInitialSetlist(result.setlists[0]);
       }
     };
-
     fetchLastSetlist();
   }, []);
 
   useEffect(() => {
     if (initialSetlist && initialSetlist.songs) {
-      const newTracks = initialSetlist.songs.map(song => ({
-        name: song.name,
-        // Aquí podrías añadir lógica para asignar colores si quieres
-      }));
-      setTracks(newTracks);
-      setActiveTracks(newTracks.map(t => t.name)); // Activar todas las pistas por defecto
+      setTracks(initialSetlist.songs);
+      setActiveTracks(initialSetlist.songs.map(t => t.id));
     } else {
-      setTracks([]); // Limpiar si no hay setlist o no tiene canciones
+      setTracks([]);
     }
   }, [initialSetlist]);
 
+  const [volumes, setVolumes] = useState<{ [key: string]: number }>({});
 
-  // Initialize volumes for each track
-  const [volumes, setVolumes] = useState<{ [key: string]: number }>(() => {
-    const initialVolumes: { [key: string]: number } = {};
-    tracks.forEach(track => {
-      // Set a default volume, e.g., 75%. Maybe active tracks start higher?
-      initialVolumes[track.name] = activeTracks.includes(track.name) ? 75 : 50;
-    });
-    return initialVolumes;
-  });
-
-  // Re-initialize volumes when tracks change
   useEffect(() => {
     const newVolumes: { [key: string]: number } = {};
+    const newAudioRefs: {[key: string]: HTMLAudioElement | null} = {};
+
     tracks.forEach(track => {
-      newVolumes[track.name] = volumes[track.name] ?? 75; // Mantener volumen existente o poner 75
+      newVolumes[track.id] = volumes[track.id] ?? 75;
+      newAudioRefs[track.id] = audioRefs.current[track.id] || null;
     });
     setVolumes(newVolumes);
+    audioRefs.current = newAudioRefs;
+
   }, [tracks]);
 
+  // --- Audio Control Handlers ---
 
-  const handleVolumeChange = (trackName: string, newVolume: number) => {
-    setVolumes(prev => ({ ...prev, [trackName]: newVolume }));
+  const updatePlaybackPosition = () => {
+    const firstAudio = Object.values(audioRefs.current).find(a => a);
+    if (firstAudio && isPlaying) {
+      setPlaybackPosition(firstAudio.currentTime);
+      animationFrameRef.current = requestAnimationFrame(updatePlaybackPosition);
+    }
   };
 
-  const toggleMute = (trackName: string) => {
+  const handlePlay = () => {
+    setIsPlaying(true);
+    Object.values(audioRefs.current).forEach(audio => audio?.play());
+    animationFrameRef.current = requestAnimationFrame(updatePlaybackPosition);
+  };
+
+  const handlePause = () => {
+    setIsPlaying(false);
+    Object.values(audioRefs.current).forEach(audio => audio?.pause());
+    if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+    }
+  };
+  
+  const handleStop = () => {
+    handlePause();
+    setPlaybackPosition(0);
+    Object.values(audioRefs.current).forEach(audio => {
+        if (audio) audio.currentTime = 0;
+    });
+  };
+
+  const handleSeek = (time: number) => {
+    Object.values(audioRefs.current).forEach(audio => {
+      if (audio) audio.currentTime = time;
+    });
+    setPlaybackPosition(time);
+  };
+
+  const handleRewind = () => {
+    handleSeek(Math.max(0, playbackPosition - 5));
+  };
+  
+  const handleFastForward = () => {
+    handleSeek(Math.min(duration, playbackPosition + 5));
+  };
+
+  const handleVolumeChange = (trackId: string, newVolume: number) => {
+    setVolumes(prev => ({ ...prev, [trackId]: newVolume }));
+    const audio = audioRefs.current[trackId];
+    if (audio) {
+      audio.volume = newVolume / 100;
+    }
+  };
+
+  const toggleMute = (trackId: string) => {
     setMutedTracks(prev =>
-      prev.includes(trackName)
-        ? prev.filter(t => t !== trackName)
-        : [...prev, trackName]
+      prev.includes(trackId)
+        ? prev.filter(t => t !== trackId)
+        : [...prev, trackId]
     );
   };
 
-  const toggleSolo = (trackName: string) => {
+  const toggleSolo = (trackId: string) => {
     setSoloTracks(prev =>
-      prev.includes(trackName)
-        ? prev.filter(t => t !== trackName)
-        : [...prev, trackName]
+      prev.includes(trackId)
+        ? prev.filter(t => t !== trackId)
+        : [...prev, trackId]
     );
   };
+  
+  // Effect to update audio elements when tracks change
+  useEffect(() => {
+    tracks.forEach(track => {
+        const audio = audioRefs.current[track.id];
+        if (audio) {
+            const isMuted = mutedTracks.includes(track.id);
+            const isSoloActive = soloTracks.length > 0;
+            const isSoloed = soloTracks.includes(track.id);
 
+            audio.muted = isMuted || (isSoloActive && !isSoloed);
+        }
+    });
+  }, [mutedTracks, soloTracks, tracks]);
+
+  // Effect to handle metadata loading for duration
+  const onLoadedMetadata = (trackId: string) => {
+      const audio = audioRefs.current[trackId];
+      if (audio) {
+          setDuration(prevDuration => Math.max(prevDuration, audio.duration));
+      }
+  }
 
   return (
     <div className="flex flex-col h-screen bg-background font-sans text-sm">
-      <Header />
+      {/* Hidden Audio Elements */}
+      {tracks.map(track => (
+          <audio
+              key={track.id}
+              ref={el => audioRefs.current[track.id] = el}
+              src={track.url}
+              onLoadedMetadata={() => onLoadedMetadata(track.id)}
+              onEnded={handlePause}
+              preload="auto"
+          />
+      ))}
+      
+      <Header 
+        isPlaying={isPlaying}
+        onPlay={handlePlay}
+        onPause={handlePause}
+        onStop={handleStop}
+        onRewind={handleRewind}
+        onFastForward={handleFastForward}
+        currentTime={playbackPosition}
+        duration={duration}
+      />
       
       <div className="relative flex-grow p-4 min-h-0">
         <div className="absolute top-0 left-4 right-4 h-24">
@@ -110,6 +193,9 @@ const DawPage = () => {
             onMuteToggle={toggleMute}
             onSoloToggle={toggleSolo}
             onVolumeChange={handleVolumeChange}
+            isPlaying={isPlaying}
+            playbackPosition={playbackPosition}
+            audioRefs={audioRefs}
           />
         </div>
         <div className="col-span-12 lg:col-span-3">

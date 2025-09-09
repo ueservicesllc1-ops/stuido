@@ -4,10 +4,10 @@ import { Button } from './ui/button';
 import { Slider } from './ui/slider';
 import { cn } from '@/lib/utils';
 import { Settings } from 'lucide-react';
+import { SetlistSong } from '@/actions/setlists';
 
 interface TrackPadProps {
-  name: string;
-  color?: 'primary' | 'destructive';
+  track: SetlistSong;
   isActive: boolean;
   isMuted: boolean;
   isSolo: boolean;
@@ -18,8 +18,7 @@ interface TrackPadProps {
 }
 
 const TrackPad: React.FC<TrackPadProps> = ({
-  name,
-  color = 'primary',
+  track,
   isActive,
   isMuted,
   isSolo,
@@ -28,9 +27,13 @@ const TrackPad: React.FC<TrackPadProps> = ({
   onMuteToggle,
   onSoloToggle,
 }) => {
+  const { name, id } = track;
+  // Define color based on track name for specific tracks
+  const color = (name.toUpperCase() === 'CLICK' || name.toUpperCase() === 'CUES') ? 'destructive' : 'primary';
+
   const sliderColorClass = {
-    primary: '[&>span:first-child]:bg-primary',
-    destructive: '[&>span:first-child]:bg-destructive',
+    primary: 'data-[state=active]:bg-primary',
+    destructive: 'data-[state=active]:bg-destructive',
   };
 
   const handleVolumeChange = (value: number[]) => {
@@ -47,7 +50,9 @@ const TrackPad: React.FC<TrackPadProps> = ({
           orientation="vertical"
           onValueChange={handleVolumeChange}
           className={cn(
-            isActive ? sliderColorClass[color] : '[&>span:first-child]:bg-muted-foreground/30',
+            '[&>span:first-child]:bg-secondary',
+            isActive && '[&_.bg-primary]:bg-primary [&_.border-primary]:border-primary',
+            isActive && color === 'destructive' && '[&_.bg-primary]:bg-destructive [&_.border-primary]:border-destructive',
             (isSolo || isMuted) && 'opacity-50'
           )}
         />
