@@ -2,12 +2,12 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
-import { AlignJustify, Library, MoreHorizontal, Music, Loader2, Calendar, X, PlusCircle, DownloadCloud } from 'lucide-react';
+import { AlignJustify, Library, MoreHorizontal, Music, Loader2, Calendar, X, PlusCircle, DownloadCloud, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { getSongs } from '@/actions/songs';
 import CreateSetlistDialog from './CreateSetlistDialog';
-import { getSetlists, Setlist, addSongToSetlist, SetlistSong } from '@/actions/setlists';
+import { getSetlists, Setlist, addSongToSetlist, SetlistSong, removeSongFromSetlist } from '@/actions/setlists';
 import { format } from 'date-fns';
 import { useToast } from './ui/use-toast';
 
@@ -146,6 +146,31 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
      // Stop loading indicator for this song
     setCachingSongs(prev => prev.filter(id => id !== song.id));
   };
+  
+  const handleRemoveSongFromSetlist = async (songToRemove: SetlistSong) => {
+    if (!selectedSetlist) return;
+
+    const result = await removeSongFromSetlist(selectedSetlist.id, songToRemove);
+
+    if (result.success) {
+        const updatedSongs = selectedSetlist.songs.filter(s => s.id !== songToRemove.id);
+        const updatedSetlist = { ...selectedSetlist, songs: updatedSongs };
+
+        onSetlistSelected(updatedSetlist);
+        setSelectedSetlist(updatedSetlist);
+
+        toast({
+            title: 'Canción eliminada',
+            description: `"${songToRemove.name}" se ha quitado del setlist.`,
+        });
+    } else {
+        toast({
+            variant: 'destructive',
+            title: 'Error al eliminar',
+            description: result.error || 'No se pudo quitar la canción.',
+        });
+    }
+  };
 
 
   return (
@@ -202,10 +227,21 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
         {selectedSetlist ? (
             selectedSetlist.songs && selectedSetlist.songs.length > 0 ? (
                 selectedSetlist.songs.map((song, index) => (
-                    <div key={index} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent">
+                    <div key={index} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent group">
                         <Music className="w-5 h-5 text-muted-foreground" />
                         <p className="font-semibold text-foreground flex-grow">{song.name}</p>
-                        {cachingSongs.includes(song.id) && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
+                        {cachingSongs.includes(song.id) ? (
+                           <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                        ) : (
+                           <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="w-8 h-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                              onClick={() => handleRemoveSongFromSetlist(song)}
+                           >
+                              <Trash2 className="w-4 h-4" />
+                           </Button>
+                        )}
                     </div>
                 ))
             ) : (

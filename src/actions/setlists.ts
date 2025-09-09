@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 
 export interface NewSetlist {
   name: string;
@@ -83,6 +83,22 @@ export async function addSongToSetlist(setlistId: string, song: SetlistSong) {
     return { success: true };
   } catch (error) {
     console.error('Error añadiendo canción al setlist:', error);
+    return { success: false, error: (error as Error).message };
+  }
+}
+
+export async function removeSongFromSetlist(setlistId: string, song: SetlistSong) {
+  try {
+    const setlistRef = doc(db, 'setlists', setlistId);
+
+    // Atomically remove a song from the "songs" array field.
+    await updateDoc(setlistRef, {
+      songs: arrayRemove(song)
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error eliminando canción del setlist:', error);
     return { success: false, error: (error as Error).message };
   }
 }
