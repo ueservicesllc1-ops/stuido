@@ -2,7 +2,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
-import { AlignJustify, Library, MoreHorizontal, Music, Loader2, Calendar, X, PlusCircle } from 'lucide-react';
+import { AlignJustify, Library, MoreHorizontal, Music, Loader2, Calendar, X, PlusCircle, DownloadCloud } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { getSongs } from '@/actions/songs';
@@ -22,9 +22,10 @@ interface Song {
 interface SongListProps {
   initialSetlist?: Setlist | null;
   onSetlistSelected: (setlist: Setlist | null) => void;
+  onLoadTrack: (track: SetlistSong) => Promise<void>;
 }
 
-const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected }) => {
+const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, onLoadTrack }) => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [isLoadingSongs, setIsLoadingSongs] = useState(false);
   const [songsError, setSongsError] = useState<string | null>(null);
@@ -37,6 +38,9 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected }
   const [isSetlistSheetOpen, setIsSetlistSheetOpen] = useState(false);
   const [isLibrarySheetOpen, setIsLibrarySheetOpen] = useState(false);
   const { toast } = useToast();
+
+  const [cachingSongs, setCachingSongs] = useState<string[]>([]);
+
 
   useEffect(() => {
     if (initialSetlist) {
@@ -92,7 +96,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected }
   }
 
   const handleAddSongToSetlist = async (song: Song) => {
-    if (!selectedSetlist) return;
+    if (!selectedSetlist || cachingSongs.includes(song.id)) return;
 
     const songToAdd: SetlistSong = {
         id: song.id,
@@ -101,7 +105,6 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected }
         fileKey: song.fileKey
     }
 
-    // Check if song is already in the setlist
     if (selectedSetlist.songs.some(s => s.id === song.id)) {
         toast({
             variant: 'destructive',
@@ -111,6 +114,9 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected }
         return;
     }
 
+    // Start loading indicator for this song specifically in the setlist UI
+    setCachingSongs(prev => [...prev, song.id]);
+
     const result = await addSongToSetlist(selectedSetlist.id, songToAdd);
 
     if (result.success) {
@@ -118,14 +124,18 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected }
         ...selectedSetlist,
         songs: [...selectedSetlist.songs, songToAdd]
       };
-      // Update state locally & notify parent
-      setSelectedSetlist(updatedSetlist);
+      // Update state locally first for instant UI feedback
       onSetlistSelected(updatedSetlist);
+      setSelectedSetlist(updatedSetlist);
 
       toast({
         title: '¡Canción añadida!',
-        description: `"${song.name}" se ha añadido a "${selectedSetlist.name}".`,
+        description: `"${song.name}" se ha añadido a "${selectedSetlist.name}". Iniciando descarga...`,
       });
+
+      // Now trigger the actual download/caching
+      await onLoadTrack(songToAdd);
+      
     } else {
       toast({
         variant: 'destructive',
@@ -133,6 +143,8 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected }
         description: result.error || 'No se pudo añadir la canción.',
       });
     }
+     // Stop loading indicator for this song
+    setCachingSongs(prev => prev.filter(id => id !== song.id));
   };
 
 
@@ -193,6 +205,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected }
                     <div key={index} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent">
                         <Music className="w-5 h-5 text-muted-foreground" />
                         <p className="font-semibold text-foreground flex-grow">{song.name}</p>
+                        {cachingSongs.includes(song.id) && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
                     </div>
                 ))
             ) : (
@@ -224,8 +237,8 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected }
                                     <div key={song.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent">
                                         <Music className="w-5 h-5 text-muted-foreground" />
                                         <p className="font-semibold text-foreground flex-grow">{song.name}</p>
-                                        <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => handleAddSongToSetlist(song)}>
-                                            <PlusCircle className="w-5 h-5 text-primary" />
+                                        <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => handleAddSongToSetlist(song)} disabled={cachingSongs.includes(song.id)}>
+                                            {cachingSongs.includes(song.id) ? <Loader2 className="w-5 h-5 animate-spin"/> : <PlusCircle className="w-5 h-5 text-primary" />}
                                         </Button>
                                     </div>
                                     ))
@@ -280,8 +293,8 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected }
                       <Music className="w-5 h-5 text-muted-foreground" />
                       <p className="font-semibold text-foreground flex-grow">{song.name}</p>
                       {selectedSetlist && (
-                        <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => handleAddSongToSetlist(song)}>
-                            <PlusCircle className="w-5 h-5 text-primary" />
+                        <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => handleAddSongToSetlist(song)} disabled={cachingSongs.includes(song.id)}>
+                             {cachingSongs.includes(song.id) ? <Loader2 className="w-5 h-5 animate-spin"/> : <PlusCircle className="w-5 h-5 text-primary" />}
                         </Button>
                       )}
                     </div>

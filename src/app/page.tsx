@@ -70,13 +70,23 @@ const DawPage = () => {
       setTracks(initialSetlist.songs);
       setActiveTracks(initialSetlist.songs.map(t => t.id));
       
-      // Reset states
-      setTrackUrls({});
+      // Reset states but preserve already loaded URLs
+      setTrackUrls(prev => {
+        const newUrls: {[key: string]: string} = {};
+        initialSetlist.songs.forEach(song => {
+          if (prev[song.id]) {
+            newUrls[song.id] = prev[song.id];
+          }
+        });
+        return newUrls;
+      });
       setLoadingTracks({});
 
-      // Load all tracks from the new setlist
+      // Load all tracks from the new setlist that are not already loaded
       initialSetlist.songs.forEach(track => {
-        loadTrack(track);
+        if (!trackUrls[track.id]) {
+          loadTrack(track);
+        }
       });
 
     } else {
@@ -214,6 +224,9 @@ const DawPage = () => {
     }
   }, [trackUrls]);
 
+  const handleSetlistUpdate = (setlist: Setlist | null) => {
+    setInitialSetlist(setlist);
+  };
 
   return (
     <div className="flex flex-col h-screen bg-background font-sans text-sm">
@@ -265,7 +278,11 @@ const DawPage = () => {
           />
         </div>
         <div className="col-span-12 lg:col-span-3">
-          <SongList initialSetlist={initialSetlist} onSetlistSelected={setInitialSetlist} />
+          <SongList 
+            initialSetlist={initialSetlist} 
+            onSetlistSelected={handleSetlistUpdate}
+            onLoadTrack={loadTrack}
+          />
         </div>
         <div className="col-span-12 lg:col-span-2">
           <TonicPad />
