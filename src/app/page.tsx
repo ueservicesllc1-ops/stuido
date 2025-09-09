@@ -36,7 +36,7 @@ export default function AudioPlayerPage() {
   const [songFile, setSongFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   
   const [playlist, setPlaylist] = useState<Song[]>([]);
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
@@ -83,9 +83,11 @@ export default function AudioPlayerPage() {
     }
   }, [currentSong]);
 
-  const handleUpload = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!songFile || !songName) {
+  const handleUpload = async (formData: FormData) => {
+    const file = formData.get('file') as File;
+    const name = formData.get('songName') as string;
+    
+    if (!file || file.size === 0 || !name) {
       toast({
         variant: 'destructive',
         title: 'Faltan campos',
@@ -97,10 +99,6 @@ export default function AudioPlayerPage() {
     setIsUploading(true);
 
     try {
-      const formData = new FormData();
-      formData.append('file', songFile);
-      formData.append('songName', songName);
-
       const result = await uploadSong(formData);
 
       if (!result.success || !result.fileUrl) {
@@ -108,7 +106,7 @@ export default function AudioPlayerPage() {
       }
       
       const newSong: Song = {
-        name: songName,
+        name: name,
         url: result.fileUrl,
       };
       
@@ -117,15 +115,13 @@ export default function AudioPlayerPage() {
 
       toast({
         title: '¡Subida exitosa!',
-        description: `"${songName}" se ha añadido a la lista y se está reproduciendo.`,
+        description: `"${name}" se ha añadido a la lista y se está reproduciendo.`,
       });
 
       // Reset form
+      formRef.current?.reset();
       setSongName('');
       setSongFile(null);
-      if(fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
 
     } catch (err: any) {
       toast({
@@ -246,27 +242,30 @@ export default function AudioPlayerPage() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <form onSubmit={handleUpload} className="flex flex-col gap-4">
+                      <form ref={formRef} action={handleUpload} className="flex flex-col gap-4">
                         <div className="grid w-full items-center gap-2">
                           <Label htmlFor="song-name">Nombre de la canción</Label>
                           <Input 
-                            id="song-name" 
+                            id="song-name"
+                            name="songName" 
                             type="text" 
                             placeholder="Mi increíble canción" 
                             value={songName}
                             onChange={(e) => setSongName(e.target.value)}
                             disabled={isUploading}
+                            required
                           />
                         </div>
                         <div className="grid w-full items-center gap-2">
                           <Label htmlFor="song-file">Archivo de audio</Label>
                           <Input 
-                            id="song-file" 
-                            ref={fileInputRef}
+                            id="song-file"
+                            name="file"
                             type="file" 
                             accept="audio/*" 
                             onChange={(e) => setSongFile(e.target.files ? e.target.files[0] : null)}
                             disabled={isUploading}
+                            required
                           />
                         </div>
                         <Button type="submit" disabled={isUploading || !songFile || !songName}>
@@ -312,5 +311,3 @@ export default function AudioPlayerPage() {
     </>
   );
 }
-
-    
