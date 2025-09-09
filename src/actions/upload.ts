@@ -8,7 +8,7 @@ export async function uploadSong(formData: FormData) {
     const file = formData.get('file') as File | null;
     const songName = formData.get('songName') as string | null;
 
-    if (!file) {
+    if (!file || file.size === 0) {
       return { success: false, error: 'No se ha enviado ningún archivo.' };
     }
     if (!songName) {
@@ -22,6 +22,7 @@ export async function uploadSong(formData: FormData) {
     const s3 = new S3Client({
       endpoint: `https://${B2_ENDPOINT}`,
       region: B2_REGION,
+      forcePathStyle: true, // <-- Esta es la corrección clave
       credentials: {
         accessKeyId: process.env.B2_KEY_ID!,
         secretAccessKey: process.env.B2_APPLICATION_KEY!,
@@ -53,5 +54,3 @@ export async function uploadSong(formData: FormData) {
     return { success: false, error: (error as Error).message };
   }
 }
-
-    
