@@ -50,10 +50,15 @@ const DawPage = () => {
     tracks.forEach(track => {
       newVolumes[track.id] = volumes[track.id] ?? 75;
       newAudioRefs[track.id] = audioRefs.current[track.id] || null;
+       // Ensure audio elements are loaded
+      if (newAudioRefs[track.id]) {
+        newAudioRefs[track.id]?.load();
+      }
     });
     setVolumes(newVolumes);
     audioRefs.current = newAudioRefs;
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tracks]);
 
   // --- Audio Control Handlers ---
