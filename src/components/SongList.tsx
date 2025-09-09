@@ -42,10 +42,28 @@ const SongList = () => {
     <div className="bg-card/50 rounded-lg p-3 flex flex-col h-full">
       <div className="flex justify-between items-center mb-3">
         <h2 className="font-bold text-foreground">Nuevas betel</h2>
-        <Button variant="ghost" size="sm" className="gap-2 text-primary">
-          <AlignJustify className="w-4 h-4" />
-          Setlists
-        </Button>
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="sm" className="gap-2 text-primary">
+              <AlignJustify className="w-4 h-4" />
+              Setlists
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-[300px] sm:w-[400px] bg-card/95">
+              <SheetHeader>
+                <SheetTitle>Setlists</SheetTitle>
+              </SheetHeader>
+              <div className="py-4 h-full flex flex-col">
+                <div className="flex-grow text-center text-muted-foreground pt-10">
+                  <p>Aún no has creado un setlist.</p>
+                </div>
+                <Button className="mt-auto gap-2">
+                  <PlusCircle className="w-4 h-4" />
+                  Crear nuevo setlist
+                </Button>
+              </div>
+          </SheetContent>
+        </Sheet>
       </div>
       <div className="flex-grow space-y-1 overflow-y-auto">
         {initialSongs.map((song, index) => (
