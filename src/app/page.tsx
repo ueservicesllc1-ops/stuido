@@ -7,15 +7,9 @@ import SongList from '@/components/SongList';
 import TonicPad from '@/components/TonicPad';
 import Image from 'next/image';
 import { getSetlists, Setlist, SetlistSong } from '@/actions/setlists';
-import { getCachedAudio, cacheAudio } from '@/lib/audiocache';
-import { Loader2 } from 'lucide-react';
 
 const DawPage = () => {
   const [tracks, setTracks] = useState<SetlistSong[]>([]);
-  const [trackUrls, setTrackUrls] = useState<{[key: string]: string}>({});
-  const [loadingTracks, setLoadingTracks] = useState<{[key: string]: boolean}>({});
-  
-  const [activeTrackIds, setActiveTrackIds] = useState<string[]>([]);
   const [soloTracks, setSoloTracks] = useState<string[]>([]);
   const [mutedTracks, setMutedTracks] = useState<string[]>([]);
   const [initialSetlist, setInitialSetlist] = useState<Setlist | null>(null);
@@ -39,78 +33,13 @@ const DawPage = () => {
     fetchLastSetlist();
   }, []);
 
-  const loadTrack = async (track: SetlistSong) => {
-    // Avoid reloading if already loaded or currently loading
-    if (trackUrls[track.id] || loadingTracks[track.id]) {
-      return;
-    }
-
-    setLoadingTracks(prev => ({ ...prev, [track.id]: true }));
-    try {
-      let audioBlob = await getCachedAudio(track.url);
-      
-      if (!audioBlob) {
-        console.log(`Caching track: ${track.name}`);
-        audioBlob = await cacheAudio(track.url);
-      }
-
-      if (audioBlob) {
-        const objectUrl = URL.createObjectURL(audioBlob);
-        setTrackUrls(prev => ({ ...prev, [track.id]: objectUrl }));
-      } else {
-         // Fallback to network URL if caching fails
-        setTrackUrls(prev => ({ ...prev, [track.id]: track.url }));
-      }
-    } catch (error) {
-      console.error(`Error loading track ${track.name}:`, error);
-      // Fallback to network URL on error
-      setTrackUrls(prev => ({ ...prev, [track.id]: track.url }));
-    } finally {
-      setLoadingTracks(prev => ({ ...prev, [track.id]: false }));
-    }
-  };
-
   useEffect(() => {
     if (initialSetlist && initialSetlist.songs) {
       setTracks(initialSetlist.songs);
-      
-      // Reset states but preserve already loaded URLs and active tracks
-      setTrackUrls(prevUrls => {
-        const newUrls: {[key: string]: string} = {};
-        initialSetlist.songs.forEach(song => {
-          if (prevUrls[song.id]) {
-            newUrls[song.id] = prevUrls[song.id];
-          }
-        });
-        return newUrls;
-      });
-
-      // Tracks that already have a URL are considered active
-      setActiveTrackIds(initialSetlist.songs.filter(s => !!trackUrls[s.id]).map(s => s.id));
-      
-      setLoadingTracks({});
-
-      // Load all tracks from the new setlist that are not already loaded
-      initialSetlist.songs.forEach(track => {
-        loadTrack(track);
-      });
-
     } else {
       setTracks([]);
-      setActiveTrackIds([]);
     }
   }, [initialSetlist]);
-
-
-  // When a track's URL becomes available, add it to the active tracks
-  useEffect(() => {
-    const loadedTrackIds = Object.keys(trackUrls);
-    setActiveTrackIds(prev => {
-        const newIds = loadedTrackIds.filter(id => !prev.includes(id));
-        return [...prev, ...newIds];
-    });
-  }, [trackUrls]);
-
 
   const [volumes, setVolumes] = useState<{ [key: string]: number }>({});
 
@@ -138,12 +67,6 @@ const DawPage = () => {
   };
 
   const handlePlay = () => {
-    const allTracksReady = tracks.every(t => trackUrls[t.id]);
-    if (!allTracksReady) {
-        console.log("Waiting for all tracks to be loaded...");
-        return;
-    }
-    
     setIsPlaying(true);
     Object.values(audioRefs.current).forEach(audio => audio?.play().catch(e => console.error("Play error:", e)));
     animationFrameRef.current = requestAnimationFrame(updatePlaybackPosition);
@@ -231,38 +154,9 @@ const DawPage = () => {
       }
   }
 
-  // Effect to explicitly load audio when a URL becomes available
-  useEffect(() => {
-    Object.keys(trackUrls).forEach(trackId => {
-      const audio = audioRefs.current[trackId];
-      if (audio && audio.src !== trackUrls[trackId]) {
-        // console.log(`Loading new src for track ${trackId}: ${trackUrls[trackId]}`);
-        audio.src = trackUrls[trackId];
-        audio.load(); // Explicitly load the new source
-        if (isPlaying) {
-          audio.currentTime = playbackPosition;
-          audio.play().catch(e => console.error("Error playing newly loaded track:", e));
-        }
-      }
-    });
-  }, [trackUrls, isPlaying, playbackPosition]);
-  
-  // Cleanup Object URLs on unmount
-  useEffect(() => {
-    return () => {
-      Object.values(trackUrls).forEach(url => {
-        if (url.startsWith('blob:')) {
-          URL.revokeObjectURL(url);
-        }
-      });
-    }
-  }, [trackUrls]);
-
   const handleSetlistUpdate = (setlist: Setlist | null) => {
     setInitialSetlist(setlist);
   };
-
-  const activeTracksData = tracks.filter(t => activeTrackIds.includes(t.id));
 
   return (
     <div className="flex flex-col h-screen bg-background font-sans text-sm">
@@ -271,7 +165,7 @@ const DawPage = () => {
           <audio
               key={track.id}
               ref={el => audioRefs.current[track.id] = el}
-              src={trackUrls[track.id]}
+              src={track.url}
               onLoadedMetadata={() => onLoadedMetadata(track.id)}
               onEnded={handlePause}
               preload="auto"
@@ -299,7 +193,7 @@ const DawPage = () => {
       <main className="flex-grow grid grid-cols-12 gap-4 px-4 pb-4 pt-20">
         <div className="col-span-12 lg:col-span-7">
           <MixerGrid 
-            tracks={activeTracksData}
+            tracks={tracks}
             soloTracks={soloTracks}
             mutedTracks={mutedTracks}
             volumes={volumes}
@@ -309,15 +203,12 @@ const DawPage = () => {
             isPlaying={isPlaying}
             playbackPosition={playbackPosition}
             duration={duration}
-            loadingTracks={loadingTracks}
           />
         </div>
         <div className="col-span-12 lg:col-span-3">
           <SongList 
             initialSetlist={initialSetlist} 
             onSetlistSelected={handleSetlistUpdate}
-            onLoadTrack={loadTrack}
-            loadingTracks={loadingTracks}
           />
         </div>
         <div className="col-span-12 lg:col-span-2">

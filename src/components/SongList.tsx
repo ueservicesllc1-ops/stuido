@@ -22,11 +22,9 @@ interface Song {
 interface SongListProps {
   initialSetlist?: Setlist | null;
   onSetlistSelected: (setlist: Setlist | null) => void;
-  onLoadTrack: (track: SetlistSong) => Promise<void>;
-  loadingTracks?: { [key: string]: boolean };
 }
 
-const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, onLoadTrack, loadingTracks = {} }) => {
+const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected }) => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [isLoadingSongs, setIsLoadingSongs] = useState(false);
   const [songsError, setSongsError] = useState<string | null>(null);
@@ -95,7 +93,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
   }
 
   const handleAddSongToSetlist = async (song: Song) => {
-    if (!selectedSetlist || loadingTracks[song.id]) return;
+    if (!selectedSetlist) return;
 
     const songToAdd: SetlistSong = {
         id: song.id,
@@ -112,9 +110,6 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
         });
         return;
     }
-
-    // Now trigger the actual download/caching
-    onLoadTrack(songToAdd);
     
     const result = await addSongToSetlist(selectedSetlist.id, songToAdd);
 
@@ -129,7 +124,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
 
       toast({
         title: '¡Canción añadida!',
-        description: `"${song.name}" se ha añadido a "${selectedSetlist.name}". Iniciando descarga...`,
+        description: `"${song.name}" se ha añadido a "${selectedSetlist.name}".`,
       });
       
     } else {
@@ -224,18 +219,14 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
                     <div key={index} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent group">
                         <Music className="w-5 h-5 text-muted-foreground" />
                         <p className="font-semibold text-foreground flex-grow">{song.name}</p>
-                        {loadingTracks[song.id] ? (
-                           <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                        ) : (
-                           <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="w-8 h-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
-                              onClick={() => handleRemoveSongFromSetlist(song)}
-                           >
-                              <Trash2 className="w-4 h-4" />
-                           </Button>
-                        )}
+                       <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="w-8 h-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                          onClick={() => handleRemoveSongFromSetlist(song)}
+                       >
+                          <Trash2 className="w-4 h-4" />
+                       </Button>
                     </div>
                 ))
             ) : (
@@ -267,8 +258,8 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
                                     <div key={song.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent">
                                         <Music className="w-5 h-5 text-muted-foreground" />
                                         <p className="font-semibold text-foreground flex-grow">{song.name}</p>
-                                        <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => handleAddSongToSetlist(song)} disabled={loadingTracks[song.id]}>
-                                            {loadingTracks[song.id] ? <Loader2 className="w-5 h-5 animate-spin"/> : <PlusCircle className="w-5 h-5 text-primary" />}
+                                        <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => handleAddSongToSetlist(song)}>
+                                            <PlusCircle className="w-5 h-5 text-primary" />
                                         </Button>
                                     </div>
                                     ))
@@ -323,8 +314,8 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
                       <Music className="w-5 h-5 text-muted-foreground" />
                       <p className="font-semibold text-foreground flex-grow">{song.name}</p>
                       {selectedSetlist && (
-                        <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => handleAddSongToSetlist(song)} disabled={loadingTracks[song.id]}>
-                             {loadingTracks[song.id] ? <Loader2 className="w-5 h-5 animate-spin"/> : <PlusCircle className="w-5 h-5 text-primary" />}
+                        <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => handleAddSongToSetlist(song)}>
+                             <PlusCircle className="w-5 h-5 text-primary" />
                         </Button>
                       )}
                     </div>
