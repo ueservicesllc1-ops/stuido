@@ -36,7 +36,7 @@ export const getCachedAudio = async (url: string): Promise<Blob | null> => {
  */
 export const cacheAudio = async (url: string): Promise<Blob> => {
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { mode: 'cors' });
     if (!response.ok) {
       throw new Error(`Failed to fetch audio: ${response.statusText}`);
     }
