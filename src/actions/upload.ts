@@ -2,8 +2,24 @@
 
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
+function getRegionFromEndpoint(endpoint: string): string {
+  try {
+    const url = new URL(endpoint);
+    // e.g. s3.us-east-005.backblazeb2.com -> us-east-005
+    const region = url.hostname.split('.')[1];
+    if (!region) {
+      throw new Error('Region could not be determined from endpoint');
+    }
+    return region;
+  } catch (error) {
+    console.error("Invalid B2_ENDPOINT URL:", error);
+    // Fallback or default region if needed, though it's better to fail fast
+    return 'us-east-005'; 
+  }
+}
+
 const s3Client = new S3Client({
-  region: process.env.B2_REGION,
+  region: getRegionFromEndpoint(process.env.B2_ENDPOINT!),
   endpoint: process.env.B2_ENDPOINT,
   credentials: {
     accessKeyId: process.env.B2_KEY_ID!,
