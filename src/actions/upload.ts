@@ -29,7 +29,7 @@ export async function uploadSong(formData: FormData) {
     });
 
     const fileBuffer = Buffer.from(await file.arrayBuffer());
-    const key = `${randomUUID()}-${file.name}`;
+    const key = `${randomUUID()}-${file.name.replace(/\s/g, '_')}`;
 
     const command = new PutObjectCommand({
       Bucket: B2_BUCKET_NAME,
@@ -44,14 +44,14 @@ export async function uploadSong(formData: FormData) {
 
     await s3.send(command);
     
-    // TODO: Guardar en Firestore la URL del archivo
-    // const fileUrl = `https://<YOUR_B2_CUSTOM_DOMAIN_OR_ENDPOINT>/${key}`;
-    // await db.collection('songs').add({ name: songName, url: fileUrl, ... });
+    const fileUrl = `https://${B2_BUCKET_NAME}.${B2_ENDPOINT}/${key}`;
 
-    return { success: true, key };
+    return { success: true, key, fileUrl };
 
   } catch (error) {
     console.error('Error subiendo el archivo a B2:', error);
     return { success: false, error: (error as Error).message };
   }
 }
+
+    

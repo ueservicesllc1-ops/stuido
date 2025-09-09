@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
-import { Play, Pause, Music, Database, Server, Upload, Loader } from 'lucide-react';
+import { Play, Pause, Music, Database, Server, Upload, Loader, ListMusic } from 'lucide-react';
 import { checkB2Connection } from '@/actions/b2';
 import { db } from '@/lib/firebase';
 import { getDoc, doc } from 'firebase/firestore';
@@ -20,6 +20,10 @@ import { useToast } from '@/components/ui/use-toast';
 import { Toaster } from "@/components/ui/toaster"
 import { uploadSong } from '@/actions/upload';
 
+interface Song {
+  name: string;
+  url: string;
+}
 
 export default function AudioPlayerPage() {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -33,9 +37,9 @@ export default function AudioPlayerPage() {
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // URL de ejemplo. Más adelante podemos hacerla dinámica.
-  const audioSrc = 'https://storage.googleapis.com/studiopublic/boom-bap-hip-hop.mp3';
+  
+  const [playlist, setPlaylist] = useState<Song[]>([]);
+  const [currentSong, setCurrentSong] = useState<Song | null>(null);
 
   useEffect(() => {
     // Check Firebase connection
@@ -67,6 +71,18 @@ export default function AudioPlayerPage() {
     checkB2();
   }, []);
 
+  useEffect(() => {
+    if (currentSong && audioRef.current) {
+        audioRef.current.load();
+        audioRef.current.play().then(() => {
+            setIsPlaying(true);
+        }).catch(e => {
+            console.error("Audio playback failed:", e);
+            setIsPlaying(false);
+        });
+    }
+  }, [currentSong]);
+
   const handleUpload = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!songFile || !songName) {
@@ -87,16 +103,22 @@ export default function AudioPlayerPage() {
 
       const result = await uploadSong(formData);
 
-      if (!result.success) {
+      if (!result.success || !result.fileUrl) {
         throw new Error(result.error || 'Error en el servidor al subir el archivo.');
       }
+      
+      const newSong: Song = {
+        name: songName,
+        url: result.fileUrl,
+      };
+      
+      setPlaylist(prev => [...prev, newSong]);
+      setCurrentSong(newSong);
 
       toast({
         title: '¡Subida exitosa!',
-        description: `"${songName}" se ha subido correctamente.`,
+        description: `"${songName}" se ha añadido a la lista y se está reproduciendo.`,
       });
-
-      // TODO: Here we should save the song metadata (name, B2 URL) to Firestore.
 
       // Reset form
       setSongName('');
@@ -173,90 +195,122 @@ export default function AudioPlayerPage() {
         </div>
       </div>
       <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 md:p-24 gap-8">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Music />
-              Reproductor de Audio
-            </CardTitle>
-            <CardDescription>
-              Reproduce la pista de audio cargada.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <audio
-              ref={audioRef}
-              src={audioSrc}
-              onTimeUpdate={handleTimeUpdate}
-              onLoadedMetadata={handleLoadedMetadata}
-              onEnded={() => setIsPlaying(false)}
-            />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Music />
+                  Reproductor de Audio
+                </CardTitle>
+                <CardDescription>
+                  {currentSong ? `Reproduciendo: ${currentSong.name}` : 'Sube una canción para empezar'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <audio
+                  ref={audioRef}
+                  src={currentSong?.url}
+                  onTimeUpdate={handleTimeUpdate}
+                  onLoadedMetadata={handleLoadedMetadata}
+                  onEnded={() => setIsPlaying(false)}
+                />
 
-            <div className="flex items-center gap-4">
-              <Button onClick={togglePlayPause} size="icon" disabled={!duration}>
-                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-              </Button>
-              <div className="flex w-full items-center gap-2">
-                  <span className="text-xs font-mono">{formatTime(currentTime)}</span>
-                  <Slider
-                      value={[currentTime]}
-                      max={duration || 1}
-                      step={1}
-                      onValueChange={handleSliderChange}
-                      disabled={!duration}
-                  />
-                  <span className="text-xs font-mono">{formatTime(duration)}</span>
-              </div>
+                <div className="flex items-center gap-4">
+                  <Button onClick={togglePlayPause} size="icon" disabled={!currentSong}>
+                    {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                  </Button>
+                  <div className="flex w-full items-center gap-2">
+                      <span className="text-xs font-mono">{formatTime(currentTime)}</span>
+                      <Slider
+                          value={[currentTime]}
+                          max={duration || 1}
+                          step={1}
+                          onValueChange={handleSliderChange}
+                          disabled={!currentSong}
+                      />
+                      <span className="text-xs font-mono">{formatTime(duration)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <div className="flex flex-col gap-8">
+                <Card className="w-full">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Upload />
+                        Subir Canción
+                      </CardTitle>
+                      <CardDescription>
+                        Añade una nueva canción a tu biblioteca.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <form onSubmit={handleUpload} className="flex flex-col gap-4">
+                        <div className="grid w-full items-center gap-2">
+                          <Label htmlFor="song-name">Nombre de la canción</Label>
+                          <Input 
+                            id="song-name" 
+                            type="text" 
+                            placeholder="Mi increíble canción" 
+                            value={songName}
+                            onChange={(e) => setSongName(e.target.value)}
+                            disabled={isUploading}
+                          />
+                        </div>
+                        <div className="grid w-full items-center gap-2">
+                          <Label htmlFor="song-file">Archivo de audio</Label>
+                          <Input 
+                            id="song-file" 
+                            ref={fileInputRef}
+                            type="file" 
+                            accept="audio/*" 
+                            onChange={(e) => setSongFile(e.target.files ? e.target.files[0] : null)}
+                            disabled={isUploading}
+                          />
+                        </div>
+                        <Button type="submit" disabled={isUploading || !songFile || !songName}>
+                          {isUploading ? (
+                            <Loader className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Upload className="mr-2 h-4 w-4" />
+                          )}
+                          {isUploading ? 'Subiendo...' : 'Subir'}
+                        </Button>
+                      </form>
+                    </CardContent>
+                </Card>
+
+                {playlist.length > 0 && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <ListMusic />
+                                Lista de Reproducción
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <ul className="flex flex-col gap-2">
+                                {playlist.map((song, index) => (
+                                    <li key={index}>
+                                        <Button 
+                                            variant={currentSong?.url === song.url ? 'secondary' : 'ghost'}
+                                            className="w-full justify-start"
+                                            onClick={() => setCurrentSong(song)}>
+                                            {currentSong?.url === song.url && isPlaying ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
+                                            {song.name}
+                                        </Button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </CardContent>
+                    </Card>
+                )}
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload />
-                Subir Canción
-              </CardTitle>
-              <CardDescription>
-                Añade una nueva canción a tu biblioteca.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleUpload} className="flex flex-col gap-4">
-                <div className="grid w-full items-center gap-2">
-                  <Label htmlFor="song-name">Nombre de la canción</Label>
-                  <Input 
-                    id="song-name" 
-                    type="text" 
-                    placeholder="Mi increíble canción" 
-                    value={songName}
-                    onChange={(e) => setSongName(e.target.value)}
-                    disabled={isUploading}
-                  />
-                </div>
-                <div className="grid w-full items-center gap-2">
-                  <Label htmlFor="song-file">Archivo de audio</Label>
-                  <Input 
-                    id="song-file" 
-                    ref={fileInputRef}
-                    type="file" 
-                    accept="audio/*" 
-                    onChange={(e) => setSongFile(e.target.files ? e.target.files[0] : null)}
-                    disabled={isUploading}
-                  />
-                </div>
-                <Button type="submit" disabled={isUploading || !songFile || !songName}>
-                  {isUploading ? (
-                    <Loader className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Upload className="mr-2 h-4 w-4" />
-                  )}
-                  {isUploading ? 'Subiendo...' : 'Subir'}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+        </div>
       </main>
     </>
   );
 }
+
+    
