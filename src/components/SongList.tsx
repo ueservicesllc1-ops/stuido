@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
-import { AlignJustify, Library, MoreHorizontal, Music, Loader2, Calendar, X } from 'lucide-react';
+import { AlignJustify, Library, MoreHorizontal, Music, Loader2, Calendar, X, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { getSongs } from '@/actions/songs';
@@ -27,7 +27,8 @@ const SongList = () => {
   const [setlistsError, setSetlistsError] = useState<string | null>(null);
   
   const [selectedSetlist, setSelectedSetlist] = useState<Setlist | null>(null);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isSetlistSheetOpen, setIsSetlistSheetOpen] = useState(false);
+  const [isLibrarySheetOpen, setIsLibrarySheetOpen] = useState(false);
 
   const handleFetchSongs = async () => {
     setIsLoadingSongs(true);
@@ -67,7 +68,7 @@ const SongList = () => {
 
   const handleSetlistSelect = (setlist: Setlist) => {
     setSelectedSetlist(setlist);
-    setIsSheetOpen(false);
+    setIsSetlistSheetOpen(false);
   }
 
   const clearSelectedSetlist = () => {
@@ -86,7 +87,7 @@ const SongList = () => {
                 Limpiar
              </Button>
         ) : (
-            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+            <Sheet open={isSetlistSheetOpen} onOpenChange={setIsSetlistSheetOpen}>
                 <SheetTrigger asChild>
                     <Button variant="ghost" size="sm" className="gap-2 text-primary" onClick={handleFetchSetlists}>
                     <AlignJustify className="w-4 h-4" />
@@ -135,52 +136,104 @@ const SongList = () => {
                     </div>
                 ))
             ) : (
-                <p className="text-muted-foreground text-center pt-10">Este setlist no tiene canciones.</p>
+                <div className="text-center pt-10 text-muted-foreground">
+                    <p>Este setlist no tiene canciones.</p>
+                    <Sheet open={isLibrarySheetOpen} onOpenChange={setIsLibrarySheetOpen}>
+                      <SheetTrigger asChild>
+                         <Button variant="link" className="text-primary mt-2" onClick={handleFetchSongs}>
+                            <PlusCircle className="w-4 h-4 mr-2" />
+                            Añadir canciones
+                        </Button>
+                      </SheetTrigger>
+                        <SheetContent side="left" className="w-[300px] sm:w-[400px] bg-card/95">
+                          <SheetHeader>
+                            <SheetTitle>Añadir a "{selectedSetlist.name}"</SheetTitle>
+                          </SheetHeader>
+                          <div className="py-4 h-full">
+                            {/* Library content goes here */}
+                             {isLoadingSongs ? (
+                                <div className="flex justify-center items-center h-full">
+                                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                                </div>
+                            ) : songsError ? (
+                                <div className="text-destructive text-center">{songsError}</div>
+                            ) : (
+                                <div className="space-y-2">
+                                {songs.length > 0 ? (
+                                    songs.map((song) => (
+                                    <div key={song.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent cursor-pointer">
+                                        <Music className="w-5 h-5 text-muted-foreground" />
+                                        <p className="font-semibold text-foreground flex-grow">{song.name}</p>
+                                        <Button variant="ghost" size="icon" className="w-8 h-8">
+                                            <PlusCircle className="w-5 h-5 text-primary" />
+                                        </Button>
+                                    </div>
+                                    ))
+                                ) : (
+                                    <p className="text-muted-foreground text-center">No hay canciones en la biblioteca.</p>
+                                )}
+                                </div>
+                            )}
+                          </div>
+                        </SheetContent>
+                    </Sheet>
+                </div>
             )
         ) : (
              <p className="text-muted-foreground text-center pt-10">Selecciona un setlist para ver las canciones.</p>
         )}
       </div>
-      <div className="pt-3 mt-auto border-t border-border/50 flex justify-between items-center">
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="sm" className="text-muted-foreground gap-2" onClick={handleFetchSongs}>
-                <Library className="w-4 h-4" />
-                Library
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-[300px] sm:w-[400px] bg-card/95">
-            <SheetHeader>
-              <SheetTitle>Biblioteca de Canciones</SheetTitle>
-            </SheetHeader>
-            <div className="py-4 h-full">
-              {isLoadingSongs ? (
-                <div className="flex justify-center items-center h-full">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                </div>
-              ) : songsError ? (
-                 <div className="text-destructive text-center">{songsError}</div>
-              ) : (
-                <div className="space-y-2">
-                  {songs.length > 0 ? (
-                    songs.map((song) => (
-                      <div key={song.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent">
-                        <Music className="w-5 h-5 text-muted-foreground" />
-                        <p className="font-semibold text-foreground flex-grow">{song.name}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-muted-foreground text-center">No hay canciones en la biblioteca.</p>
-                  )}
-                </div>
-              )}
-            </div>
-          </SheetContent>
-        </Sheet>
-         <Button variant="ghost" size="sm" className="text-muted-foreground">
-            Edit setlist
-        </Button>
-      </div>
+       <Sheet open={isLibrarySheetOpen} onOpenChange={setIsLibrarySheetOpen}>
+        <div className="pt-3 mt-auto border-t border-border/50 flex justify-between items-center">
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-muted-foreground gap-2" onClick={handleFetchSongs}>
+                  <Library className="w-4 h-4" />
+                  Biblioteca
+              </Button>
+            </SheetTrigger>
+
+            {selectedSetlist && (
+                 <SheetTrigger asChild>
+                    <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={handleFetchSongs}>
+                        Editar setlist
+                    </Button>
+                 </SheetTrigger>
+            )}
+        </div>
+
+        <SheetContent side="left" className="w-[300px] sm:w-[400px] bg-card/95">
+          <SheetHeader>
+            <SheetTitle>{selectedSetlist ? `Añadir a "${selectedSetlist.name}"` : 'Biblioteca de Canciones'}</SheetTitle>
+          </SheetHeader>
+          <div className="py-4 h-full">
+            {isLoadingSongs ? (
+              <div className="flex justify-center items-center h-full">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : songsError ? (
+               <div className="text-destructive text-center">{songsError}</div>
+            ) : (
+              <div className="space-y-2">
+                {songs.length > 0 ? (
+                  songs.map((song) => (
+                    <div key={song.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent cursor-pointer">
+                      <Music className="w-5 h-5 text-muted-foreground" />
+                      <p className="font-semibold text-foreground flex-grow">{song.name}</p>
+                      {selectedSetlist && (
+                        <Button variant="ghost" size="icon" className="w-8 h-8">
+                            <PlusCircle className="w-5 h-5 text-primary" />
+                        </Button>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-muted-foreground text-center">No hay canciones en la biblioteca.</p>
+                )}
+              </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
