@@ -50,7 +50,7 @@ const DawPage = () => {
       
       <div className="relative flex-grow p-4 min-h-0">
         <div className="absolute top-0 left-4 right-4 h-24">
-            <Image src="https://i.imgur.com/kP4MS2H.png" alt="Waveform" layout="fill" objectFit="contain" data-ai-hint="waveform audio" />
+            <Image src="https://i.imgur.com/kP4MS2H.png" alt="Waveform" fill style={{objectFit: 'contain'}} data-ai-hint="waveform audio" />
         </div>
       </div>
 
