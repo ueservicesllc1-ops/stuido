@@ -8,7 +8,14 @@ import TonicPad from '@/components/TonicPad';
 import Image from 'next/image';
 import { getSetlists, Setlist } from '@/actions/setlists';
 
+interface TrackInfo {
+  name: string;
+  color?: 'primary' | 'destructive';
+}
+
+
 const DawPage = () => {
+  const [tracks, setTracks] = useState<TrackInfo[]>([]);
   const [activeTracks, setActiveTracks] = useState<string[]>([]);
   const [soloTracks, setSoloTracks] = useState<string[]>([]);
   const [mutedTracks, setMutedTracks] = useState<string[]>([]);
@@ -27,18 +34,39 @@ const DawPage = () => {
     fetchLastSetlist();
   }, []);
 
+  useEffect(() => {
+    if (initialSetlist && initialSetlist.songs) {
+      const newTracks = initialSetlist.songs.map(song => ({
+        name: song.name,
+        // Aquí podrías añadir lógica para asignar colores si quieres
+      }));
+      setTracks(newTracks);
+      setActiveTracks(newTracks.map(t => t.name)); // Activar todas las pistas por defecto
+    } else {
+      setTracks([]); // Limpiar si no hay setlist o no tiene canciones
+    }
+  }, [initialSetlist]);
 
-  const initialTracks: { name: string, color?: 'primary' | 'destructive' }[] = [];
 
   // Initialize volumes for each track
   const [volumes, setVolumes] = useState<{ [key: string]: number }>(() => {
     const initialVolumes: { [key: string]: number } = {};
-    initialTracks.forEach(track => {
+    tracks.forEach(track => {
       // Set a default volume, e.g., 75%. Maybe active tracks start higher?
       initialVolumes[track.name] = activeTracks.includes(track.name) ? 75 : 50;
     });
     return initialVolumes;
   });
+
+  // Re-initialize volumes when tracks change
+  useEffect(() => {
+    const newVolumes: { [key: string]: number } = {};
+    tracks.forEach(track => {
+      newVolumes[track.name] = volumes[track.name] ?? 75; // Mantener volumen existente o poner 75
+    });
+    setVolumes(newVolumes);
+  }, [tracks]);
+
 
   const handleVolumeChange = (trackName: string, newVolume: number) => {
     setVolumes(prev => ({ ...prev, [trackName]: newVolume }));
@@ -74,7 +102,7 @@ const DawPage = () => {
       <main className="flex-grow grid grid-cols-12 gap-4 px-4 pb-4 pt-20">
         <div className="col-span-12 lg:col-span-7">
           <MixerGrid 
-            tracks={initialTracks}
+            tracks={tracks}
             activeTracks={activeTracks}
             soloTracks={soloTracks}
             mutedTracks={mutedTracks}
