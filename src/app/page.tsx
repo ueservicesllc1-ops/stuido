@@ -16,7 +16,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { getSongs } from '@/actions/songs';
 import { Loader, Music, ListMusic, UploadCloud, PlayCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import axios from 'axios';
 
 interface Song {
   id: string;
@@ -68,7 +67,7 @@ export default function MultitrackPage() {
     const file = formData.get('file') as File;
     const songName = formData.get('name') as string;
 
-    if (!file || !songName) {
+    if (!file || file.size === 0 || !songName) {
       toast({
         variant: 'destructive',
         title: 'Faltan campos',
@@ -77,22 +76,16 @@ export default function MultitrackPage() {
       setIsUploading(false);
       return;
     }
-    
-    // Usamos FormData para enviar el archivo al endpoint de la API
-    const uploadFormData = new FormData();
-    uploadFormData.append('file', file);
-    uploadFormData.append('name', songName);
 
     try {
-      const response = await axios.post('/api/upload', uploadFormData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
       });
 
-      const result = response.data;
+      const result = await response.json();
 
-      if (result.success && result.song) {
+      if (response.ok && result.success && result.song) {
         toast({
           title: '¡Canción Subida!',
           description: `"${result.song.name}" está lista.`,
@@ -111,7 +104,7 @@ export default function MultitrackPage() {
       toast({
         variant: 'destructive',
         title: 'Error en la subida',
-        description: err.response?.data?.error || err.message || 'Ocurrió un problema al subir el archivo.',
+        description: err.message || 'Ocurrió un problema al subir el archivo.',
       });
     } finally {
       setIsUploading(false);
