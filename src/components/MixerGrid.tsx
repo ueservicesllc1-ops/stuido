@@ -12,13 +12,24 @@ interface MixerGridProps {
   activeTracks: string[];
   soloTracks: string[];
   mutedTracks: string[];
+  volumes: { [key: string]: number };
   onMuteToggle: (trackName: string) => void;
   onSoloToggle: (trackName: string) => void;
+  onVolumeChange: (trackName: string, volume: number) => void;
 }
 
-const MixerGrid: React.FC<MixerGridProps> = ({ tracks, activeTracks, soloTracks, mutedTracks, onMuteToggle, onSoloToggle }) => {
+const MixerGrid: React.FC<MixerGridProps> = ({ 
+  tracks, 
+  activeTracks, 
+  soloTracks, 
+  mutedTracks, 
+  volumes,
+  onMuteToggle, 
+  onSoloToggle,
+  onVolumeChange
+}) => {
   return (
-    <div className="grid grid-cols-6 gap-2">
+    <div className="grid grid-cols-6 gap-4">
       {tracks.map(track => (
         <TrackPad
           key={track.name}
@@ -27,9 +38,10 @@ const MixerGrid: React.FC<MixerGridProps> = ({ tracks, activeTracks, soloTracks,
           isActive={activeTracks.includes(track.name)}
           isMuted={mutedTracks.includes(track.name)}
           isSolo={soloTracks.includes(track.name)}
+          volume={volumes[track.name] ?? 75}
           onMuteToggle={() => onMuteToggle(track.name)}
           onSoloToggle={() => onSoloToggle(track.name)}
-          progress={Math.random() * 85 + 5} // Random progress for visual variety
+          onVolumeChange={(newVolume) => onVolumeChange(track.name, newVolume)}
         />
       ))}
     </div>

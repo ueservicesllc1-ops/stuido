@@ -11,6 +11,26 @@ const DawPage = () => {
   const [soloTracks, setSoloTracks] = useState<string[]>([]);
   const [mutedTracks, setMutedTracks] = useState<string[]>(['BGVS', 'DRUMS']);
 
+  const initialTracks = [
+    { name: 'CLICK', color: 'destructive' }, { name: 'CUES', color: 'destructive' }, { name: 'AG' }, { name: 'BASS' }, { name: 'BGVS' }, { name: 'DRUMS' },
+    { name: 'EG 1' }, { name: 'EG 2' }, { name: 'EG 3' }, { name: 'EG 4' }, { name: 'KEYS1' }, { name: 'KEYS2' },
+    { name: 'KEYS3' }, { name: 'KEYS4' }, { name: 'ORGAN' }, { name: 'PERC' }, { name: 'PIANO' }, { name: 'SYNTH B...' },
+  ];
+
+  // Initialize volumes for each track
+  const [volumes, setVolumes] = useState<{ [key: string]: number }>(() => {
+    const initialVolumes: { [key: string]: number } = {};
+    initialTracks.forEach(track => {
+      // Set a default volume, e.g., 75%. Maybe active tracks start higher?
+      initialVolumes[track.name] = activeTracks.includes(track.name) ? 75 : 50;
+    });
+    return initialVolumes;
+  });
+
+  const handleVolumeChange = (trackName: string, newVolume: number) => {
+    setVolumes(prev => ({ ...prev, [trackName]: newVolume }));
+  };
+
   const toggleMute = (trackName: string) => {
     setMutedTracks(prev =>
       prev.includes(trackName)
@@ -27,11 +47,6 @@ const DawPage = () => {
     );
   };
 
-  const initialTracks = [
-    { name: 'CLICK', color: 'destructive' }, { name: 'CUES', color: 'destructive' }, { name: 'AG' }, { name: 'BASS' }, { name: 'BGVS' }, { name: 'DRUMS' },
-    { name: 'EG 1' }, { name: 'EG 2' }, { name: 'EG 3' }, { name: 'EG 4' }, { name: 'KEYS1' }, { name: 'KEYS2' },
-    { name: 'KEYS3' }, { name: 'KEYS4' }, { name: 'ORGAN' }, { name: 'PERC' }, { name: 'PIANO' }, { name: 'SYNTH B...' },
-  ];
 
   return (
     <div className="flex flex-col h-screen bg-background font-sans text-sm">
@@ -50,8 +65,10 @@ const DawPage = () => {
             activeTracks={activeTracks}
             soloTracks={soloTracks}
             mutedTracks={mutedTracks}
+            volumes={volumes}
             onMuteToggle={toggleMute}
             onSoloToggle={toggleSolo}
+            onVolumeChange={handleVolumeChange}
           />
         </div>
         <div className="col-span-12 lg:col-span-3">
