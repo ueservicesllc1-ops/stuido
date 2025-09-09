@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import Tone from 'tone';
 import {
   UploadCloud,
   Play,
@@ -15,6 +14,7 @@ import {
   Info,
   Rewind,
 } from 'lucide-react';
+import type { Panner, Player } from 'tone';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,8 +34,8 @@ import { suggestOptimalLoopPoints } from '@/ai/flows/suggest-optimal-loop-points
 interface Track {
   id: string;
   file: File;
-  player: Tone.Player;
-  panner: Tone.Panner;
+  player: Player;
+  panner: Panner;
   volume: number;
   pan: number;
   isMuted: boolean;
@@ -68,6 +68,7 @@ export default function MultitrackMixerPage() {
   const [masterVolume, setMasterVolume] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const tracksRef = useRef(tracks);
+  const Tone = useRef<typeof import('tone') | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -75,19 +76,21 @@ export default function MultitrackMixerPage() {
   }, [tracks]);
 
   useEffect(() => {
-    if (!isReady) return;
-    Tone.Transport.bpm.value = tempo;
+    if (!isReady || !Tone.current) return;
+    Tone.current.Transport.bpm.value = tempo;
   }, [tempo, isReady]);
 
   useEffect(() => {
-    if (!isReady) return;
-    Tone.getDestination().volume.value = masterVolume;
+    if (!isReady || !Tone.current) return;
+    Tone.current.getDestination().volume.value = masterVolume;
   }, [masterVolume, isReady]);
 
   useEffect(() => {
     if (!isReady) return;
     const checkPlaybackState = () => {
-      setIsPlaying(Tone.Transport.state === 'started');
+      if (Tone.current) {
+        setIsPlaying(Tone.current.Transport.state === 'started');
+      }
     };
     const interval = setInterval(checkPlaybackState, 100);
     return () => clearInterval(interval);
@@ -96,9 +99,11 @@ export default function MultitrackMixerPage() {
   const initializeAudio = useCallback(async () => {
     if (isReady) return;
     try {
-      await Tone.start();
-      Tone.getDestination().volume.value = masterVolume;
-      Tone.Transport.bpm.value = tempo;
+      const ToneModule = await import('tone');
+      Tone.current = ToneModule;
+      await Tone.current.start();
+      Tone.current.getDestination().volume.value = masterVolume;
+      Tone.current.Transport.bpm.value = tempo;
       setIsReady(true);
     } catch (error) {
       console.error('Error starting audio context:', error);
@@ -112,24 +117,27 @@ export default function MultitrackMixerPage() {
 
   const handlePlayPause = () => {
     if (!isReady) initializeAudio();
-    if (Tone.Transport.state === 'started') {
-      Tone.Transport.pause();
+    if (!Tone.current) return;
+    if (Tone.current.Transport.state === 'started') {
+      Tone.current.Transport.pause();
     } else {
-      Tone.Transport.start();
+      Tone.current.Transport.start();
     }
-    setIsPlaying(Tone.Transport.state === 'started');
+    setIsPlaying(Tone.current.Transport.state === 'started');
   };
 
   const handleStop = () => {
-    Tone.Transport.stop();
+    if (!Tone.current) return;
+    Tone.current.Transport.stop();
     setIsPlaying(false);
   };
   
   const addTrack = useCallback(async (file: File) => {
+    if (!Tone.current) return;
     try {
       const url = URL.createObjectURL(file);
-      const panner = new Tone.Panner(0).toDestination();
-      const player = new Tone.Player(url).connect(panner);
+      const panner = new Tone.current.Panner(0).toDestination();
+      const player = new Tone.current.Player(url).connect(panner);
       
       await new Promise((resolve, reject) => {
         player.onload = resolve;
