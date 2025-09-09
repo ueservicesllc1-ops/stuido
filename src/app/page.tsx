@@ -14,8 +14,9 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { Toaster } from "@/components/ui/toaster";
 import { getSongs } from '@/actions/songs';
-import { Loader, Music, ListMusic, UploadCloud, PlayCircle } from 'lucide-react';
+import { Loader, Music, ListMusic, UploadCloud, Play, Pause } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import Track, { type TrackHandle } from '@/components/Track';
 
 interface Song {
   id: string;
@@ -26,18 +27,14 @@ interface Song {
 export default function MultitrackPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [songs, setSongs] = useState<Song[]>([]);
-  const [currentSong, setCurrentSong] = useState<Song | null>(null);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const trackRefs = useRef<Map<string, TrackHandle>>(new Map());
 
   const fetchSongs = async () => {
     const result = await getSongs();
     if (result.success && result.songs) {
       setSongs(result.songs);
-      if (!currentSong && result.songs.length > 0) {
-        setCurrentSong(result.songs[0]);
-      }
     } else {
       toast({
         variant: "destructive",
@@ -50,14 +47,6 @@ export default function MultitrackPage() {
   useEffect(() => {
     fetchSongs();
   }, []);
-
-  useEffect(() => {
-    if (currentSong && audioRef.current) {
-      audioRef.current.src = currentSong.url;
-      audioRef.current.load();
-      audioRef.current.play().catch(e => console.error("La reproducción automática falló", e));
-    }
-  }, [currentSong]);
 
   const handleUpload = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -87,15 +76,13 @@ export default function MultitrackPage() {
 
       if (response.ok && result.success && result.song) {
         toast({
-          title: '¡Canción Subida!',
+          title: '¡Pista Subida!',
           description: `"${result.song.name}" está lista.`,
         });
         formRef.current?.reset();
         
-        // Actualizar la lista de canciones y reproducir la nueva
-        const updatedSongs = [result.song, ...songs];
-        setSongs(updatedSongs);
-        setCurrentSong(result.song);
+        // Actualizar la lista de canciones
+        setSongs(prevSongs => [result.song, ...prevSongs]);
 
       } else {
         throw new Error(result.error || 'Error desconocido en la subida.');
@@ -111,41 +98,29 @@ export default function MultitrackPage() {
     }
   };
   
-  const handleSelectSong = (song: Song) => {
-    setCurrentSong(song);
-  }
+  const playAll = () => {
+    trackRefs.current.forEach(ref => ref.play());
+  };
+
+  const pauseAll = () => {
+    trackRefs.current.forEach(ref => ref.pause());
+  };
+
 
   return (
     <>
       <Toaster />
       <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 md:p-12 gap-8">
         <div className="w-full max-w-6xl mx-auto">
-          <Card className="mb-8">
-              <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                      <PlayCircle className="text-accent" size={28}/>
-                      Reproductor
-                  </CardTitle>
-                   <CardDescription>
-                     {currentSong ? `Reproduciendo: ${currentSong.name}` : "Selecciona una canción de la lista"}
-                   </CardDescription>
-              </CardHeader>
-              <CardContent>
-                  <audio ref={audioRef} controls className="w-full" src={currentSong?.url}>
-                      Tu navegador no soporta el elemento de audio.
-                  </audio>
-              </CardContent>
-          </Card>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <Card className="w-full">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <UploadCloud />
-                  Subir Nueva Canción
+                  Subir Nueva Pista
                 </CardTitle>
                 <CardDescription>
-                  Sube una pista para añadirla a tu proyecto.
+                  Sube un archivo de audio para añadirlo como una nueva pista.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -153,13 +128,13 @@ export default function MultitrackPage() {
                   <div className="grid w-full items-center gap-2">
                     <Label htmlFor="name">
                       <Music className="inline-block mr-2 h-4 w-4" />
-                      Nombre de la Canción
+                      Nombre de la Pista
                     </Label>
                     <Input 
                       id="name"
                       name="name" 
                       type="text" 
-                      placeholder="Ej: Pista de Guitarra" 
+                      placeholder="Ej: Guitarra Principal" 
                       disabled={isUploading}
                       required
                     />
@@ -180,7 +155,7 @@ export default function MultitrackPage() {
                   </div>
                   <Button type="submit" disabled={isUploading}>
                     {isUploading && <Loader className="mr-2 h-4 w-4 animate-spin" />}
-                    {isUploading ? 'Subiendo...' : 'Subir'}
+                    {isUploading ? 'Subiendo...' : 'Subir Pista'}
                   </Button>
                 </form>
               </CardContent>
@@ -188,32 +163,45 @@ export default function MultitrackPage() {
             
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <ListMusic />
-                        Lista de Reproducción
+                    <CardTitle className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <ListMusic />
+                          Pistas del Proyecto
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="icon" variant="outline" onClick={playAll} title="Reproducir Todo">
+                            <Play />
+                          </Button>
+                          <Button size="icon" variant="outline" onClick={pauseAll} title="Pausar Todo">
+                            <Pause />
+                          </Button>
+                        </div>
                     </CardTitle>
                     <CardDescription>
-                        Canciones guardadas en tu proyecto.
+                        Controla cada pista individualmente o todas a la vez.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <ScrollArea className="h-72">
+                    <ScrollArea className="h-96">
                         {songs.length > 0 ? (
-                             <ul className="flex flex-col gap-2 pr-4">
+                             <ul className="flex flex-col gap-4 pr-4">
                                 {songs.map((song) => (
-                                    <li key={song.id} 
-                                        className={`flex items-center justify-between p-3 rounded-md border cursor-pointer transition-colors ${currentSong?.id === song.id ? 'bg-accent/20 border-accent' : 'hover:bg-muted/50'}`}
-                                        onClick={() => handleSelectSong(song)}
-                                    >
-                                        <div>
-                                            <p className="font-semibold truncate">{song.name}</p>
-                                        </div>
-                                        {currentSong?.id === song.id && <PlayCircle className="text-accent" />}
+                                    <li key={song.id}>
+                                       <Track
+                                          ref={ref => {
+                                            if (ref) {
+                                              trackRefs.current.set(song.id, ref);
+                                            } else {
+                                              trackRefs.current.delete(song.id);
+                                            }
+                                          }}
+                                          song={song}
+                                        />
                                     </li>
                                 ))}
                             </ul>
                         ) : (
-                            <p className="text-sm text-muted-foreground text-center py-8">Aún no has subido ninguna canción.</p>
+                            <p className="text-sm text-muted-foreground text-center py-8">Aún no has subido ninguna pista.</p>
                         )}
                     </ScrollArea>
                 </CardContent>
