@@ -21,9 +21,10 @@ interface Song {
 
 interface SongListProps {
   initialSetlist?: Setlist | null;
+  onSetlistSelected: (setlist: Setlist | null) => void;
 }
 
-const SongList: React.FC<SongListProps> = ({ initialSetlist }) => {
+const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected }) => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [isLoadingSongs, setIsLoadingSongs] = useState(false);
   const [songsError, setSongsError] = useState<string | null>(null);
@@ -40,6 +41,8 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist }) => {
   useEffect(() => {
     if (initialSetlist) {
       setSelectedSetlist(initialSetlist);
+    } else {
+      setSelectedSetlist(null);
     }
   }, [initialSetlist]);
 
@@ -80,12 +83,12 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist }) => {
   };
 
   const handleSetlistSelect = (setlist: Setlist) => {
-    setSelectedSetlist(setlist);
+    onSetlistSelected(setlist);
     setIsSetlistSheetOpen(false);
   }
 
   const clearSelectedSetlist = () => {
-    setSelectedSetlist(null);
+    onSetlistSelected(null);
   }
 
   const handleAddSongToSetlist = async (song: Song) => {
@@ -111,14 +114,14 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist }) => {
     const result = await addSongToSetlist(selectedSetlist.id, songToAdd);
 
     if (result.success) {
-      // Update state locally for instant feedback
-      setSelectedSetlist(prev => {
-        if (!prev) return null;
-        return {
-          ...prev,
-          songs: [...prev.songs, songToAdd]
-        }
-      });
+      const updatedSetlist = {
+        ...selectedSetlist,
+        songs: [...selectedSetlist.songs, songToAdd]
+      };
+      // Update state locally & notify parent
+      setSelectedSetlist(updatedSetlist);
+      onSetlistSelected(updatedSetlist);
+
       toast({
         title: '¡Canción añadida!',
         description: `"${song.name}" se ha añadido a "${selectedSetlist.name}".`,
