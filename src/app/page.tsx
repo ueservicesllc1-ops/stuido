@@ -8,7 +8,6 @@ import TonicPad from '@/components/TonicPad';
 import Image from 'next/image';
 import { getSetlists, Setlist, SetlistSong } from '@/actions/setlists';
 import { cacheAudio, getCachedAudio } from '@/lib/audiocache';
-import { Progress } from '@/components/ui/progress';
 
 export type PlaybackMode = 'online' | 'offline';
 
@@ -361,19 +360,6 @@ const DawPage = () => {
   const loadingProgress = totalTracks > 0 ? (loadedCount / totalTracks) * 100 : 0;
   const showLoadingBar = playbackMode === 'offline' && loadingProgress < 100;
   
-  if (showLoadingBar) {
-    return (
-      <div className="w-screen h-screen flex flex-col justify-center items-center bg-background gap-4">
-        <Image src="/logo.png" alt="Cargando..." width={150} height={150} className="animate-pulse"/>
-        <div className="w-1/3 text-center">
-            <p className="text-lg text-foreground mb-2">Descargando setlist para uso offline...</p>
-            <Progress value={loadingProgress} />
-            <p className="text-sm text-muted-foreground mt-1">{loadedCount} de {totalTracks} pistas descargadas.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="grid grid-cols-[1fr_320px] grid-rows-[auto_1fr] h-screen w-screen p-4 gap-4">
       <div className="col-span-2 row-start-1">
@@ -388,6 +374,8 @@ const DawPage = () => {
             duration={duration}
             playbackMode={playbackMode}
             onPlaybackModeChange={setPlaybackMode}
+            loadingProgress={loadingProgress}
+            showLoadingBar={showLoadingBar}
         />
       </div>
       
