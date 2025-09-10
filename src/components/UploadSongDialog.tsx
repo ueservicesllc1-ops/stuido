@@ -10,7 +10,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -24,11 +23,11 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Loader2, Upload, FileAudio, X, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Loader2, Upload, X, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { ScrollArea } from './ui/scroll-area';
 import { saveSong, NewSong, TrackFile } from '@/actions/songs';
-import { cn } from '@/lib/utils';
+import { Progress } from './ui/progress';
 
 
 const ACCEPTED_AUDIO_TYPES = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio/x-m4a', 'audio/mp3'];
@@ -68,6 +67,7 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
   const [isUploading, setIsUploading] = useState(false);
   const [trackStatuses, setTrackStatuses] = useState<Record<number, TrackStatus>>({});
   const [trackErrorMessages, setTrackErrorMessages] = useState<Record<number, string>>({});
+  const [uploadProgress, setUploadProgress] = useState<Record<number, number>>({});
   const { toast } = useToast();
 
   const form = useForm<SongFormValues>({
@@ -99,12 +99,14 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
     setIsUploading(false);
     setTrackStatuses({});
     setTrackErrorMessages({});
+    setUploadProgress({});
   }
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files) {
       const newTrackStatuses: Record<number, TrackStatus> = {};
+      const newProgress: Record<number, number> = {};
       Array.from(files).forEach((file, index) => {
         let trackName = file.name.split('.').slice(0, -1).join('.') || file.name;
         trackName = trackName.replace(/\s/g, '');
@@ -113,8 +115,11 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
         const newIndex = fields.length + index;
         append({ file, name: trackName });
         newTrackStatuses[newIndex] = 'pending';
+        newProgress[newIndex] = 0;
       });
       setTrackStatuses(prev => ({...prev, ...newTrackStatuses}));
+      setUploadProgress(prev => ({...prev, ...newProgress}));
+
 
       if (!form.getValues('name') && files.length > 0) {
         form.setValue('name', files[0].name.split('.').slice(0, -1).join('.'));
@@ -122,11 +127,47 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
     }
   };
 
+  const uploadTrackWithProgress = (formData: FormData, index: number): Promise<{ success: boolean, track?: TrackFile, error?: string }> => {
+    return new Promise((resolve) => {
+      const xhr = new XMLHttpRequest();
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percentComplete = (event.loaded / event.total) * 100;
+          setUploadProgress(prev => ({ ...prev, [index]: percentComplete }));
+        }
+      };
+      
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const result = JSON.parse(xhr.responseText);
+            if (result.success) {
+              resolve({ success: true, track: result.track });
+            } else {
+              resolve({ success: false, error: result.error || `Error del servidor al subir.` });
+            }
+          } catch(e) {
+             resolve({ success: false, error: 'Respuesta del servidor inválida.'});
+          }
+        } else {
+           resolve({ success: false, error: `Error del servidor: ${xhr.statusText}` });
+        }
+      };
+
+      xhr.onerror = () => {
+         resolve({ success: false, error: 'Error de red al subir el archivo.' });
+      };
+
+      xhr.open('POST', '/api/upload-track', true);
+      xhr.send(formData);
+    });
+  }
+
   async function onSubmit(data: SongFormValues) {
     setIsUploading(true);
     const uploadedTracks: TrackFile[] = [];
 
-    // Usar un bucle for clásico con índice para asegurar la ejecución secuencial estricta
     for (let i = 0; i < data.tracks.length; i++) {
         const track = data.tracks[i];
         try {
@@ -136,25 +177,18 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
             formData.append('file', track.file);
             formData.append('trackName', track.name);
             
-            // `await` pausará el bucle aquí hasta que esta subida se complete
-            const response = await fetch('/api/upload-track', {
-                method: 'POST',
-                body: formData,
-            });
+            const result = await uploadTrackWithProgress(formData, i);
 
-            const result = await response.json();
-
-            if (!response.ok || !result.success) {
-                throw new Error(result.error || `Error del servidor al subir ${track.name}.`);
+            if (!result.success) {
+                throw new Error(result.error || `Error desconocido al subir ${track.name}.`);
             }
 
-            uploadedTracks.push(result.track);
+            uploadedTracks.push(result.track!);
             setTrackStatuses(prev => ({ ...prev, [i]: 'success' }));
 
         } catch (error) {
             setTrackStatuses(prev => ({ ...prev, [i]: 'error' }));
             setTrackErrorMessages(prev => ({ ...prev, [i]: (error as Error).message }));
-            // No detenemos el bucle, permitimos que las demás subidas continúen
         }
     }
 
@@ -197,7 +231,6 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
           description: `La canción "${saveResult.song.name}" ha sido guardada.`,
         });
 
-        // Esperar un poco para que el usuario vea los checks verdes antes de cerrar
         setTimeout(() => {
           setOpen(false);
           onUploadFinished();
@@ -213,13 +246,6 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
         setIsUploading(false);
     }
   }
-  
-  const defaultTrigger = (
-    <Button variant="outline" size="sm" className="gap-2">
-      <Upload className="w-4 h-4" />
-      Subir Canción
-    </Button>
-  );
   
   const StatusIcon = ({ status }: { status: TrackStatus }) => {
     switch (status) {
@@ -244,7 +270,10 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
       }
     }}>
       <DialogTrigger asChild>
-        {defaultTrigger}
+        <Button variant="outline" size="sm" className="gap-2">
+            <Upload className="w-4 h-4" />
+            Subir Canción
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
@@ -290,23 +319,28 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
                 </div>
 
                 {fields.length > 0 && (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <FormLabel>Pistas a subir</FormLabel>
                     {fields.map((field, index) => (
                       <div key={field.id}>
                         <div className="flex items-center gap-2 p-2 border rounded-md">
                           <StatusIcon status={trackStatuses[index] || 'pending'} />
-                          <FormField
-                            control={form.control}
-                            name={`tracks.${index}.name`}
-                            render={({ field }) => (
-                              <FormItem className="flex-grow">
-                                <FormControl>
-                                  <Input {...field} className="h-8" disabled={isUploading}/>
-                                </FormControl>
-                              </FormItem>
+                          <div className="flex-grow space-y-1.5">
+                             <FormField
+                              control={form.control}
+                              name={`tracks.${index}.name`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input {...field} className="h-8 text-sm" disabled={isUploading}/>
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                            {trackStatuses[index] === 'uploading' && (
+                                <Progress value={uploadProgress[index]} className="h-1.5" />
                             )}
-                          />
+                          </div>
                            <div className="w-24 text-sm text-muted-foreground truncate">
                               {form.getValues(`tracks.${index}.file.name`)}
                            </div>
