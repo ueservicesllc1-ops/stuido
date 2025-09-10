@@ -11,13 +11,13 @@ const keys = [
 const TonicPad = () => {
   return (
     <div className="bg-card/50 rounded-lg p-3 flex flex-col gap-2">
-      <div className="grid grid-cols-6 gap-1.5">
+      <div className="grid grid-cols-6 gap-1.5 h-40">
         {keys.map((key) => (
             <Button 
                 key={key} 
                 variant="secondary"
                 className={cn(
-                    "w-full h-16 text-base font-bold",
+                    "w-full h-full text-base font-bold",
                     key === 'D' ? 'bg-primary text-primary-foreground' : 'bg-secondary hover:bg-accent'
                 )}
             >
