@@ -29,7 +29,7 @@ const DawPage = () => {
   const [trackUrls, setTrackUrls] = useState<{[key: string]: string}>({});
   const [loadingTracks, setLoadingTracks] = useState<string[]>([]);
   const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('hybrid');
-  const [cachedTracks, setCachedTracks] = new Set<string>();
+  const [cachedTracks, setCachedTracks] = useState(new Set<string>());
   const [isReadyToPlay, setIsReadyToPlay] = useState(false);
 
   // Estado para descargas en segundo plano en modo híbrido
@@ -102,123 +102,128 @@ const DawPage = () => {
 
   // Lógica de carga de canciones y preparación de audios
   useEffect(() => {
-    // Si no hay canción activa, no hacemos nada.
     if (!activeSongId) {
       setIsReadyToPlay(false);
       return;
     }
     
-    // 1. Detener cualquier reproducción anterior y resetear estados
     handleStop();
     setIsReadyToPlay(false);
     
     const tracksForSong = tracks.filter(t => t.songId === activeSongId);
     
-    // Si no hay pistas para esta canción, consideramos que está "lista"
     if (tracksForSong.length === 0) {
       setIsReadyToPlay(true);
       return;
     }
-    
-    // 2. Función para preparar y verificar una pista individual
-    const prepareAndVerifyTrack = async (track: SetlistSong): Promise<string> => {
-      let assignedUrl = '';
-      const cachedBlob = await getCachedAudio(track.url);
-      if (cachedBlob) {
-        setCachedTracks(prev => new Set(prev).add(track.id));
-        assignedUrl = URL.createObjectURL(cachedBlob);
-      } else {
-        setCachedTracks(prev => {
+
+    const prepareAndVerifyTracks = async () => {
+      const preparationPromises = tracksForSong.map(async (track): Promise<{ id: string; url: string }> => {
+        let assignedUrl = '';
+        const cachedBlob = await getCachedAudio(track.url);
+
+        if (cachedBlob) {
+          setCachedTracks(prev => new Set(prev).add(track.id));
+          assignedUrl = URL.createObjectURL(cachedBlob);
+        } else {
+          setCachedTracks(prev => {
             const newSet = new Set(prev);
             newSet.delete(track.id);
             return newSet;
-        });
+          });
 
-        switch (playbackMode) {
-          case 'online':
-            assignedUrl = `/api/download?url=${encodeURIComponent(track.url)}`;
-            break;
-          case 'hybrid':
-            assignedUrl = `/api/download?url=${encodeURIComponent(track.url)}`;
-            setHybridDownloadingTracks(prev => new Set(prev).add(track.id));
-            cacheAudio(track.url)
-              .then(() => setCachedTracks(prev => new Set(prev).add(track.id)))
-              .catch(err => console.error(`Hybrid download failed for ${track.name}`, err))
-              .finally(() => {
+          switch (playbackMode) {
+            case 'online':
+              assignedUrl = `/api/download?url=${encodeURIComponent(track.url)}`;
+              break;
+            case 'hybrid':
+              assignedUrl = `/api/download?url=${encodeURIComponent(track.url)}`;
+              setHybridDownloadingTracks(prev => new Set(prev).add(track.id));
+              cacheAudio(track.url)
+                .then(() => setCachedTracks(prev => new Set(prev).add(track.id)))
+                .catch(err => console.error(`Hybrid download failed for ${track.name}`, err))
+                .finally(() => {
                   setHybridDownloadingTracks(prev => {
-                      const newSet = new Set(prev);
-                      newSet.delete(track.id);
-                      return newSet;
+                    const newSet = new Set(prev);
+                    newSet.delete(track.id);
+                    return newSet;
                   });
-              });
-            break;
-          case 'offline':
-            setLoadingTracks(prev => [...prev, track.id]);
-            try {
-              const blob = await cacheAudio(track.url);
-              setCachedTracks(prev => new Set(prev).add(track.id));
-              assignedUrl = URL.createObjectURL(blob);
-            } catch (error) {
-              console.error(`Error loading track ${track.name} for offline:`, error);
-              throw new Error(`Failed to load ${track.name} for offline mode.`);
-            } finally {
-              setLoadingTracks(prev => prev.filter(id => id !== track.id));
-            }
-            break;
+                });
+              break;
+            case 'offline':
+              setLoadingTracks(prev => [...prev, track.id]);
+              try {
+                const blob = await cacheAudio(track.url);
+                setCachedTracks(prev => new Set(prev).add(track.id));
+                assignedUrl = URL.createObjectURL(blob);
+              } catch (error) {
+                console.error(`Error loading track ${track.name} for offline:`, error);
+                throw new Error(`Failed to load ${track.name} for offline mode.`);
+              } finally {
+                setLoadingTracks(prev => prev.filter(id => id !== track.id));
+              }
+              break;
+          }
         }
-      }
-      
-      if (!assignedUrl) {
-          throw new Error(`No URL could be assigned for track ${track.name} in ${playbackMode} mode.`);
-      }
-
-      // Asignar URL al elemento de audio y esperar a que esté listo
-      return new Promise<string>((resolve, reject) => {
-        const audio = audioRefs.current[track.id];
-        if (!audio) return reject(new Error(`No audio element for track ${track.name}`));
-
-        const onCanPlayThrough = () => { cleanup(); resolve(assignedUrl); };
-        const onError = () => { cleanup(); reject(new Error(`Audio element failed to load source for ${track.name}`)); };
-        const cleanup = () => {
-          audio.removeEventListener('canplaythrough', onCanPlayThrough);
-          audio.removeEventListener('error', onError);
-        };
         
-        audio.addEventListener('canplaythrough', onCanPlayThrough);
-        audio.addEventListener('error', onError);
-        
-        audio.src = assignedUrl;
-        audio.load();
+        if (!assignedUrl) {
+          throw new Error(`No URL for track ${track.name}`);
+        }
+
+        return new Promise<{ id: string; url: string }>((resolve, reject) => {
+          const audio = audioRefs.current[track.id];
+          if (!audio) return reject(new Error(`No audio element for track ${track.name}`));
+
+          const onCanPlayThrough = () => {
+            cleanup();
+            resolve({ id: track.id, url: assignedUrl });
+          };
+          const onError = () => {
+            cleanup();
+            reject(new Error(`Audio element failed to load source for ${track.name}`));
+          };
+          const cleanup = () => {
+            audio.removeEventListener('canplaythrough', onCanPlayThrough);
+            audio.removeEventListener('error', onError);
+          };
+          
+          if (audio.readyState >= 4) { // HAVE_ENOUGH_DATA
+              onCanPlayThrough();
+          } else {
+              audio.addEventListener('canplaythrough', onCanPlayThrough);
+              audio.addEventListener('error', onError);
+              audio.src = assignedUrl;
+              audio.load();
+          }
+        });
       });
-    };
 
-    // 3. Procesar todas las pistas en paralelo
-    const preparationPromises = tracksForSong.map(track => 
-      prepareAndVerifyTrack(track).then(url => ({ id: track.id, url }))
-    );
-
-    Promise.all(preparationPromises)
-      .then(results => {
-        // 4. Cuando todas las pistas están listas, actualizar los estados
+      try {
+        const results = await Promise.all(preparationPromises);
         const finalTrackUrls = results.reduce((acc, { id, url }) => {
           acc[id] = url;
           return acc;
         }, {} as { [key: string]: string });
 
         setTrackUrls(finalTrackUrls);
-        setIsReadyToPlay(true);
 
-        const referenceTrack = audioRefs.current[tracksForSong[0].id];
-        if(referenceTrack && isFinite(referenceTrack.duration)) {
-            setDuration(referenceTrack.duration);
-        } else {
-            setDuration(0);
+        const firstTrackId = tracksForSong[0]?.id;
+        if (firstTrackId) {
+            const referenceAudio = audioRefs.current[firstTrackId];
+            if (referenceAudio && isFinite(referenceAudio.duration)) {
+                setDuration(referenceAudio.duration);
+            } else {
+                setDuration(0);
+            }
         }
-      })
-      .catch(error => {
+        setIsReadyToPlay(true);
+      } catch (error: any) {
         console.error("One or more tracks failed to become ready, playback disabled.", error.message);
         setIsReadyToPlay(false);
-      });
+      }
+    };
+
+    prepareAndVerifyTracks();
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSongId, playbackMode]);
