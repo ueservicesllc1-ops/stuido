@@ -310,21 +310,23 @@ const DawPage = () => {
 
       <main className="flex-grow grid grid-cols-12 gap-4 px-4 pb-4 pt-20">
         <div className="col-span-12 lg:col-span-7 items-start">
-          <MixerGrid 
-            tracks={activeTracks}
-            soloTracks={soloTracks}
-            mutedTracks={mutedTracks}
-            volumes={volumes}
-            loadingTracks={loadingTracks}
-            onMuteToggle={toggleMute}
-            onSoloToggle={toggleSolo}
-            onVolumeChange={handleVolumeChange}
-            isPlaying={isPlaying}
-            playbackPosition={playbackPosition}
-            duration={duration}
-            playbackMode={playbackMode}
-            cachedTracks={cachedTracks}
-          />
+          <div>
+            <MixerGrid 
+              tracks={activeTracks}
+              soloTracks={soloTracks}
+              mutedTracks={mutedTracks}
+              volumes={volumes}
+              loadingTracks={loadingTracks}
+              onMuteToggle={toggleMute}
+              onSoloToggle={toggleSolo}
+              onVolumeChange={handleVolumeChange}
+              isPlaying={isPlaying}
+              playbackPosition={playbackPosition}
+              duration={duration}
+              playbackMode={playbackMode}
+              cachedTracks={cachedTracks}
+            />
+          </div>
         </div>
         <div className="col-span-12 lg:col-span-5 flex flex-col gap-4 min-h-0">
             <div className="flex-grow min-h-0">
