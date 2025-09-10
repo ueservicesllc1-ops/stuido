@@ -87,9 +87,19 @@ const TrackPad: React.FC<TrackPadProps> = ({
     }
   };
 
+  const isLedOn = isPlaying && !isDisabled && !isMuted && (!isSolo || isSolo);
+
 
   return (
     <div className="flex flex-col items-center gap-2">
+       <div className="h-4 w-4 flex items-center justify-center">
+            <div
+                className={cn(
+                    'h-2 w-2 rounded-full bg-secondary/30 transition-all',
+                    isLedOn && 'bg-green-400 shadow-[0_0_8px_rgba(134,239,172,0.8)]'
+                )}
+            />
+        </div>
       <div className="relative h-40 flex justify-center items-center" ref={sliderRef}>
          {isHybridDownloading && (
             <div className="absolute top-0 right-0 z-20 p-1 bg-card/80 rounded-full">
