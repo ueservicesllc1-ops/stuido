@@ -196,25 +196,18 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished, t
                     )}/>
                 </div>
                 
-                <FormField
-                  control={form.control}
-                  name="tracks"
-                  render={() => (
-                    <FormItem>
-                      <FormLabel>Archivos de Pistas</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="file"
-                          accept={ACCEPTED_AUDIO_TYPES.join(',')}
-                          multiple
-                          onChange={handleFileChange}
-                          className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="space-y-2">
+                   <FormLabel>Archivos de Pistas</FormLabel>
+                    <FormControl>
+                    <Input
+                        type="file"
+                        accept={ACCEPTED_AUDIO_TYPES.join(',')}
+                        multiple
+                        onChange={handleFileChange}
+                        className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                    />
+                    </FormControl>
+                </div>
 
                 {fields.length > 0 && (
                   <div className="space-y-2">
@@ -241,6 +234,15 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished, t
                     ))}
                   </div>
                 )}
+                 <FormField
+                    control={form.control}
+                    name="tracks"
+                    render={() => (
+                        <FormItem>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                 />
               </div>
             </ScrollArea>
             <DialogFooter>
