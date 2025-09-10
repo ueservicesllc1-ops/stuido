@@ -3,6 +3,7 @@
 import React from 'react';
 import TrackPad from './TrackPad';
 import { SetlistSong } from '@/actions/setlists';
+import { PlaybackMode } from '@/app/page';
 
 interface MixerGridProps {
   tracks: SetlistSong[];
@@ -15,6 +16,7 @@ interface MixerGridProps {
   onVolumeChange: (trackId: string, newVolume: number) => void;
   isPlaying: boolean;
   vuData: Record<string, number>;
+  playbackMode: PlaybackMode;
 }
 
 const MixerGrid: React.FC<MixerGridProps> = ({ 
@@ -27,7 +29,8 @@ const MixerGrid: React.FC<MixerGridProps> = ({
   onSoloToggle,
   onVolumeChange,
   isPlaying,
-  vuData
+  vuData,
+  playbackMode,
 }) => {
   const isSoloActive = soloTracks.length > 0;
 
@@ -54,6 +57,7 @@ const MixerGrid: React.FC<MixerGridProps> = ({
             onSoloToggle={() => onSoloToggle(track.id)}
             onVolumeChange={(newVolume) => onVolumeChange(track.id, newVolume)}
             vuMeterLevel={vuData[track.id] || 0}
+            playbackMode={playbackMode}
           />
         );
       })}
@@ -62,5 +66,3 @@ const MixerGrid: React.FC<MixerGridProps> = ({
 };
 
 export default MixerGrid;
-
-    

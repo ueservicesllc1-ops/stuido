@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { Loader2, Settings } from 'lucide-react';
 import { SetlistSong } from '@/actions/setlists';
 import VuMeter from './VuMeter';
+import { PlaybackMode } from '@/app/page';
 
 interface TrackPadProps {
   track: SetlistSong;
@@ -19,6 +20,7 @@ interface TrackPadProps {
   onMuteToggle: () => void;
   onSoloToggle: () => void;
   vuMeterLevel: number;
+  playbackMode: PlaybackMode;
 }
 
 const TrackPad: React.FC<TrackPadProps> = ({
@@ -32,6 +34,7 @@ const TrackPad: React.FC<TrackPadProps> = ({
   onSoloToggle,
   onMuteToggle,
   vuMeterLevel,
+  playbackMode,
 }) => {
   const { name } = track;
   const [localVolume, setLocalVolume] = useState(volume);
@@ -54,6 +57,19 @@ const TrackPad: React.FC<TrackPadProps> = ({
     const upperCaseName = name.trim().toUpperCase();
     return upperCaseName === 'CLICK' || upperCaseName === 'CUES';
   }, [name]);
+
+  const rangeColorClass = useMemo(() => {
+    if (isSpecialTrack) return 'bg-destructive';
+    switch (playbackMode) {
+      case 'hybrid':
+        return 'bg-yellow-500';
+      case 'offline':
+        return 'bg-green-500';
+      case 'online':
+      default:
+        return 'bg-primary';
+    }
+  }, [isSpecialTrack, playbackMode]);
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -83,9 +99,7 @@ const TrackPad: React.FC<TrackPadProps> = ({
             '[&>span:first-child]:bg-secondary',
             (isSolo || isMuted || isDisabled) && 'opacity-50'
           )}
-          rangeClassName={cn(
-            isSpecialTrack && 'bg-destructive'
-          )}
+          rangeClassName={rangeColorClass}
         />
         <VuMeter level={vuMeterLevel} />
       </div>

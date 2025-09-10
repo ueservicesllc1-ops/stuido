@@ -48,8 +48,12 @@ export default {
           foreground: 'hsl(var(--card-foreground))',
         },
         yellow: {
-          '400': '#FBBF24', // For offline text/icon
-          '500': '#EAB308', // For offline slider/solo button
+          '400': '#FBBF24', // For text/icon
+          '500': '#EAB308', // For slider/solo button
+        },
+        green: {
+          '400': '#22C55E', // For text/icon
+          '500': '#16A34A', // For slider
         }
       },
       borderRadius: {
@@ -83,5 +87,3 @@ export default {
   },
   plugins: [require('tailwindcss-animate')],
 } satisfies Config;
-
-    

@@ -412,6 +412,7 @@ const DawPage = () => {
               onVolumeChange={handleVolumeChange}
               isPlaying={isPlaying}
               vuData={vuData}
+              playbackMode={playbackMode}
             />
         ) : (
           <div className="flex justify-center items-center h-full">
@@ -437,5 +438,3 @@ const DawPage = () => {
 };
 
 export default DawPage;
-
-    
