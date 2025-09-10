@@ -5,13 +5,14 @@ import { cn } from '@/lib/utils';
 import { Progress } from './ui/progress';
 
 const keys = [
-    'Gb', 'D', 'Ab', 'A', 'Bb', 'B'
+    'Gb', 'Db', 'Ab', 'Eb', 'Bb', 'F',
+    'C', 'G', 'D', 'A', 'E', 'B'
 ]
 
 const TonicPad = () => {
   return (
     <div className="bg-card/50 rounded-lg p-3 flex flex-col gap-2">
-      <div className="grid grid-cols-6 gap-1.5 h-40">
+      <div className="grid grid-cols-6 grid-rows-2 gap-1.5 h-40">
         {keys.map((key) => (
             <Button 
                 key={key} 
