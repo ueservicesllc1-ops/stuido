@@ -29,8 +29,8 @@ const TrackPad: React.FC<TrackPadProps> = ({
   isAudible,
   volume,
   onVolumeChange,
-  onMuteToggle,
   onSoloToggle,
+  onMuteToggle,
   vuMeterLevel,
 }) => {
   const { name } = track;
@@ -49,6 +49,11 @@ const TrackPad: React.FC<TrackPadProps> = ({
   const sliderValue = useMemo(() => [localVolume], [localVolume]);
   const isDisabled = isLoading;
   const isSaturated = vuMeterLevel >= 95;
+
+  const isSpecialTrack = useMemo(() => {
+    const upperCaseName = name.trim().toUpperCase();
+    return upperCaseName === 'CLICK' || upperCaseName === 'CUES';
+  }, [name]);
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -78,6 +83,9 @@ const TrackPad: React.FC<TrackPadProps> = ({
             '[&>span:first-child]:bg-secondary',
             (isSolo || isMuted || isDisabled) && 'opacity-50'
           )}
+          rangeClassName={cn(
+            isSpecialTrack && 'bg-destructive'
+          )}
         />
         <VuMeter level={vuMeterLevel} />
       </div>
@@ -85,9 +93,10 @@ const TrackPad: React.FC<TrackPadProps> = ({
        <div className="flex items-center justify-center w-full mt-2">
          <span className={cn(
             "text-xs font-semibold uppercase text-muted-foreground tracking-wider",
-            isDisabled && 'opacity-50'
+            isDisabled && 'opacity-50',
+            isSpecialTrack && 'text-destructive'
           )}>{name}</span>
-         {name === 'CUES' && <Button variant="ghost" size="icon" className="w-4 h-4 ml-1 text-muted-foreground"><Settings className="w-3 h-3" /></Button>}
+         {name.trim().toUpperCase() === 'CUES' && <Button variant="ghost" size="icon" className="w-4 h-4 ml-1 text-muted-foreground"><Settings className="w-3 h-3" /></Button>}
        </div>
 
       <div className="flex gap-1.5 w-full">
@@ -121,5 +130,3 @@ const TrackPad: React.FC<TrackPadProps> = ({
 };
 
 export default TrackPad;
-
-    

@@ -8,13 +8,13 @@ import { cn } from "@/lib/utils"
 
 const Slider = React.forwardRef<
   React.ElementRef<typeof SliderPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root>
->(({ className, orientation = 'horizontal', ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root> & { rangeClassName?: string }
+>(({ className, orientation = 'horizontal', rangeClassName, ...props }, ref) => (
   <SliderPrimitive.Root
     ref={ref}
     orientation={orientation}
     className={cn(
-      "relative flex touch-none select-none items-center group", // Add group
+      "relative flex touch-none select-none items-center group",
       orientation === 'horizontal' && 'h-5 w-full',
       orientation === 'vertical' && 'h-full w-4 flex-col',
       className
@@ -29,14 +29,13 @@ const Slider = React.forwardRef<
       <SliderPrimitive.Range className={cn(
           "absolute bg-primary",
           orientation === 'horizontal' && 'h-full',
-          orientation === 'vertical' && 'w-full bottom-0'
+          orientation === 'vertical' && 'w-full bottom-0',
+          rangeClassName
       )} />
     </SliderPrimitive.Track>
-    {/* Make thumb larger and transparent for easier grabbing, but visually smaller */}
     <SliderPrimitive.Thumb className="block h-4 w-4 rounded-full border-2 border-primary bg-background ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50" />
   </SliderPrimitive.Root>
 ))
 Slider.displayName = SliderPrimitive.Root.displayName
 
 export { Slider }
-
