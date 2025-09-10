@@ -6,9 +6,8 @@
 # Este script realiza las siguientes acciones:
 # 1. Añade todos los cambios (archivos nuevos, modificados, eliminados) al
 #    área de preparación de Git.
-# 2. Crea un commit con un mensaje descriptivo que incluye la fecha y hora
-#    actual para tener un registro claro.
-# 3. Sube (push) los cambios a la rama 'main' del repositorio remoto 'origin'.
+# 2. Crea un commit con un mensaje descriptivo si hay cambios que guardar.
+# 3. Sube (push) todos los commits locales a la rama 'main' del repositorio.
 #
 # Para ejecutar este script:
 # 1. Asegúrate de estar en la terminal, en el directorio raíz de tu proyecto.
@@ -36,18 +35,17 @@ TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
 COMMIT_MESSAGE="Respaldo manual: $TIMESTAMP"
 git commit -m "$COMMIT_MESSAGE"
 if [ $? -ne 0 ]; then
-    echo "⚠️  No se creó un nuevo commit. Probablemente no había cambios que guardar."
-    echo "✅ Todo está al día."
-    exit 0
+    echo "⚠️  No se creó un nuevo commit. Probablemente no había cambios nuevos que guardar."
+else
+    echo "    => Commit creado con el mensaje: '$COMMIT_MESSAGE'"
 fi
-echo "    => Commit creado con el mensaje: '$COMMIT_MESSAGE'"
 
 
 # 3. Subir los cambios a GitHub (rama main)
-echo "    => Subiendo cambios a GitHub..."
+echo "    => Subiendo todos los cambios pendientes a GitHub..."
 git push origin main
 if [ $? -ne 0 ]; then
-    echo "❌ Error: 'git push' falló. Revisa tu conexión o los permisos del repositorio."
+    echo "❌ Error: 'git push' falló. Revisa tu conexión, los permisos del repositorio o si necesitas hacer 'git pull' primero."
     exit 1
 fi
 
