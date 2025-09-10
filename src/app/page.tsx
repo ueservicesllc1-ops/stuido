@@ -16,6 +16,7 @@ const DawPage = () => {
   const [soloTracks, setSoloTracks] = useState<string[]>([]);
   const [mutedTracks, setMutedTracks] = useState<string[]>([]);
   const [initialSetlist, setInitialSetlist] = useState<Setlist | null>(null);
+  const [activeSongId, setActiveSongId] = useState<string | null>(null);
 
   // --- Audio State ---
   const [isPlaying, setIsPlaying] = useState(false);
@@ -44,15 +45,26 @@ const DawPage = () => {
   // Actualiza las pistas cuando cambia el setlist inicial
   useEffect(() => {
     if (initialSetlist && initialSetlist.songs) {
-      setTracks(initialSetlist.songs);
+      const allTracks = initialSetlist.songs;
+      setTracks(allTracks);
+      
+      // Activa la primera canción del setlist por defecto
+      if (allTracks.length > 0 && allTracks[0].songId) {
+        setActiveSongId(allTracks[0].songId);
+      } else {
+        setActiveSongId(null);
+      }
+      
       // Reiniciar las URLs y el estado de carga al cambiar de setlist
       setTrackUrls({});
       setLoadingTracks([]);
       
       // Cuando cambia el setlist, cargar todas sus pistas según el modo actual
-      initialSetlist.songs.forEach(song => loadTrack(song));
+      allTracks.forEach(song => loadTrack(song));
+
     } else {
       setTracks([]);
+      setActiveSongId(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSetlist, playbackMode]);
@@ -220,12 +232,20 @@ const DawPage = () => {
     setInitialSetlist(setlist);
   };
   
+  const handleSongSelect = (songId: string) => {
+    handleStop();
+    setActiveSongId(songId);
+    setDuration(0); // Reset duration when changing song
+  };
+
+  const activeTracks = tracks.filter(t => t.songId === activeSongId);
+
   // Filtra las pistas para mostrar solo las que están listas.
   // En modo offline, solo se muestran las cacheadas.
   // En modo online, se muestran todas.
   const visibleTracks = playbackMode === 'offline' 
-    ? tracks.filter(t => trackUrls[t.id]?.startsWith('blob:'))
-    : tracks;
+    ? activeTracks.filter(t => trackUrls[t.id]?.startsWith('blob:'))
+    : activeTracks;
 
 
   return (
@@ -280,8 +300,10 @@ const DawPage = () => {
         </div>
         <div className="col-span-12 lg:col-span-3">
           <SongList 
-            initialSetlist={initialSetlist} 
+            initialSetlist={initialSetlist}
+            activeSongId={activeSongId}
             onSetlistSelected={handleSetlistUpdate}
+            onSongSelected={handleSongSelect}
             onLoadTrack={loadTrack}
           />
         </div>

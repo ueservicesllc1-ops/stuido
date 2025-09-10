@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
@@ -26,11 +25,13 @@ import {
 
 interface SongListProps {
   initialSetlist?: Setlist | null;
+  activeSongId: string | null;
   onSetlistSelected: (setlist: Setlist | null) => void;
+  onSongSelected: (songId: string) => void;
   onLoadTrack: (track: SetlistSong) => void;
 }
 
-const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, onLoadTrack }) => {
+const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSetlistSelected, onSongSelected, onLoadTrack }) => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [isLoadingSongs, setIsLoadingSongs] = useState(false);
   const [songsError, setSongsError] = useState<string | null>(null);
@@ -315,25 +316,36 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
         const songId = track.songId || 'unknown';
         if (!acc[songId]) {
             acc[songId] = {
+                songId: songId,
                 songName: track.songName || 'Canción Desconocida',
                 tracks: []
             };
         }
         acc[songId].tracks.push(track);
         return acc;
-    }, {} as Record<string, { songName: string; tracks: SetlistSong[] }>);
+    }, {} as Record<string, { songId: string; songName: string; tracks: SetlistSong[] }>);
 
     return (
         <div className="space-y-3">
-            {Object.entries(songsInSetlist).map(([songId, songGroup]) => (
-                <div key={songId} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent group">
+            {Object.values(songsInSetlist).map((songGroup) => (
+                <div 
+                    key={songGroup.songId} 
+                    className={cn(
+                        "flex items-center gap-3 p-2 rounded-md group cursor-pointer",
+                        activeSongId === songGroup.songId ? 'bg-primary/20' : 'hover:bg-accent'
+                    )}
+                    onClick={() => onSongSelected(songGroup.songId)}
+                >
                     <Music className="w-5 h-5 text-muted-foreground" />
                     <p className="font-semibold text-foreground flex-grow">{songGroup.songName}</p>
                     <Button 
                         variant="ghost" 
                         size="icon" 
                         className="w-8 h-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
-                        onClick={() => handleRemoveSongFromSetlist(songId, songGroup.songName)}
+                        onClick={(e) => {
+                            e.stopPropagation(); // Evita que se seleccione la canción al eliminarla
+                            handleRemoveSongFromSetlist(songGroup.songId, songGroup.songName)
+                        }}
                     >
                         <Trash2 className="w-4 h-4" />
                     </Button>
