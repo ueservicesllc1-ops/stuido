@@ -96,23 +96,14 @@ const DawPage = () => {
   }, [playbackMode]);
 
 
-  // Re-evaluar y cargar pistas de la canción ACTIVA al cambiar de modo o de canción
+  // Prepara las pistas cuando cambia la canción activa
   useEffect(() => {
-    if (activeTracks.length > 0) {
-      activeTracks.forEach(track => {
-        checkCacheStatus(track); // Verifica si ya está en caché
-        
-        // Si estamos en modo offline y la pista no está en caché, la descarga.
-        if (playbackMode === 'offline' && !cachedTracks.has(track.id)) {
-            loadTrack(track);
-        } else {
-            // Si no, simplemente asigna la URL (remota u offline si ya estaba)
-            assignTrackUrl(track);
-        }
-      });
+    if (activeSongId) {
+      const tracksForSong = tracks.filter(t => t.songId === activeSongId);
+      tracksForSong.forEach(prepareAndAssignUrl);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playbackMode, activeTracks]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSongId, playbackMode]);
   
   // Chequea si las pistas de la canción activa están listas para reproducirse
   useEffect(() => {
@@ -222,39 +213,31 @@ const DawPage = () => {
 
 
   // --- Lógica de Carga y Caché ---
-  const checkCacheStatus = async (track: SetlistSong) => {
-    const blob = await getCachedAudio(track.url);
-    if(blob) {
+  
+  const prepareAndAssignUrl = async (track: SetlistSong) => {
+    const cachedBlob = await getCachedAudio(track.url);
+    if(cachedBlob) {
       setCachedTracks(prev => new Set(prev).add(track.id));
-      assignTrackUrl(track, blob); // Pre-asignar la URL si ya está en caché
+      const localUrl = URL.createObjectURL(cachedBlob);
+      setTrackUrls(prev => ({...prev, [track.id]: localUrl}));
     } else {
+      // No está en caché
       setCachedTracks(prev => {
         const newSet = new Set(prev);
         newSet.delete(track.id);
         return newSet;
       });
-      assignTrackUrl(track); // Asignar URL remota si no está en caché
-    }
-  }
 
-  const assignTrackUrl = async (track: SetlistSong, cachedBlob: Blob | null = null) => {
-      let blob = cachedBlob;
-      // Intenta obtener de la caché siempre primero, por si acaso.
-      if (!blob) blob = await getCachedAudio(track.url);
-
-      if (blob) {
-        const localUrl = URL.createObjectURL(blob);
-        setTrackUrls(prev => ({...prev, [track.id]: localUrl}));
+      if (playbackMode === 'online') {
+        // En modo online, usamos la URL del proxy
+        setTrackUrls(prev => ({...prev, [track.id]: `/api/download?url=${encodeURIComponent(track.url)}`}));
       } else {
-        if (playbackMode === 'online') {
-            // En modo online, usamos la URL del proxy
-            setTrackUrls(prev => ({...prev, [track.id]: `/api/download?url=${encodeURIComponent(track.url)}`}));
-        } else {
-            // En modo offline y sin caché, la URL queda vacía.
-            setTrackUrls(prev => ({...prev, [track.id]: ''}));
-        }
+        // En modo offline, la URL queda vacía inicialmente y se inicia la descarga
+        setTrackUrls(prev => ({...prev, [track.id]: ''}));
+        loadTrack(track); // Inicia la descarga
       }
-  }
+    }
+  };
 
   const loadTrack = async (track: SetlistSong) => {
     if (loadingTracks.includes(track.id) || cachedTracks.has(track.id)) return;
@@ -262,17 +245,15 @@ const DawPage = () => {
     setLoadingTracks(prev => [...prev, track.id]);
 
     try {
-        let blob = await getCachedAudio(track.url);
-        if (!blob) {
-          blob = await cacheAudio(track.url);
-        }
+        const blob = await cacheAudio(track.url);
         setCachedTracks(prev => new Set(prev).add(track.id));
         const localUrl = URL.createObjectURL(blob);
+        // Una vez descargado, se asigna la URL, lo que disparará el useEffect de 'isReadyToPlay'
         setTrackUrls(prev => ({...prev, [track.id]: localUrl}));
       
     } catch (error) {
       console.error(`Error loading track ${track.name}:`, error);
-      // No hacemos fallback a la URL original, en modo offline estricto
+      setTrackUrls(prev => ({...prev, [track.id]: ''})); // Asegurarse de que la URL quede vacía si falla
     } finally {
       setLoadingTracks(prev => prev.filter(id => id !== track.id));
     }
