@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Header from '@/components/Header';
 import MixerGrid from '@/components/MixerGrid';
 import SongList from '@/components/SongList';
@@ -170,11 +170,33 @@ const DawPage = () => {
     }
   };
   
-  const activeTracks = tracks.filter(t => t.songId === activeSongId);
+  const getPrio = (trackName: string) => {
+    const upperCaseName = trackName.toUpperCase();
+    if (upperCaseName === 'CLICK') return 1;
+    if (upperCaseName === 'CUES') return 2;
+    return 3;
+  };
+  
+  const activeTracks = tracks
+    .filter(t => t.songId === activeSongId)
+    .sort((a, b) => {
+        const prioA = getPrio(a.name);
+        const prioB = getPrio(b.name);
+        if (prioA !== prioB) {
+            return prioA - prioB;
+        }
+        return a.name.localeCompare(b.name);
+    });
 
   const handlePlay = () => {
     setIsPlaying(true);
-    const playPromises = activeTracks.map(track => audioRefs.current[track.id]?.play());
+    const playPromises = activeTracks.map(track => {
+        if(audioRefs.current[track.id]) {
+            return audioRefs.current[track.id]!.play();
+        }
+        return null;
+    }).filter(p => p);
+    
     Promise.all(playPromises).catch(e => {
       // Un solo error puede ser reportado si el usuario no ha interactuado
       console.error("Play error:", e.message);
@@ -185,7 +207,14 @@ const DawPage = () => {
 
   const handlePause = () => {
     setIsPlaying(false);
-    activeTracks.forEach(track => audioRefs.current[track.id]?.pause());
+    Object.keys(audioRefs.current).forEach(trackId => {
+        const audio = audioRefs.current[trackId];
+        // Solo pausamos las pistas que pertenecen a la canción activa
+        if (audio && tracks.find(t => t.id === trackId && t.songId === activeSongId)) {
+            audio.pause();
+        }
+    });
+
     if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
     }
@@ -194,9 +223,12 @@ const DawPage = () => {
   const handleStop = () => {
     handlePause();
     setPlaybackPosition(0);
-    activeTracks.forEach(track => {
-        const audio = audioRefs.current[track.id];
-        if (audio) audio.currentTime = 0;
+    Object.keys(audioRefs.current).forEach(trackId => {
+        const audio = audioRefs.current[trackId];
+         // Solo reiniciamos las pistas que pertenecen a la canción activa
+        if (audio && tracks.find(t => t.id === trackId && t.songId === activeSongId)) {
+            audio.currentTime = 0;
+        }
     });
   };
 
@@ -215,13 +247,17 @@ const DawPage = () => {
     handleSeek(Math.min(duration, playbackPosition + 5));
   };
 
-  const handleVolumeChange = (trackId: string, newVolume: number) => {
-    setVolumes(prev => ({ ...prev, [trackId]: newVolume }));
-    const audio = audioRefs.current[trackId];
-    if (audio) {
-      audio.volume = newVolume / 100;
-    }
-  };
+  const handleVolumeChange = useCallback((trackId: string, newVolume: number) => {
+    setVolumes(prev => {
+      if (prev[trackId] === newVolume) return prev;
+      const newVolumes = { ...prev, [trackId]: newVolume };
+      const audio = audioRefs.current[trackId];
+      if (audio) {
+        audio.volume = newVolume / 100;
+      }
+      return newVolumes;
+    });
+  }, []);
 
   const toggleMute = (trackId: string) => {
     setMutedTracks(prev =>
@@ -350,3 +386,5 @@ const DawPage = () => {
 };
 
 export default DawPage;
+
+    

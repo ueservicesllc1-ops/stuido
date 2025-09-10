@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { Button } from './ui/button';
 import { Slider } from './ui/slider';
 import { cn } from '@/lib/utils';
@@ -14,7 +14,7 @@ interface TrackPadProps {
   isMuted: boolean;
   isSolo: boolean;
   volume: number;
-  onVolumeChange: (volume: number) => void;
+  onVolumeChange: (trackId: string, volume: number) => void;
   onMuteToggle: () => void;
   onSoloToggle: () => void;
   isPlaying: boolean;
@@ -39,20 +39,27 @@ const TrackPad: React.FC<TrackPadProps> = ({
   playbackMode,
   isCached,
 }) => {
-  const { name } = track;
+  const { id, name } = track;
   const sliderRef = useRef<HTMLDivElement>(null);
   const [sliderHeight, setSliderHeight] = useState(0);
+  const [localVolume, setLocalVolume] = useState(volume);
 
   useEffect(() => {
     if (sliderRef.current) {
       setSliderHeight(sliderRef.current.offsetHeight);
     }
-  }, [sliderRef]);
+  }, []);
+
+  useEffect(() => {
+    setLocalVolume(volume);
+  }, [volume]);
 
   const color = (name.toUpperCase() === 'CLICK' || name.toUpperCase() === 'CUES') ? 'destructive' : 'primary';
-
+  
   const handleVolumeChange = (value: number[]) => {
-    onVolumeChange(value[0]);
+    const newVolume = value[0];
+    setLocalVolume(newVolume);
+    onVolumeChange(id, newVolume);
   };
   
   const progressPercentage = duration > 0 ? (playbackPosition / duration) * 100 : 0;
@@ -61,6 +68,8 @@ const TrackPad: React.FC<TrackPadProps> = ({
 
   const isDownloading = playbackMode === 'offline' && !isCached;
   const isDisabled = isLoading || isDownloading;
+  
+  const sliderValue = useMemo(() => [localVolume], [localVolume]);
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -80,7 +89,7 @@ const TrackPad: React.FC<TrackPadProps> = ({
           />
         )}
         <Slider
-          defaultValue={[volume]}
+          value={sliderValue}
           max={100}
           step={1}
           orientation="vertical"
@@ -138,3 +147,5 @@ const TrackPad: React.FC<TrackPadProps> = ({
 };
 
 export default TrackPad;
+
+    
