@@ -37,10 +37,11 @@ export const getCachedAudio = async (url: string): Promise<Blob | null> => {
  */
 export const cacheAudio = async (url: string): Promise<Blob> => {
   try {
-    // Usamos 'no-cors' para evitar problemas de CORS con B2 u otros almacenamientos
-    const response = await fetch(url, { mode: 'no-cors' });
-    if (!response.ok && response.type !== 'opaque') {
-       throw new Error(`Failed to fetch audio: ${response.statusText}`);
+    // Usamos nuestro endpoint de proxy para evitar problemas de CORS
+    const response = await fetch(`/api/download?url=${encodeURIComponent(url)}`);
+
+    if (!response.ok) {
+       throw new Error(`Failed to fetch audio via proxy: ${response.statusText}`);
     }
     const blob = await response.blob();
     await localforage.setItem(url, blob);

@@ -45,6 +45,10 @@ const DawPage = () => {
   useEffect(() => {
     if (initialSetlist && initialSetlist.songs) {
       setTracks(initialSetlist.songs);
+      // Reiniciar las URLs y el estado de carga al cambiar de setlist
+      setTrackUrls({});
+      setLoadingTracks([]);
+      
       // Cuando cambia el setlist, cargar todas sus pistas según el modo actual
       initialSetlist.songs.forEach(song => loadTrack(song));
     } else {
@@ -93,11 +97,12 @@ const DawPage = () => {
         const localUrl = URL.createObjectURL(blob);
         setTrackUrls(prev => ({...prev, [track.id]: localUrl}));
       } else {
+        // En modo online, usar la URL directa
         setTrackUrls(prev => ({...prev, [track.id]: track.url}));
       }
     } catch (error) {
       console.error(`Error loading track ${track.name}:`, error);
-      // Fallback a online si la caché falla
+      // Si hay un error, por ejemplo, al cargar offline, podemos intentar usar la url online como fallback
       setTrackUrls(prev => ({...prev, [track.id]: track.url}));
     } finally {
       setLoadingTracks(prev => prev.filter(id => id !== track.id));
@@ -210,6 +215,11 @@ const DawPage = () => {
   const handleSetlistUpdate = (setlist: Setlist | null) => {
     setInitialSetlist(setlist);
   };
+  
+  const visibleTracks = playbackMode === 'offline' 
+    ? tracks.filter(t => !loadingTracks.includes(t.id) && trackUrls[t.id]?.startsWith('blob:'))
+    : tracks;
+
 
   return (
     <div className="flex flex-col h-screen bg-background font-sans text-sm">
@@ -247,7 +257,7 @@ const DawPage = () => {
       <main className="flex-grow grid grid-cols-12 gap-4 px-4 pb-4 pt-20">
         <div className="col-span-12 lg:col-span-7">
           <MixerGrid 
-            tracks={tracks}
+            tracks={visibleTracks}
             soloTracks={soloTracks}
             mutedTracks={mutedTracks}
             volumes={volumes}
