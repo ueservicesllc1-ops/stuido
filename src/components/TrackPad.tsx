@@ -13,6 +13,7 @@ interface TrackPadProps {
   isLoading: boolean;
   isMuted: boolean;
   isSolo: boolean;
+  isAudible: boolean;
   volume: number;
   onVolumeChange: (trackId: string, volume: number) => void;
   onMuteToggle: () => void;
@@ -30,6 +31,7 @@ const TrackPad: React.FC<TrackPadProps> = ({
   isLoading,
   isMuted,
   isSolo,
+  isAudible,
   volume,
   onVolumeChange,
   onMuteToggle,
@@ -88,7 +90,6 @@ const TrackPad: React.FC<TrackPadProps> = ({
     }
   };
 
-  const isLedOn = isPlaying && !isDisabled && !isMuted && (!isSolo || isSolo);
   const isSaturated = localVolume >= 95;
 
 
@@ -98,8 +99,8 @@ const TrackPad: React.FC<TrackPadProps> = ({
             <div
                 className={cn(
                     'h-2 w-2 rounded-full bg-secondary/30 transition-all',
-                    isLedOn && !isSaturated && 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]',
-                    isLedOn && isSaturated && 'bg-destructive shadow-[0_0_8px_rgba(239,68,68,0.8)]'
+                    isAudible && !isSaturated && 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]',
+                    isAudible && isSaturated && 'bg-destructive shadow-[0_0_8px_rgba(239,68,68,0.8)]'
                 )}
             />
         </div>

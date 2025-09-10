@@ -41,27 +41,39 @@ const MixerGrid: React.FC<MixerGridProps> = ({
   cachedTracks,
   hybridDownloadingTracks
 }) => {
+  const isSoloActive = soloTracks.length > 0;
+
   return (
     <div className="grid grid-cols-7 gap-4 items-start">
-      {tracks.map(track => (
-        <TrackPad
-          key={track.id}
-          track={track}
-          isLoading={loadingTracks.includes(track.id)}
-          isMuted={mutedTracks.includes(track.id)}
-          isSolo={soloTracks.includes(track.id)}
-          volume={volumes[track.id] ?? 75}
-          onMuteToggle={() => onMuteToggle(track.id)}
-          onSoloToggle={() => onSoloToggle(track.id)}
-          onVolumeChange={(newVolume) => onVolumeChange(track.id, newVolume)}
-          isPlaying={isPlaying}
-          playbackPosition={playbackPosition}
-          duration={duration}
-          playbackMode={playbackMode}
-          isCached={cachedTracks.has(track.id)}
-          isHybridDownloading={hybridDownloadingTracks.has(track.id)}
-        />
-      ))}
+      {tracks.map(track => {
+        const isMuted = mutedTracks.includes(track.id);
+        const isSolo = soloTracks.includes(track.id);
+        const isDownloadingForOffline = playbackMode === 'offline' && !cachedTracks.has(track.id);
+        const isDisabled = loadingTracks.includes(track.id) || isDownloadingForOffline;
+
+        const isAudible = isPlaying && !isDisabled && !isMuted && (!isSoloActive || isSolo);
+
+        return (
+          <TrackPad
+            key={track.id}
+            track={track}
+            isLoading={loadingTracks.includes(track.id)}
+            isMuted={isMuted}
+            isSolo={isSolo}
+            isAudible={isAudible}
+            volume={volumes[track.id] ?? 75}
+            onMuteToggle={() => onMuteToggle(track.id)}
+            onSoloToggle={() => onSoloToggle(track.id)}
+            onVolumeChange={(newVolume) => onVolumeChange(track.id, newVolume)}
+            isPlaying={isPlaying}
+            playbackPosition={playbackPosition}
+            duration={duration}
+            playbackMode={playbackMode}
+            isCached={cachedTracks.has(track.id)}
+            isHybridDownloading={hybridDownloadingTracks.has(track.id)}
+          />
+        );
+      })}
     </div>
   );
 };
