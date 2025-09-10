@@ -309,7 +309,7 @@ const DawPage = () => {
       </div>
 
       <main className="flex-grow grid grid-cols-12 gap-4 px-4 pb-4 pt-20">
-        <div className="col-span-12 lg:col-span-8">
+        <div className="col-span-12 lg:col-span-7">
           <MixerGrid 
             tracks={activeTracks}
             soloTracks={soloTracks}
@@ -326,7 +326,7 @@ const DawPage = () => {
             cachedTracks={cachedTracks}
           />
         </div>
-        <div className="col-span-12 lg:col-span-4 flex flex-col gap-4">
+        <div className="col-span-12 lg:col-span-5 flex flex-col gap-4">
           <div className="flex-grow flex flex-col min-h-0">
             <SongList 
                 initialSetlist={initialSetlist}
