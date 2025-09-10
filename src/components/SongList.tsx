@@ -43,6 +43,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
   const [selectedSetlist, setSelectedSetlist] = useState<Setlist | null>(null);
   const [isSetlistSheetOpen, setIsSetlistSheetOpen] = useState(false);
   const [isLibrarySheetOpen, setIsLibrarySheetOpen] = useState(false);
+  const [isLibrarySheetForEditingOpen, setIsLibrarySheetForEditingOpen] = useState(false);
   const [songToDelete, setSongToDelete] = useState<Song | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
@@ -268,66 +269,47 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
   };
 
   const renderSetlist = () => {
-    if (!selectedSetlist || !selectedSetlist.songs || selectedSetlist.songs.length === 0) {
+    // Agrupar pistas por canción
+    const songsInSetlist = selectedSetlist.songs.reduce((acc, track) => {
+        // Solo procesar pistas que tengan información de la canción padre
+        if (track.songId && track.songName) {
+            const songId = track.songId;
+            if (!acc[songId]) {
+                acc[songId] = {
+                    songId: songId,
+                    songName: track.songName,
+                    tracks: []
+                };
+            }
+            acc[songId].tracks.push(track);
+        }
+        return acc;
+    }, {} as Record<string, { songId: string; songName: string; tracks: SetlistSong[] }>);
+
+    const groupedSongs = Object.values(songsInSetlist);
+
+    if (groupedSongs.length === 0) {
         return (
             <div className="text-center pt-10 text-muted-foreground">
                 <p>Este setlist no tiene canciones.</p>
-                <Sheet open={isLibrarySheetOpen} onOpenChange={setIsLibrarySheetOpen}>
-                    <SheetTrigger asChild>
-                        <Button variant="link" className="text-primary mt-2" onClick={handleFetchSongs}>
-                        <PlusCircle className="w-4 h-4 mr-2" />
-                        Añadir canciones
-                        </Button>
-                    </SheetTrigger>
-                    <SheetContent side="left" className="w-[400px] sm:w-[500px] bg-card/95 p-0">
-                        <SheetHeader className="p-4 pb-0">
-                            <SheetTitle>Añadir Canciones</SheetTitle>
-                            <SheetDescription>
-                            Explora tus bibliotecas y añade canciones al setlist activo.
-                            </SheetDescription>
-                        </SheetHeader>
-                        <Tabs defaultValue="local" className="flex flex-col h-full pt-2">
-                        <TabsList className="mx-4">
-                            <TabsTrigger value="local" className="gap-2"><Library className="w-4 h-4" /> Biblioteca Local</TabsTrigger>
-                            <TabsTrigger value="global" className="gap-2"><Globe className="w-4 h-4"/> Biblioteca Global</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="local" className="flex-grow overflow-y-auto px-4">
-                            <div className="flex justify-between items-center my-4">
-                            <h3 className="font-semibold">Añadir a "{selectedSetlist.name}"</h3>
-                            <UploadSongDialog onUploadFinished={handleFetchSongs} />
-                            </div>
-                            {renderSongList()}
-                        </TabsContent>
-                        <TabsContent value="global" className="flex-grow overflow-y-auto px-4">
-                            <div className="flex justify-between items-center my-4">
-                            <h3 className="font-semibold">Añadir a "{selectedSetlist.name}"</h3>
-                            </div>
-                            {renderSongList(true)}
-                        </TabsContent>
-                        </Tabs>
-                    </SheetContent>
-                </Sheet>
+                <Button 
+                  variant="link" 
+                  className="text-primary mt-2" 
+                  onClick={() => {
+                    handleFetchSongs();
+                    setIsLibrarySheetForEditingOpen(true);
+                  }}>
+                  <PlusCircle className="w-4 h-4 mr-2" />
+                  Añadir canciones
+                </Button>
             </div>
         );
     }
 
-    // Agrupar pistas por canción
-    const songsInSetlist = selectedSetlist.songs.reduce((acc, track) => {
-        const songId = track.songId || 'unknown';
-        if (!acc[songId]) {
-            acc[songId] = {
-                songId: songId,
-                songName: track.songName || 'Canción Desconocida',
-                tracks: []
-            };
-        }
-        acc[songId].tracks.push(track);
-        return acc;
-    }, {} as Record<string, { songId: string; songName: string; tracks: SetlistSong[] }>);
 
     return (
         <div className="space-y-3">
-            {Object.values(songsInSetlist).map((songGroup) => (
+            {groupedSongs.map((songGroup) => (
                 <div 
                     key={songGroup.songId} 
                     className={cn(
@@ -432,29 +414,31 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
       <div className="flex-grow space-y-1 overflow-y-auto">
         {selectedSetlist ? renderSetlist() : <p className="text-muted-foreground text-center pt-10">Selecciona un setlist para ver las canciones.</p>}
       </div>
-       <Sheet open={isLibrarySheetOpen} onOpenChange={setIsLibrarySheetOpen}>
         <div className="pt-3 mt-auto border-t border-border/50 flex justify-between items-center">
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="sm" className="text-muted-foreground gap-2" onClick={handleFetchSongs}>
-                  <Library className="w-4 h-4" />
-                  Biblioteca
-              </Button>
-            </SheetTrigger>
+            <Button variant="ghost" size="sm" className="text-muted-foreground gap-2" onClick={() => {
+              handleFetchSongs();
+              setIsLibrarySheetOpen(true);
+            }}>
+                <Library className="w-4 h-4" />
+                Biblioteca
+            </Button>
 
             {selectedSetlist && (
-                 <SheetTrigger asChild>
-                    <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={handleFetchSongs}>
-                        Editar setlist
-                    </Button>
-                 </SheetTrigger>
+                <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => {
+                  handleFetchSongs();
+                  setIsLibrarySheetForEditingOpen(true);
+                }}>
+                    Editar setlist
+                </Button>
             )}
         </div>
 
+      <Sheet open={isLibrarySheetOpen} onOpenChange={setIsLibrarySheetOpen}>
         <SheetContent side="left" className="w-[400px] sm:w-[500px] bg-card/95 p-0">
           <SheetHeader className="p-4 pb-0">
             <SheetTitle>Biblioteca de Canciones</SheetTitle>
             <SheetDescription>
-                Gestiona tus canciones o explora la biblioteca global para añadir a un setlist.
+                Gestiona tus canciones o explora la biblioteca global.
             </SheetDescription>
           </SheetHeader>
           <Tabs defaultValue="local" className="h-full flex flex-col pt-2">
@@ -465,7 +449,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
             
             <TabsContent value="local" className="flex-grow overflow-y-auto px-4">
                 <div className="flex justify-between items-center my-4">
-                  <h3 className="font-semibold">{selectedSetlist ? `Añadir a "${selectedSetlist.name}"` : 'Biblioteca de Canciones'}</h3>
+                  <h3 className="font-semibold">Biblioteca de Canciones</h3>
                   <UploadSongDialog onUploadFinished={handleFetchSongs} />
                 </div>
                 {renderSongList()}
@@ -473,11 +457,41 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
 
             <TabsContent value="global" className="flex-grow overflow-y-auto px-4">
                 <div className="flex justify-between items-center my-4">
-                  <h3 className="font-semibold">{selectedSetlist ? `Añadir a "${selectedSetlist.name}"` : 'Biblioteca Global'}</h3>
+                  <h3 className="font-semibold">Biblioteca Global</h3>
                 </div>
                 {renderSongList(true)}
             </TabsContent>
           </Tabs>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={isLibrarySheetForEditingOpen} onOpenChange={setIsLibrarySheetForEditingOpen}>
+        <SheetContent side="left" className="w-[400px] sm:w-[500px] bg-card/95 p-0">
+            <SheetHeader className="p-4 pb-0">
+                <SheetTitle>Añadir Canciones a "{selectedSetlist?.name}"</SheetTitle>
+                <SheetDescription>
+                Explora tus bibliotecas y añade canciones al setlist activo.
+                </SheetDescription>
+            </SheetHeader>
+            <Tabs defaultValue="local" className="flex flex-col h-full pt-2">
+            <TabsList className="mx-4">
+                <TabsTrigger value="local" className="gap-2"><Library className="w-4 h-4" /> Biblioteca Local</TabsTrigger>
+                <TabsTrigger value="global" className="gap-2"><Globe className="w-4 h-4"/> Biblioteca Global</TabsTrigger>
+            </TabsList>
+            <TabsContent value="local" className="flex-grow overflow-y-auto px-4">
+                <div className="flex justify-between items-center my-4">
+                <h3 className="font-semibold">Biblioteca de Canciones</h3>
+                <UploadSongDialog onUploadFinished={handleFetchSongs} />
+                </div>
+                {renderSongList()}
+            </TabsContent>
+            <TabsContent value="global" className="flex-grow overflow-y-auto px-4">
+                <div className="flex justify-between items-center my-4">
+                <h3 className="font-semibold">Biblioteca Global</h3>
+                </div>
+                {renderSongList(true)}
+            </TabsContent>
+            </Tabs>
         </SheetContent>
       </Sheet>
     </div>
