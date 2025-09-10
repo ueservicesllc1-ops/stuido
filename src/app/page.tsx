@@ -222,7 +222,6 @@ const DawPage = () => {
               onLoadedMetadata={() => onLoadedMetadata(track.id)}
               onEnded={handlePause}
               preload="auto"
-              crossOrigin="anonymous"
           />
       ))}
       
