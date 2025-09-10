@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { Button } from './ui/button';
@@ -147,5 +146,3 @@ const TrackPad: React.FC<TrackPadProps> = ({
 };
 
 export default TrackPad;
-
-    
