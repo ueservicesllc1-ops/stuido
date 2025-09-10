@@ -85,7 +85,12 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished, t
     const files = event.target.files;
     if (files) {
       Array.from(files).forEach(file => {
-        const trackName = file.name.split('.').slice(0, -1).join('.') || file.name;
+        let trackName = file.name.split('.').slice(0, -1).join('.') || file.name;
+        // 1. Sin espacios
+        trackName = trackName.replace(/\s/g, '');
+        // 2. Limita a 6 caracteres
+        trackName = trackName.substring(0, 6);
+        
         append({ file, name: trackName });
       });
       // Set song name from first file if empty
