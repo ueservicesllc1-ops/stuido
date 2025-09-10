@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { Progress } from './ui/progress';
 
 const keys = [
-    'Gb', 'G', 'Ab', 'A', 'Bb', 'B'
+    'Gb', 'D', 'Ab', 'A', 'Bb', 'B'
 ]
 
 const TonicPad = () => {
