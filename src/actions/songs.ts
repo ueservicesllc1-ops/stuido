@@ -3,13 +3,22 @@
 
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, serverTimestamp, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
-// Eliminamos la importación de deleteFileFromB2 ya que no se usará
-// import { deleteFileFromB2 } from './upload';
 
-export interface NewSong {
+// Represents a single track file within a song
+export interface TrackFile {
   name: string;
   url: string;
   fileKey: string;
+}
+
+// Represents the new Song entity, which is a collection of tracks and metadata
+export interface NewSong {
+  name: string;
+  artist: string;
+  tempo: number;
+  key: string;
+  timeSignature: string;
+  tracks: TrackFile[];
 }
 
 export interface Song extends NewSong {
@@ -19,12 +28,13 @@ export interface Song extends NewSong {
 export async function saveSong(data: NewSong) {
   try {
     const songsCollection = collection(db, 'songs');
+    
     const newDoc = await addDoc(songsCollection, {
       ...data,
       createdAt: serverTimestamp(),
     });
 
-    const songData = {
+    const songData: Song = {
       id: newDoc.id,
       ...data
     }
@@ -42,12 +52,18 @@ export async function getSongs() {
         const q = query(songsCollection, orderBy('createdAt', 'desc'));
         const songsSnapshot = await getDocs(q);
         
-        const songs: Song[] = songsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            name: doc.data().name,
-            url: doc.data().url,
-            fileKey: doc.data().fileKey
-        }));
+        const songs: Song[] = songsSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                name: data.name,
+                artist: data.artist,
+                tempo: data.tempo,
+                key: data.key,
+                timeSignature: data.timeSignature,
+                tracks: data.tracks || []
+            };
+        });
 
         return { success: true, songs };
     } catch (error) {
@@ -58,10 +74,7 @@ export async function getSongs() {
 
 export async function deleteSong(song: Song) {
     try {
-        // Ya no eliminamos el archivo de B2, solo de Firestore.
-        // La lógica de eliminación del archivo físico ha sido removida.
-
-        // 1. Delete document from Firestore
+        // We only delete the document from Firestore, not the files from B2.
         const songRef = doc(db, 'songs', song.id);
         await deleteDoc(songRef);
 

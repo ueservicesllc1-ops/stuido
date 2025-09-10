@@ -1,3 +1,4 @@
+
 'use server';
 
 import { db } from '@/lib/firebase';
@@ -10,11 +11,15 @@ export interface NewSetlist {
 }
 
 // Interfaz para una canción dentro de un setlist
+// Esto ahora representa una pista individual de una canción más grande.
 export interface SetlistSong {
-  id: string;
-  name: string;
+  id: string; // Puede ser un ID único para la pista en el contexto del setlist, o el ID de la canción padre.
+  name: string; // Nombre de la pista individual, ej: "Guitars"
   url: string;
   fileKey: string;
+  // Opcionalmente, podrías añadir metadatos de la canción padre si es necesario
+  // songId: string;
+  // songName: string;
 }
 
 export interface Setlist extends NewSetlist {

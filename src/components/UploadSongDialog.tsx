@@ -13,9 +13,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { z } from 'zod';
 import {
   Form,
@@ -25,31 +24,38 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Loader2, Upload } from 'lucide-react';
+import { Loader2, Upload, FileAudio, X } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { ScrollArea } from './ui/scroll-area';
 
-const ACCEPTED_AUDIO_TYPES = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio/x-m4a'];
+const ACCEPTED_AUDIO_TYPES = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio/x-m4a', 'audio/mp3'];
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
-const songFormSchema = z.object({
-  name: z.string().min(2, {
-    message: 'El nombre debe tener al menos 2 caracteres.',
-  }),
+const trackSchema = z.object({
   file: z
-    .instanceof(File, { message: 'Se requiere un archivo.' })
+    .instanceof(File)
     .refine((file) => file.size > 0, 'Se requiere un archivo.')
     .refine((file) => file.size <= MAX_FILE_SIZE, `El tamaño máximo es 50MB.`)
     .refine(
       (file) => ACCEPTED_AUDIO_TYPES.includes(file.type),
       'Formato de audio no soportado.'
     ),
+  name: z.string().min(1, { message: 'El nombre de la pista es requerido.' }),
+});
+
+const songFormSchema = z.object({
+  name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
+  artist: z.string().min(2, { message: 'El artista debe tener al menos 2 caracteres.' }),
+  tempo: z.coerce.number().min(40, { message: 'El tempo debe ser al menos 40 BPM.' }).max(300, { message: 'El tempo no puede ser mayor a 300 BPM.' }),
+  key: z.string().min(1, { message: 'La tonalidad es requerida.' }),
+  timeSignature: z.string().min(3, { message: 'El compás es requerido.' }),
+  tracks: z.array(trackSchema).min(1, { message: 'Debes subir al menos una pista.' }),
 });
 
 type SongFormValues = z.infer<typeof songFormSchema>;
 
 interface UploadSongDialogProps {
   onUploadFinished: () => void;
-  // Make trigger a render prop
   trigger?: React.ReactNode;
 }
 
@@ -62,16 +68,47 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished, t
     resolver: zodResolver(songFormSchema),
     defaultValues: {
       name: '',
-      file: undefined,
+      artist: '',
+      tempo: 120,
+      key: 'C',
+      timeSignature: '4/4',
+      tracks: [],
     },
   });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: 'tracks',
+  });
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      Array.from(files).forEach(file => {
+        const trackName = file.name.split('.').slice(0, -1).join('.') || file.name;
+        append({ file, name: trackName });
+      });
+      // Set song name from first file if empty
+      if (!form.getValues('name') && files.length > 0) {
+        form.setValue('name', files[0].name.split('.').slice(0, -1).join('.'));
+      }
+    }
+  };
 
   async function onSubmit(data: SongFormValues) {
     setIsUploading(true);
     try {
       const formData = new FormData();
       formData.append('name', data.name);
-      formData.append('file', data.file);
+      formData.append('artist', data.artist);
+      formData.append('tempo', String(data.tempo));
+      formData.append('key', data.key);
+      formData.append('timeSignature', data.timeSignature);
+      
+      data.tracks.forEach(track => {
+        formData.append('files', track.file);
+        formData.append('trackNames', track.name);
+      });
       
       const response = await fetch('/api/upload', {
         method: 'POST',
@@ -110,62 +147,93 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished, t
   );
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      setOpen(isOpen);
+      if (!isOpen) {
+        form.reset();
+      }
+    }}>
       <DialogTrigger asChild>
         {trigger || defaultTrigger}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Subir nueva canción</DialogTitle>
+          <DialogTitle>Subir nueva canción (grupo de pistas)</DialogTitle>
           <DialogDescription>
-            Añade una nueva pista a tu biblioteca. El archivo debe ser MP3, WAV, etc. (máx 50MB).
+            Añade los metadatos de la canción y sube todos los archivos de las pistas.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <div className="grid gap-4 py-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nombre de la canción</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ej: Guitarras Eléctricas" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <ScrollArea className="h-[450px] pr-6">
+              <div className="space-y-4">
+                <FormField control={form.control} name="name" render={({ field }) => (
+                  <FormItem><FormLabel>Nombre de la canción</FormLabel><FormControl><Input placeholder="Ej: Gracia Sublime es" {...field} /></FormControl><FormMessage /></FormItem>
+                )}/>
+                <FormField control={form.control} name="artist" render={({ field }) => (
+                  <FormItem><FormLabel>Artista</FormLabel><FormControl><Input placeholder="Ej: Elevation Worship" {...field} /></FormControl><FormMessage /></FormItem>
+                )}/>
+                <div className="grid grid-cols-3 gap-4">
+                    <FormField control={form.control} name="tempo" render={({ field }) => (
+                        <FormItem><FormLabel>Tempo (BPM)</FormLabel><FormControl><Input type="number" placeholder="120" {...field} /></FormControl><FormMessage /></FormItem>
+                    )}/>
+                    <FormField control={form.control} name="key" render={({ field }) => (
+                        <FormItem><FormLabel>Tonalidad</FormLabel><FormControl><Input placeholder="Ej: G" {...field} /></FormControl><FormMessage /></FormItem>
+                    )}/>
+                    <FormField control={form.control} name="timeSignature" render={({ field }) => (
+                        <FormItem><FormLabel>Compás</FormLabel><FormControl><Input placeholder="4/4" {...field} /></FormControl><FormMessage /></FormItem>
+                    )}/>
+                </div>
+                
+                <FormField
+                  control={form.control}
+                  name="tracks"
+                  render={() => (
+                    <FormItem>
+                      <FormLabel>Archivos de Pistas</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="file"
+                          accept={ACCEPTED_AUDIO_TYPES.join(',')}
+                          multiple
+                          onChange={handleFileChange}
+                          className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {fields.length > 0 && (
+                  <div className="space-y-2">
+                    <FormLabel>Pistas a subir</FormLabel>
+                    {fields.map((field, index) => (
+                      <div key={field.id} className="flex items-center gap-2 p-2 border rounded-md">
+                        <FileAudio className="w-5 h-5 text-muted-foreground" />
+                        <FormField
+                          control={form.control}
+                          name={`tracks.${index}.name`}
+                          render={({ field }) => (
+                            <FormItem className="flex-grow">
+                              <FormControl>
+                                <Input {...field} className="h-8"/>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <Button type="button" variant="ghost" size="icon" className="w-8 h-8 text-destructive" onClick={() => remove(index)}>
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
                 )}
-              />
-              <FormField
-                control={form.control}
-                name="file"
-                render={({ field: { onChange, value, ...rest } }) => (
-                  <FormItem>
-                    <FormLabel>Archivo de Audio</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="file"
-                        accept={ACCEPTED_AUDIO_TYPES.join(',')}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                             onChange(file);
-                             // Set name field if empty
-                             if (!form.getValues('name')) {
-                                form.setValue('name', file.name.split('.').slice(0, -1).join('.'));
-                             }
-                          }
-                        }}
-                        {...rest}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+              </div>
+            </ScrollArea>
             <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
               <Button type="submit" disabled={isUploading}>
                 {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Subir canción

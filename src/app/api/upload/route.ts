@@ -1,11 +1,12 @@
+
 import { NextResponse } from 'next/server';
 import { uploadFileToB2 } from '@/actions/upload';
-import { saveSong } from '@/actions/songs';
+import { saveSong, TrackFile } from '@/actions/songs';
 
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: '50mb', // Aumentar el límite a 50MB
+      sizeLimit: '50mb', 
     },
   },
 };
@@ -13,26 +14,54 @@ export const config = {
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
-    const file = formData.get('file') as File | null;
-    const name = formData.get('name') as string | null;
+    const files = formData.getAll('files') as File[];
+    const trackNames = formData.getAll('trackNames') as string[];
 
-    if (!file || !name) {
-      return NextResponse.json({ success: false, error: 'Faltan campos: nombre o archivo.' }, { status: 400 });
+    const name = formData.get('name') as string;
+    const artist = formData.get('artist') as string;
+    const tempo = formData.get('tempo') as string;
+    const key = formData.get('key') as string;
+    const timeSignature = formData.get('timeSignature') as string;
+
+    if (!name || !artist || !tempo || !key || !timeSignature || files.length === 0) {
+      return NextResponse.json({ success: false, error: 'Faltan campos requeridos o archivos.' }, { status: 400 });
+    }
+    
+    if (files.length !== trackNames.length) {
+      return NextResponse.json({ success: false, error: 'La cantidad de archivos no coincide con la cantidad de nombres de pista.' }, { status: 400 });
     }
 
-    // 1. Subir el archivo a B2
-    const uploadResult = await uploadFileToB2(file);
-    if (!uploadResult.success || !uploadResult.url || !uploadResult.fileKey) {
-      console.error("Error en la subida a B2:", uploadResult.error);
-      return NextResponse.json({ success: false, error: uploadResult.error || "No se pudo obtener la URL del archivo de B2." }, { status: 500 });
-    }
+    const uploadedTracks: TrackFile[] = [];
 
-    // 2. Guardar la información en Firestore
+    // 1. Subir todos los archivos a B2 en paralelo
+    const uploadPromises = files.map(async (file, index) => {
+      const uploadResult = await uploadFileToB2(file);
+      if (!uploadResult.success || !uploadResult.url || !uploadResult.fileKey) {
+        // Lanzar un error para que Promise.all falle
+        throw new Error(uploadResult.error || `No se pudo subir el archivo ${file.name}.`);
+      }
+      return {
+        name: trackNames[index] || file.name,
+        url: uploadResult.url,
+        fileKey: uploadResult.fileKey,
+      };
+    });
+    
+    // Esperar a que todas las subidas terminen
+    const results = await Promise.all(uploadPromises);
+    uploadedTracks.push(...results);
+
+
+    // 2. Guardar la información de la canción con todas sus pistas en Firestore
     const songData = {
-      name: name,
-      url: uploadResult.url,
-      fileKey: uploadResult.fileKey,
+      name,
+      artist,
+      tempo: parseInt(tempo, 10),
+      key,
+      timeSignature,
+      tracks: uploadedTracks,
     };
+    
     const saveResult = await saveSong(songData);
 
     if (!saveResult.success || !saveResult.song) {
