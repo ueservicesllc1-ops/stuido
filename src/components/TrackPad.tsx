@@ -65,7 +65,8 @@ const TrackPad: React.FC<TrackPadProps> = ({
   };
   
   const progressPercentage = duration > 0 ? (playbackPosition / duration) * 100 : 0;
-  const indicatorPosition = (progressPercentage / 100) * (sliderHeight - 8); 
+  // Calculate indicator position based on the slider's height. The '8' is a magic number for thumb height adjustment.
+  const indicatorPosition = (progressPercentage / 100) * (sliderHeight > 8 ? sliderHeight - 8 : sliderHeight); 
 
   const isDownloadingForOffline = playbackMode === 'offline' && !isCached;
   const isDisabled = isLoading || isDownloadingForOffline;
