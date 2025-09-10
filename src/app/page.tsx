@@ -169,10 +169,12 @@ const DawPage = () => {
       animationFrameRef.current = requestAnimationFrame(updatePlaybackPosition);
     }
   };
+  
+  const activeTracks = tracks.filter(t => t.songId === activeSongId);
 
   const handlePlay = () => {
     setIsPlaying(true);
-    const playPromises = Object.values(audioRefs.current).map(audio => audio?.play());
+    const playPromises = activeTracks.map(track => audioRefs.current[track.id]?.play());
     Promise.all(playPromises).catch(e => {
       // Un solo error puede ser reportado si el usuario no ha interactuado
       console.error("Play error:", e.message);
@@ -183,7 +185,7 @@ const DawPage = () => {
 
   const handlePause = () => {
     setIsPlaying(false);
-    Object.values(audioRefs.current).forEach(audio => audio?.pause());
+    activeTracks.forEach(track => audioRefs.current[track.id]?.pause());
     if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
     }
@@ -192,7 +194,8 @@ const DawPage = () => {
   const handleStop = () => {
     handlePause();
     setPlaybackPosition(0);
-    Object.values(audioRefs.current).forEach(audio => {
+    activeTracks.forEach(track => {
+        const audio = audioRefs.current[track.id];
         if (audio) audio.currentTime = 0;
     });
   };
@@ -273,7 +276,7 @@ const DawPage = () => {
     setDuration(0); // Reset duration when changing song
   };
 
-  const activeTracks = tracks.filter(t => t.songId === activeSongId);
+  
   const progress = duration > 0 ? (playbackPosition / duration) * 100 : 0;
 
   return (
