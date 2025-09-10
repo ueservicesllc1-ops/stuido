@@ -306,7 +306,6 @@ const DawPage = () => {
       <div className="p-4 pt-0">
         <div className="relative h-24">
             <div className="relative h-full">
-                <Image src="https://i.imgur.com/kP4MS2H.png" alt="Waveform" fill style={{objectFit: 'contain'}} data-ai-hint="waveform audio" priority />
                 <Progress value={progress} className="absolute bottom-0 w-full h-1 bg-black/20" indicatorClassName="bg-primary/80" />
             </div>
         </div>
