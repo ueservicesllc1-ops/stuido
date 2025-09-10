@@ -8,6 +8,7 @@ import TonicPad from '@/components/TonicPad';
 import Image from 'next/image';
 import { getSetlists, Setlist, SetlistSong } from '@/actions/setlists';
 import { cacheAudio, getCachedAudio } from '@/lib/audiocache';
+import { Progress } from '@/components/ui/progress';
 
 export type PlaybackMode = 'online' | 'offline';
 
@@ -273,7 +274,7 @@ const DawPage = () => {
   };
 
   const activeTracks = tracks.filter(t => t.songId === activeSongId);
-
+  const progress = duration > 0 ? (playbackPosition / duration) * 100 : 0;
 
   return (
     <div className="flex flex-col h-screen bg-background font-sans text-sm">
@@ -304,35 +305,30 @@ const DawPage = () => {
       
       <div className="relative p-4 pt-0">
         <div className="relative h-24">
-          <div>
-            <div className="relative h-24">
+            <div className="relative h-full">
                 <Image src="https://i.imgur.com/kP4MS2H.png" alt="Waveform" fill style={{objectFit: 'contain'}} data-ai-hint="waveform audio" priority />
+                <Progress value={progress} className="absolute bottom-0 w-full h-1 bg-black/20" indicatorClassName="bg-primary/80" />
             </div>
-          </div>
         </div>
       </div>
 
       <main className="flex-grow grid grid-cols-12 gap-4 px-4 pb-4">
         <div className="col-span-12 lg:col-span-8">
-            <div>
-              <div className="items-start">
-                <MixerGrid 
-                  tracks={activeTracks}
-                  soloTracks={soloTracks}
-                  mutedTracks={mutedTracks}
-                  volumes={volumes}
-                  loadingTracks={loadingTracks}
-                  onMuteToggle={toggleMute}
-                  onSoloToggle={toggleSolo}
-                  onVolumeChange={handleVolumeChange}
-                  isPlaying={isPlaying}
-                  playbackPosition={playbackPosition}
-                  duration={duration}
-                  playbackMode={playbackMode}
-                  cachedTracks={cachedTracks}
-                />
-              </div>
-            </div>
+            <MixerGrid 
+              tracks={activeTracks}
+              soloTracks={soloTracks}
+              mutedTracks={mutedTracks}
+              volumes={volumes}
+              loadingTracks={loadingTracks}
+              onMuteToggle={toggleMute}
+              onSoloToggle={toggleSolo}
+              onVolumeChange={handleVolumeChange}
+              isPlaying={isPlaying}
+              playbackPosition={playbackPosition}
+              duration={duration}
+              playbackMode={playbackMode}
+              cachedTracks={cachedTracks}
+            />
         </div>
         <div className="col-span-12 lg:col-span-4 flex flex-col gap-4 min-h-0">
             <div className="flex-grow min-h-0">
@@ -352,3 +348,5 @@ const DawPage = () => {
 };
 
 export default DawPage;
+
+    
