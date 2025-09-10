@@ -2,7 +2,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
-import { AlignJustify, Library, MoreHorizontal, Music, Loader2, Calendar, X, PlusCircle, DownloadCloud, Trash2 } from 'lucide-react';
+import { AlignJustify, Library, MoreHorizontal, Music, Loader2, Calendar, X, PlusCircle, DownloadCloud, Trash2, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { getSongs } from '@/actions/songs';
@@ -10,6 +10,7 @@ import CreateSetlistDialog from './CreateSetlistDialog';
 import { getSetlists, Setlist, addSongToSetlist, SetlistSong, removeSongFromSetlist } from '@/actions/setlists';
 import { format } from 'date-fns';
 import { useToast } from './ui/use-toast';
+import UploadSongDialog from './UploadSongDialog';
 
 
 interface Song {
@@ -247,8 +248,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
                           <SheetHeader>
                             <SheetTitle>Añadir a "{selectedSetlist.name}"</SheetTitle>
                           </SheetHeader>
-                          <div className="py-4 h-full">
-                            {/* Library content goes here */}
+                          <div className="py-4 h-full flex flex-col">
                              {isLoadingSongs ? (
                                 <div className="flex justify-center items-center h-full">
                                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -256,7 +256,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
                             ) : songsError ? (
                                 <div className="text-destructive text-center">{songsError}</div>
                             ) : (
-                                <div className="space-y-2">
+                                <div className="space-y-2 flex-grow overflow-y-auto">
                                 {songs.length > 0 ? (
                                     songs.map((song) => (
                                     <div key={song.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent">
@@ -272,6 +272,9 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
                                 )}
                                 </div>
                             )}
+                            <div className="pt-4 border-t border-border/50">
+                                <UploadSongDialog onUploadFinished={handleFetchSongs} />
+                            </div>
                           </div>
                         </SheetContent>
                     </Sheet>
@@ -300,8 +303,9 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
         </div>
 
         <SheetContent side="left" className="w-[300px] sm:w-[400px] bg-card/95">
-          <SheetHeader>
+          <SheetHeader className="flex-row justify-between items-center">
             <SheetTitle>{selectedSetlist ? `Añadir a "${selectedSetlist.name}"` : 'Biblioteca de Canciones'}</SheetTitle>
+            <UploadSongDialog onUploadFinished={handleFetchSongs} />
           </SheetHeader>
           <div className="py-4 h-full">
             {isLoadingSongs ? (
