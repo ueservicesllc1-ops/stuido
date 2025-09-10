@@ -92,6 +92,9 @@ const DawPage = () => {
       if (playbackMode === 'offline') {
         let blob = await getCachedAudio(track.url);
         if (!blob) {
+          // Si no está en caché, lo descargamos.
+          // Para simular una carga, podemos añadir un pequeño delay
+          // await new Promise(resolve => setTimeout(resolve, 1000));
           blob = await cacheAudio(track.url);
         }
         const localUrl = URL.createObjectURL(blob);
@@ -102,12 +105,13 @@ const DawPage = () => {
       }
     } catch (error) {
       console.error(`Error loading track ${track.name}:`, error);
-      // Si hay un error, por ejemplo, al cargar offline, podemos intentar usar la url online como fallback
+      // Si hay un error (ej. offline sin cache), usamos la url online como fallback
       setTrackUrls(prev => ({...prev, [track.id]: track.url}));
     } finally {
       setLoadingTracks(prev => prev.filter(id => id !== track.id));
     }
   };
+
 
   // --- Audio Control Handlers ---
 
@@ -264,6 +268,7 @@ const DawPage = () => {
             soloTracks={soloTracks}
             mutedTracks={mutedTracks}
             volumes={volumes}
+            loadingTracks={loadingTracks}
             onMuteToggle={toggleMute}
             onSoloToggle={toggleSolo}
             onVolumeChange={handleVolumeChange}

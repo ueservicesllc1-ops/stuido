@@ -4,12 +4,13 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Slider } from './ui/slider';
 import { cn } from '@/lib/utils';
-import { Settings } from 'lucide-react';
+import { Loader2, Settings } from 'lucide-react';
 import { SetlistSong } from '@/actions/setlists';
 import { PlaybackMode } from '@/app/page';
 
 interface TrackPadProps {
   track: SetlistSong;
+  isLoading: boolean;
   isMuted: boolean;
   isSolo: boolean;
   volume: number;
@@ -24,6 +25,7 @@ interface TrackPadProps {
 
 const TrackPad: React.FC<TrackPadProps> = ({
   track,
+  isLoading,
   isMuted,
   isSolo,
   volume,
@@ -58,7 +60,12 @@ const TrackPad: React.FC<TrackPadProps> = ({
   return (
     <div className="flex flex-col items-center gap-2">
       <div className="relative h-40 flex justify-center items-center" ref={sliderRef}>
-         {isPlaying && duration > 0 && (
+         {isLoading && (
+           <div className="absolute inset-0 flex justify-center items-center bg-card/50 z-20">
+              <Loader2 className="w-8 h-8 text-primary animate-spin" />
+           </div>
+         )}
+         {isPlaying && duration > 0 && !isLoading && (
           <div 
             className="absolute left-1/2 -translate-x-1/2 w-4 h-2 rounded-full bg-green-400 z-10"
             style={{ 
@@ -73,6 +80,7 @@ const TrackPad: React.FC<TrackPadProps> = ({
           step={1}
           orientation="vertical"
           onValueChange={handleVolumeChange}
+          disabled={isLoading}
           className={cn(
             '[&>span:first-child]:bg-secondary',
             // Default online color
@@ -81,14 +89,15 @@ const TrackPad: React.FC<TrackPadProps> = ({
             color === 'destructive' && '[&_.bg-primary]:bg-destructive [&_.border-primary]:border-destructive',
             // Offline color override
             playbackMode === 'offline' && color !== 'destructive' && '[&_.bg-primary]:bg-yellow-500 [&_.border-primary]:border-yellow-500',
-            (isSolo || isMuted) && 'opacity-50'
+            (isSolo || isMuted || isLoading) && 'opacity-50'
           )}
         />
       </div>
 
        <div className="flex items-center justify-center w-full mt-2">
          <span className={cn(
-            "text-xs font-semibold uppercase text-muted-foreground tracking-wider"
+            "text-xs font-semibold uppercase text-muted-foreground tracking-wider",
+            isLoading && 'opacity-50'
           )}>{name}</span>
          {name === 'CUES' && <Button variant="ghost" size="icon" className="w-4 h-4 ml-1 text-muted-foreground"><Settings className="w-3 h-3" /></Button>}
        </div>
@@ -97,6 +106,7 @@ const TrackPad: React.FC<TrackPadProps> = ({
         <Button
           onClick={onMuteToggle}
           variant={isMuted ? 'secondary' : 'ghost'}
+          disabled={isLoading}
           className={cn(
             'w-full h-7 text-xs font-bold border',
              isMuted ? 'bg-primary text-primary-foreground' : 'bg-secondary/50'
@@ -107,6 +117,7 @@ const TrackPad: React.FC<TrackPadProps> = ({
         <Button
           onClick={onSoloToggle}
           variant={isSolo ? 'secondary' : 'ghost'}
+          disabled={isLoading}
           className={cn(
             'w-full h-7 text-xs font-bold border',
             isSolo ? 'bg-yellow-500 text-black' : 'bg-secondary/50'
@@ -120,5 +131,3 @@ const TrackPad: React.FC<TrackPadProps> = ({
 };
 
 export default TrackPad;
-
-    

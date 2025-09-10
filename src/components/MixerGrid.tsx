@@ -13,6 +13,7 @@ interface MixerGridProps {
   soloTracks: string[];
   mutedTracks: string[];
   volumes: { [key: string]: number };
+  loadingTracks: string[];
   onMuteToggle: (trackId: string) => void;
   onSoloToggle: (trackId: string) => void;
   onVolumeChange: (trackId: string, volume: number) => void;
@@ -27,6 +28,7 @@ const MixerGrid: React.FC<MixerGridProps> = ({
   soloTracks, 
   mutedTracks, 
   volumes,
+  loadingTracks,
   onMuteToggle, 
   onSoloToggle,
   onVolumeChange,
@@ -41,6 +43,7 @@ const MixerGrid: React.FC<MixerGridProps> = ({
         <TrackPad
           key={track.id}
           track={track}
+          isLoading={loadingTracks.includes(track.id)}
           isMuted={mutedTracks.includes(track.id)}
           isSolo={soloTracks.includes(track.id)}
           volume={volumes[track.id] ?? 75}
