@@ -390,15 +390,9 @@ const DawPage = () => {
             onPlaybackModeChange={setPlaybackMode}
         />
       </div>
-      <div className="col-start-1 row-start-2">
-        <SongList 
-            initialSetlist={initialSetlist}
-            activeSongId={activeSongId}
-            onSetlistSelected={handleSetlistSelected}
-            onSongSelected={handleSongSelected}
-            onLoadTrack={loadTrack}
-        />
-      </div>
+      <aside className="col-start-1 row-start-2">
+        <TonicPad />
+      </aside>
       <main className="col-start-2 row-start-2 overflow-y-auto pr-2">
         {activeSongId ? (
             <MixerGrid
@@ -425,9 +419,15 @@ const DawPage = () => {
          </div>
         )}
       </main>
-      <aside className="col-start-3 row-start-2">
-        <TonicPad />
-      </aside>
+       <div className="col-start-3 row-start-2">
+        <SongList 
+            initialSetlist={initialSetlist}
+            activeSongId={activeSongId}
+            onSetlistSelected={handleSetlistSelected}
+            onSongSelected={handleSongSelected}
+            onLoadTrack={loadTrack}
+        />
+      </div>
     </div>
   );
 };
