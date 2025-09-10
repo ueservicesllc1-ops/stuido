@@ -98,33 +98,37 @@ const DawPage = () => {
 
   // Prepara las pistas cuando cambia la canción activa
   useEffect(() => {
+    // Cuando cambia la canción activa, se reinicia la disposición para reproducir
+    setIsReadyToPlay(false);
     if (activeSongId) {
-      const tracksForSong = tracks.filter(t => t.songId === activeSongId);
-      tracksForSong.forEach(prepareAndAssignUrl);
+      // Inicia la preparación de todas las pistas de la canción activa.
+      activeTracks.forEach(prepareAndAssignUrl);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSongId, playbackMode]);
+  }, [activeSongId, playbackMode]); // También reacciona al cambio de modo
   
   // Chequea si las pistas de la canción activa están listas para reproducirse
+  // Este efecto ahora depende de trackUrls, lo que asegura que se ejecuta
+  // solo después de que las URLs hayan sido asignadas.
   useEffect(() => {
       if (!activeSongId) {
           setIsReadyToPlay(false);
           return;
       }
       if (activeTracks.length === 0) {
-          setIsReadyToPlay(true);
+          setIsReadyToPlay(true); // No hay pistas, se puede "reproducir" (no hace nada)
+          return;
+      }
+
+      // Asegurarse de que todas las pistas activas tengan una URL asignada antes de verificar la preparación
+      const allUrlsAssigned = activeTracks.every(track => !!trackUrls[track.id]);
+      if (!allUrlsAssigned) {
+          setIsReadyToPlay(false);
           return;
       }
 
       const readinessPromises = activeTracks.map(track => {
           return new Promise<void>((resolve, reject) => {
-              const url = trackUrls[track.id];
-              // Si no hay URL (p.ej. offline y no cacheado), no puede estar listo.
-              if (!url) {
-                   reject(new Error(`No URL for track ${track.name}`));
-                   return;
-              }
-
               const audio = audioRefs.current[track.id];
               // Si el audio no existe aún, tampoco está listo.
               if (!audio) {
@@ -141,7 +145,6 @@ const DawPage = () => {
                   cleanup();
                   const errorDetails = (e.target as HTMLAudioElement).error;
                   console.error(`Error loading audio source for ${track.name}:`, errorDetails?.message || 'Unknown error', e);
-                  // Rechazamos la promesa para que el Promise.all falle
                   reject(new Error(`Failed to load ${track.name}`));
               };
               
@@ -156,12 +159,16 @@ const DawPage = () => {
                   return;
               }
 
+              // Si el readyState es 0, es posible que 'load' no haya sido llamado aún.
+              if (audio.readyState === 0 && audio.src) {
+                audio.load();
+              }
+
               audio.addEventListener('canplaythrough', onCanPlayThrough);
               audio.addEventListener('error', onError);
           });
       });
 
-      // Se considera listo para reproducir si TODAS las promesas se resuelven
       Promise.all(readinessPromises).then(() => {
           setIsReadyToPlay(true);
       }).catch(error => {
@@ -182,7 +189,7 @@ const DawPage = () => {
       newVolumes[track.id] = volumes[track.id] ?? 75;
       if (!audioRefs.current[track.id]) {
           const audio = new Audio();
-          audio.preload = 'auto'; // Cambiado a auto para que el navegador decida
+          audio.preload = 'auto'; 
           audio.addEventListener('loadedmetadata', () => {
               if (isFinite(audio.duration)) {
                 setDuration(prev => Math.max(prev, audio.duration));
@@ -206,7 +213,7 @@ const DawPage = () => {
         const url = trackUrls[trackId];
         if (audio && url && audio.src !== url) {
             audio.src = url;
-            audio.load(); // Llama a load explícitamente
+            audio.load();
         }
     });
   }, [trackUrls]);
@@ -221,7 +228,6 @@ const DawPage = () => {
       const localUrl = URL.createObjectURL(cachedBlob);
       setTrackUrls(prev => ({...prev, [track.id]: localUrl}));
     } else {
-      // No está en caché
       setCachedTracks(prev => {
         const newSet = new Set(prev);
         newSet.delete(track.id);
@@ -229,12 +235,10 @@ const DawPage = () => {
       });
 
       if (playbackMode === 'online') {
-        // En modo online, usamos la URL del proxy
         setTrackUrls(prev => ({...prev, [track.id]: `/api/download?url=${encodeURIComponent(track.url)}`}));
       } else {
-        // En modo offline, la URL queda vacía inicialmente y se inicia la descarga
-        setTrackUrls(prev => ({...prev, [track.id]: ''}));
-        loadTrack(track); // Inicia la descarga
+        // En modo offline, inicia la descarga. La URL se asignará cuando la descarga termine.
+        loadTrack(track);
       }
     }
   };
@@ -253,7 +257,8 @@ const DawPage = () => {
       
     } catch (error) {
       console.error(`Error loading track ${track.name}:`, error);
-      setTrackUrls(prev => ({...prev, [track.id]: ''})); // Asegurarse de que la URL quede vacía si falla
+      // Asegurarse de que la URL quede vacía si falla para que no se intente reproducir
+      setTrackUrls(prev => ({...prev, [track.id]: ''})); 
     } finally {
       setLoadingTracks(prev => prev.filter(id => id !== track.id));
     }
