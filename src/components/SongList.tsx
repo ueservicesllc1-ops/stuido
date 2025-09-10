@@ -229,6 +229,14 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
   };
   
   const handleReanalyze = async (song: Song) => {
+    if (!song.tracks || song.tracks.length === 0) {
+        toast({
+            variant: 'destructive',
+            title: 'Sin pistas',
+            description: `La canción "${song.name}" no tiene pistas para analizar.`,
+        });
+        return;
+    }
     setAnalyzingSongId(song.id);
     try {
         const result = await reanalyzeSongStructure(song.id);
