@@ -61,31 +61,34 @@ const DawPage = () => {
       setLoadingTracks([]);
       setCachedTracks(new Set()); // Reset cache status on setlist change
       
-      allTracks.forEach(song => checkCacheStatus(song));
-
     } else {
       setTracks([]);
       setActiveSongId(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSetlist]);
-  
-  // Re-evaluar y cargar pistas al cambiar el modo de reproducción
-  useEffect(() => {
-    handleStop(); // Detener reproducción al cambiar de modo
-    if(tracks.length > 0) {
-        tracks.forEach(track => {
-            checkCacheStatus(track);
-            if(playbackMode === 'offline' && !cachedTracks.has(track.id)) {
-                loadTrack(track);
-            } else {
-                assignTrackUrl(track);
-            }
-        })
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playbackMode, tracks]);
 
+  // Se detiene la reproducción al cambiar de modo
+  useEffect(() => {
+    handleStop();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playbackMode]);
+
+  // Re-evaluar y cargar pistas al cambiar el modo de reproducción o las pistas
+  useEffect(() => {
+    if (tracks.length > 0) {
+      tracks.forEach(track => {
+          checkCacheStatus(track);
+          if (playbackMode === 'offline' && !cachedTracks.has(track.id)) {
+              loadTrack(track);
+          } else {
+              assignTrackUrl(track);
+          }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playbackMode, tracks]);
+  
   // Chequea si las pistas de la canción activa están listas para reproducirse
   useEffect(() => {
       if (!activeSongId) {
@@ -104,10 +107,10 @@ const DawPage = () => {
           return new Promise<void>((resolve, reject) => {
               const url = trackUrls[track.id];
               if (!url) {
-                  // Si no hay URL, no podemos hacer nada. Esperar a que se asigne.
-                  // Podríamos rechazar, pero eso detendría la comprobación de otras pistas.
-                  // Es mejor esperar a que todas las URLs estén asignadas.
-                  return;
+                  // Si no hay URL, la pista no puede estar lista.
+                   // Resolvemos para no bloquear la carga, pero la pista no sonará.
+                   resolve();
+                   return;
               }
               const audio = audioRefs.current[track.id];
               if (!audio) {
