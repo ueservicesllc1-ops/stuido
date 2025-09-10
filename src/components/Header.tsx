@@ -9,6 +9,7 @@ import PlaybackModeToggle from './PlaybackModeToggle';
 import type { PlaybackMode } from '@/app/page';
 import { Progress } from './ui/progress';
 import { cn } from '@/lib/utils';
+import { Slider } from './ui/slider';
 
 
 interface HeaderProps {
@@ -18,6 +19,7 @@ interface HeaderProps {
   onStop: () => void;
   onRewind: () => void;
   onFastForward: () => void;
+  onSeek: (position: number) => void;
   currentTime: number;
   duration: number;
   playbackMode: PlaybackMode;
@@ -42,6 +44,7 @@ const Header: React.FC<HeaderProps> = ({
   onStop,
   onRewind,
   onFastForward,
+  onSeek,
   currentTime,
   duration,
   playbackMode,
@@ -50,8 +53,15 @@ const Header: React.FC<HeaderProps> = ({
   showLoadingBar,
   isReadyToPlay,
 }) => {
+  
+  const handleSeek = (value: number[]) => {
+    if (isReadyToPlay) {
+      onSeek(value[0]);
+    }
+  };
+  
   return (
-    <header className="flex flex-col bg-card/50 border-b border-border p-2 gap-2">
+    <header className="flex flex-col bg-card/50 border-b border-border p-2 gap-2 rounded-lg">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2">
             <Button variant="outline" className="bg-white text-black hover:bg-neutral-200 font-bold">
@@ -118,8 +128,24 @@ const Header: React.FC<HeaderProps> = ({
             </Button>
         </div>
       </div>
+      
+      <div className="px-1 pt-1">
+        <Slider
+          value={[currentTime]}
+          max={duration || 1}
+          step={0.1}
+          onValueChange={handleSeek}
+          disabled={!isReadyToPlay}
+          className={cn(
+             '[&>span:first-child]:bg-secondary',
+             '[&_.bg-primary]:bg-primary [&_.border-primary]:border-primary h-2',
+             !isReadyToPlay && 'opacity-50'
+          )}
+        />
+      </div>
+
       {showLoadingBar && (
-        <div className="flex items-center gap-3 px-2">
+        <div className="flex items-center gap-3 px-2 pt-2">
             <DownloadCloud className="w-5 h-5 text-yellow-400 animate-pulse" />
             <div className="flex-grow">
                  <Progress value={loadingProgress} className="h-2" indicatorClassName="bg-yellow-500" />
@@ -134,3 +160,5 @@ const Header: React.FC<HeaderProps> = ({
 };
 
 export default Header;
+
+    

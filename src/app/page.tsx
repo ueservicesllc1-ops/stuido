@@ -333,6 +333,10 @@ const DawPage = () => {
   const handlePlay = useCallback(() => {
     if (!isReadyToPlay) return;
 
+    if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+    }
+
     setIsPlaying(true);
     const playPromises = activeTracks.map(track => {
         const audio = audioRefs.current[track.id];
@@ -348,9 +352,6 @@ const DawPage = () => {
       setIsPlaying(false);
     });
 
-    if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-    }
     animationFrameRef.current = requestAnimationFrame(updatePlaybackPosition);
   }, [isReadyToPlay, activeTracks, trackUrls, playbackPosition, updatePlaybackPosition]);
 
@@ -396,6 +397,15 @@ const DawPage = () => {
     });
   };
 
+  const handleSeek = (newPosition: number) => {
+    setPlaybackPosition(newPosition);
+    activeTracks.forEach(track => {
+      if (audioRefs.current[track.id]) {
+        audioRefs.current[track.id]!.currentTime = newPosition;
+      }
+    });
+  };
+
   const handleMuteToggle = (trackId: string) => {
     setMutedTracks(prev => prev.includes(trackId) ? prev.filter(id => id !== trackId) : [...prev, trackId]);
     if (!mutedTracks.includes(trackId)) setSoloTracks(prev => prev.filter(id => id !== trackId));
@@ -436,6 +446,7 @@ const DawPage = () => {
             onStop={handleStop}
             onRewind={handleRewind}
             onFastForward={handleFastForward}
+            onSeek={handleSeek}
             currentTime={playbackPosition}
             duration={duration}
             playbackMode={playbackMode}
@@ -488,7 +499,5 @@ const DawPage = () => {
 };
 
 export default DawPage;
-
-    
 
     
