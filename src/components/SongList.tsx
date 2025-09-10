@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { AlignJustify, Library, MoreHorizontal, Music, Loader2, Calendar, X, PlusCircle, DownloadCloud, Trash2, Upload, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getSongs, Song, deleteSong } from '@/actions/songs';
 import CreateSetlistDialog from './CreateSetlistDialog';
@@ -356,8 +356,11 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
                         </Button>
                       </SheetTrigger>
                        <SheetContent side="left" className="w-[400px] sm:w-[500px] bg-card/95 p-0">
-                          <SheetHeader>
-                              <SheetTitle className="p-4 pb-0">Añadir Canciones</SheetTitle>
+                          <SheetHeader className="p-4 pb-0">
+                              <SheetTitle>Añadir Canciones</SheetTitle>
+                              <SheetDescription>
+                                Explora tus bibliotecas y añade canciones al setlist activo.
+                              </SheetDescription>
                           </SheetHeader>
                           <Tabs defaultValue="local" className="flex flex-col h-full pt-2">
                             <TabsList className="mx-4">
@@ -405,8 +408,11 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
         </div>
 
         <SheetContent side="left" className="w-[400px] sm:w-[500px] bg-card/95 p-0">
-          <SheetHeader>
-            <SheetTitle className="p-4 pb-0">Biblioteca de Canciones</SheetTitle>
+          <SheetHeader className="p-4 pb-0">
+            <SheetTitle>Biblioteca de Canciones</SheetTitle>
+            <SheetDescription>
+                Gestiona tus canciones o explora la biblioteca global para añadir a un setlist.
+            </SheetDescription>
           </SheetHeader>
           <Tabs defaultValue="local" className="h-full flex flex-col pt-2">
             <TabsList className="mx-4">
