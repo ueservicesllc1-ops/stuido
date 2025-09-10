@@ -3,13 +3,14 @@
 
 import React from 'react';
 import { Button } from './ui/button';
-import { Rewind, Play, Pause, Square, FastForward, Settings, RadioTower, Disc, Loader2 } from 'lucide-react';
+import { Rewind, Play, Pause, Square, FastForward, Settings, RadioTower, Disc, Loader2, DownloadCloud } from 'lucide-react';
 import { Circle } from './icons';
 import PlaybackModeToggle from './PlaybackModeToggle';
 import type { PlaybackMode } from '@/app/page';
 import { Progress } from './ui/progress';
 import { cn } from '@/lib/utils';
-import { Slider } from './ui/slider';
+import Timeline from './Timeline';
+import { SongStructure } from '@/ai/flows/song-structure';
 
 
 interface HeaderProps {
@@ -27,15 +28,8 @@ interface HeaderProps {
   loadingProgress: number;
   showLoadingBar: boolean;
   isReadyToPlay: boolean;
+  songStructure: SongStructure | null;
 }
-
-const formatTime = (seconds: number) => {
-    if (!isFinite(seconds)) return '00:00';
-    const minutes = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-};
-
 
 const Header: React.FC<HeaderProps> = ({
   isPlaying,
@@ -52,13 +46,8 @@ const Header: React.FC<HeaderProps> = ({
   loadingProgress,
   showLoadingBar,
   isReadyToPlay,
+  songStructure,
 }) => {
-  
-  const handleSeek = (value: number[]) => {
-    if (isReadyToPlay) {
-      onSeek(value[0]);
-    }
-  };
   
   return (
     <header className="flex flex-col bg-card/50 border-b border-border p-2 gap-2 rounded-lg">
@@ -117,26 +106,13 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
       
-      <div className="flex items-center gap-3 px-1 pt-1">
-        <span className="font-mono text-sm text-muted-foreground w-14 text-right">
-            {formatTime(currentTime)}
-        </span>
-        <Slider
-          value={[currentTime]}
-          max={duration || 1}
-          step={0.1}
-          onValueChange={handleSeek}
-          disabled={!isReadyToPlay}
-          className={cn(
-             '[&>span:first-child]:bg-secondary',
-             '[&_.bg-primary]:bg-primary [&_.border-primary]:border-primary h-2',
-             !isReadyToPlay && 'opacity-50'
-          )}
-        />
-        <span className="font-mono text-sm text-muted-foreground w-14 text-left">
-            {formatTime(duration)}
-        </span>
-      </div>
+      <Timeline
+        currentTime={currentTime}
+        duration={duration}
+        onSeek={onSeek}
+        structure={songStructure}
+        isReady={isReadyToPlay}
+       />
 
       {showLoadingBar && (
         <div className="flex items-center gap-3 px-2 pt-2">

@@ -30,9 +30,10 @@ interface SongListProps {
   onSetlistSelected: (setlist: Setlist | null) => void;
   onSongSelected: (songId: string) => void;
   onLoadTrack: (track: SetlistSong) => void;
+  onSongsFetched: (songs: Song[]) => void;
 }
 
-const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSetlistSelected, onSongSelected, onLoadTrack }) => {
+const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSetlistSelected, onSongSelected, onLoadTrack, onSongsFetched }) => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [isLoadingSongs, setIsLoadingSongs] = useState(false);
   const [songsError, setSongsError] = useState<string | null>(null);
@@ -65,6 +66,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
       const result = await getSongs();
       if (result.success && result.songs) {
         setSongs(result.songs);
+        onSongsFetched(result.songs); // Notificar al padre sobre las canciones
       } else {
         setSongsError(result.error || 'No se pudieron cargar las canciones.');
       }
@@ -74,6 +76,12 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
       setIsLoadingSongs(false);
     }
   };
+  
+  // Cargar canciones al montar el componente
+  useEffect(() => {
+    handleFetchSongs();
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleFetchSetlists = async () => {
     setIsLoadingSetlists(true);

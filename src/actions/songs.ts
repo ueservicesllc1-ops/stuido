@@ -2,7 +2,8 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, serverTimestamp, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, serverTimestamp, query, orderBy, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { analyzeSongStructure, SongStructure } from '@/ai/flows/song-structure';
 
 // Represents a single track file within a song
 export interface TrackFile {
@@ -23,6 +24,7 @@ export interface NewSong {
 
 export interface Song extends NewSong {
     id: string;
+    structure?: SongStructure;
 }
 
 export async function saveSong(data: NewSong) {
@@ -38,6 +40,9 @@ export async function saveSong(data: NewSong) {
       id: newDoc.id,
       ...data
     }
+    
+    // Disparar el análisis de estructura en segundo plano
+    runStructureAnalysis(newDoc.id, data.tracks);
 
     return { success: true, song: songData };
   } catch (error) {
@@ -45,6 +50,26 @@ export async function saveSong(data: NewSong) {
     return { success: false, error: (error as Error).message };
   }
 }
+
+async function runStructureAnalysis(songId: string, tracks: TrackFile[]) {
+    try {
+        const cuesTrack = tracks.find(t => t.name.trim().toUpperCase() === 'CUES');
+        if (cuesTrack) {
+            console.log(`Iniciando análisis de estructura para la canción ${songId}...`);
+            const structure = await analyzeSongStructure({ audioDataUri: cuesTrack.url });
+            
+            const songRef = doc(db, 'songs', songId);
+            await updateDoc(songRef, { structure });
+            console.log(`Estructura guardada para la canción ${songId}.`);
+        } else {
+            console.log(`No se encontró pista 'CUES' para la canción ${songId}. No se analizará la estructura.`);
+        }
+    } catch (error) {
+        console.error(`Error al analizar la estructura de la canción ${songId}:`, error);
+        // No devolvemos error al cliente, es un proceso de fondo.
+    }
+}
+
 
 export async function getSongs() {
     try {
@@ -61,7 +86,8 @@ export async function getSongs() {
                 tempo: data.tempo,
                 key: data.key,
                 timeSignature: data.timeSignature,
-                tracks: data.tracks || []
+                tracks: data.tracks || [],
+                structure: data.structure,
             };
         });
 

@@ -5,9 +5,10 @@ import Header from '@/components/Header';
 import MixerGrid from '@/components/MixerGrid';
 import SongList from '@/components/SongList';
 import TonicPad from '@/components/TonicPad';
-import Image from 'next/image';
 import { getSetlists, Setlist, SetlistSong } from '@/actions/setlists';
 import { cacheAudio, getCachedAudio } from '@/lib/audiocache';
+import { Song } from '@/actions/songs';
+import { SongStructure } from '@/ai/flows/song-structure';
 
 export type PlaybackMode = 'online' | 'hybrid' | 'offline';
 
@@ -17,6 +18,9 @@ const DawPage = () => {
   const [mutedTracks, setMutedTracks] = useState<string[]>([]);
   const [initialSetlist, setInitialSetlist] = useState<Setlist | null>(null);
   const [activeSongId, setActiveSongId] = useState<string | null>(null);
+  const [songs, setSongs] = useState<Song[]>([]);
+  const [songStructure, setSongStructure] = useState<SongStructure | null>(null);
+
 
   // --- Audio State ---
   const [isPlaying, setIsPlaying] = useState(false);
@@ -77,6 +81,11 @@ const DawPage = () => {
       const allTracks = initialSetlist.songs;
       setTracks(allTracks);
       
+      const songIdsInSetlist = [...new Set(allTracks.map(t => t.songId).filter(Boolean))];
+      // Aquí necesitarías una forma de obtener las Songs completas
+      // Por ahora, asumimos que 'songs' en el estado global se actualiza de alguna forma.
+      // En una implementación real, podrías necesitar un `getSongsByIds`.
+
       if (allTracks.length > 0) {
         const firstSongId = allTracks[0].songId;
         if (firstSongId) {
@@ -84,13 +93,15 @@ const DawPage = () => {
         }
       } else {
         setActiveSongId(null);
+        setSongStructure(null);
       }
       setTrackUrls({});
       setLoadingTracks([]);
-      setCachedTracks(new Set());
+      setCachedTracks(new Set<string>());
     } else {
       setTracks([]);
       setActiveSongId(null);
+      setSongStructure(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSetlist]);
@@ -111,6 +122,10 @@ const DawPage = () => {
       setIsReadyToPlay(false);
       return;
     }
+    
+    // Encontrar y establecer la estructura de la canción
+    const currentSong = songs.find(s => s.id === activeSongId);
+    setSongStructure(currentSong?.structure || null);
     
     handleStop();
     setIsReadyToPlay(false);
@@ -398,6 +413,7 @@ const DawPage = () => {
   };
 
   const handleSeek = (newPosition: number) => {
+    if (!isReadyToPlay) return;
     setPlaybackPosition(newPosition);
     activeTracks.forEach(track => {
       if (audioRefs.current[track.id]) {
@@ -454,6 +470,7 @@ const DawPage = () => {
             loadingProgress={loadingProgress}
             showLoadingBar={showLoadingBar}
             isReadyToPlay={isReadyToPlay}
+            songStructure={songStructure}
         />
       </div>
       
@@ -491,6 +508,7 @@ const DawPage = () => {
             onSetlistSelected={handleSetlistSelected}
             onSongSelected={handleSongSelected}
             onLoadTrack={loadTrackForOffline}
+            onSongsFetched={setSongs}
         />
         <TonicPad />
       </div>
@@ -499,5 +517,3 @@ const DawPage = () => {
 };
 
 export default DawPage;
-
-    

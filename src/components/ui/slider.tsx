@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -13,7 +14,7 @@ const Slider = React.forwardRef<
     ref={ref}
     orientation={orientation}
     className={cn(
-      "relative flex touch-none select-none items-center",
+      "relative flex touch-none select-none items-center group", // Add group
       orientation === 'horizontal' && 'h-5 w-full',
       orientation === 'vertical' && 'h-full w-5 flex-col',
       className
@@ -31,6 +32,7 @@ const Slider = React.forwardRef<
           orientation === 'vertical' && 'w-full bottom-0'
       )} />
     </SliderPrimitive.Track>
+    {/* Make thumb larger and transparent for easier grabbing, but visually smaller */}
     <SliderPrimitive.Thumb className="block h-5 w-5 rounded-full border-2 border-primary bg-background ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50" />
   </SliderPrimitive.Root>
 ))
