@@ -3,11 +3,12 @@
 
 import React from 'react';
 import { Button } from './ui/button';
-import { Rewind, Play, Pause, Square, FastForward, Settings, RadioTower, Disc, Wifi, DownloadCloud } from 'lucide-react';
+import { Rewind, Play, Pause, Square, FastForward, Settings, RadioTower, Disc, Wifi, DownloadCloud, Loader2 } from 'lucide-react';
 import { Circle } from './icons';
 import PlaybackModeToggle from './PlaybackModeToggle';
 import type { PlaybackMode } from '@/app/page';
 import { Progress } from './ui/progress';
+import { cn } from '@/lib/utils';
 
 
 interface HeaderProps {
@@ -23,6 +24,7 @@ interface HeaderProps {
   onPlaybackModeChange: (mode: PlaybackMode) => void;
   loadingProgress: number;
   showLoadingBar: boolean;
+  isReadyToPlay: boolean;
 }
 
 const formatTime = (seconds: number) => {
@@ -45,6 +47,7 @@ const Header: React.FC<HeaderProps> = ({
   onPlaybackModeChange,
   loadingProgress,
   showLoadingBar,
+  isReadyToPlay,
 }) => {
   return (
     <header className="flex flex-col bg-card/50 border-b border-border p-2 gap-2">
@@ -56,23 +59,31 @@ const Header: React.FC<HeaderProps> = ({
         </div>
 
         <div className="flex items-center gap-1 bg-background p-1 rounded-lg">
-            <Button variant="secondary" size="icon" className="w-12 h-10" onClick={onRewind}>
+            <Button variant="secondary" size="icon" className="w-12 h-10" onClick={onRewind} disabled={!isReadyToPlay}>
             <Rewind className="w-6 h-6" />
             </Button>
             <div className="bg-white rounded-lg p-1">
                 <Button 
                     variant="secondary" 
                     size="icon" 
-                    className="w-20 h-10 bg-white text-black hover:bg-neutral-200"
+                    className={cn(
+                      "w-20 h-10 bg-white text-black hover:bg-neutral-200",
+                      !isReadyToPlay && "bg-neutral-300 text-neutral-500 cursor-not-allowed"
+                    )}
                     onClick={isPlaying ? onPause : onPlay}
+                    disabled={!isReadyToPlay}
                 >
-                    {isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8" />}
+                    {isReadyToPlay ? (
+                      isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8" />
+                    ) : (
+                      <Loader2 className="w-8 h-8 animate-spin" />
+                    )}
                 </Button>
             </div>
-            <Button variant="secondary" size="icon" className="w-12 h-10" onClick={onStop}>
+            <Button variant="secondary" size="icon" className="w-12 h-10" onClick={onStop} disabled={!isReadyToPlay}>
             <Square className="w-6 h-6" />
             </Button>
-            <Button variant="secondary" size="icon" className="w-12 h-10" onClick={onFastForward}>
+            <Button variant="secondary" size="icon" className="w-12 h-10" onClick={onFastForward} disabled={!isReadyToPlay}>
             <FastForward className="w-6 h-6" />
             </Button>
         </div>

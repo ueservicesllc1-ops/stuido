@@ -30,6 +30,8 @@ const DawPage = () => {
   const [loadingTracks, setLoadingTracks] = useState<string[]>([]);
   const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('online');
   const [cachedTracks, setCachedTracks] = useState<Set<string>>(new Set());
+  const [isReadyToPlay, setIsReadyToPlay] = useState(false);
+
 
   // Carga el último setlist usado al iniciar
   useEffect(() => {
@@ -70,14 +72,13 @@ const DawPage = () => {
   
   // Re-evaluar y cargar pistas al cambiar el modo de reproducción
   useEffect(() => {
+    handleStop(); // Detener reproducción al cambiar de modo
     if(tracks.length > 0) {
         tracks.forEach(track => {
             checkCacheStatus(track);
-            // Si estamos en modo offline y no está cacheado, iniciamos la carga
             if(playbackMode === 'offline' && !cachedTracks.has(track.id)) {
                 loadTrack(track);
             } else {
-                // En cualquier otro caso, asignamos la URL correcta
                 assignTrackUrl(track);
             }
         })
@@ -85,11 +86,79 @@ const DawPage = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playbackMode, tracks]);
 
+  // Chequea si las pistas de la canción activa están listas para reproducirse
+  useEffect(() => {
+      if (!activeSongId) {
+          setIsReadyToPlay(false);
+          return;
+      }
+      const currentTracks = tracks.filter(t => t.songId === activeSongId);
+      if (currentTracks.length === 0) {
+          setIsReadyToPlay(true);
+          return;
+      }
+
+      setIsReadyToPlay(false);
+
+      const readinessPromises = currentTracks.map(track => {
+          return new Promise<void>((resolve, reject) => {
+              const url = trackUrls[track.id];
+              if (!url) {
+                  // Si no hay URL, no podemos hacer nada. Esperar a que se asigne.
+                  // Podríamos rechazar, pero eso detendría la comprobación de otras pistas.
+                  // Es mejor esperar a que todas las URLs estén asignadas.
+                  return;
+              }
+              const audio = audioRefs.current[track.id];
+              if (!audio) {
+                  reject(new Error(`Audio element not found for ${track.name}`));
+                  return;
+              }
+              
+              const onCanPlayThrough = () => {
+                  cleanup();
+                  resolve();
+              };
+
+              const onError = (e: Event) => {
+                  cleanup();
+                  const errorDetails = (e.target as HTMLAudioElement).error;
+                  console.error(`Error loading audio source for ${track.name}:`, errorDetails?.message || 'Unknown error', e);
+                  reject(new Error(`Failed to load ${track.name}`));
+              };
+              
+              const cleanup = () => {
+                  audio.removeEventListener('canplaythrough', onCanPlayThrough);
+                  audio.removeEventListener('error', onError);
+              }
+
+              // Si ya está listo, resolver de inmediato
+              if (audio.readyState >= 4) { // HAVE_ENOUGH_DATA
+                  resolve();
+                  return;
+              }
+
+              audio.addEventListener('canplaythrough', onCanPlayThrough);
+              audio.addEventListener('error', onError);
+          });
+      });
+
+      Promise.all(readinessPromises)
+          .then(() => {
+              setIsReadyToPlay(true);
+          })
+          .catch((error) => {
+              console.error("One or more tracks failed to become ready:", error);
+              setIsReadyToPlay(false);
+          });
+
+  }, [activeSongId, tracks, trackUrls]);
+
 
   // Inicializa volúmenes y refs de audio cuando cambian las pistas
   useEffect(() => {
     const newVolumes: { [key: string]: number } = {};
-    const newAudioRefs: {[key: string]: HTMLAudioElement | null} = {};
+    const newAudioRefs: {[key:string]: HTMLAudioElement | null} = {};
 
     tracks.forEach(track => {
       newVolumes[track.id] = volumes[track.id] ?? 75;
@@ -97,9 +166,8 @@ const DawPage = () => {
           const audio = new Audio();
           audio.preload = 'metadata';
           audio.addEventListener('loadedmetadata', () => {
-              const maxDuration = Math.max(duration, audio.duration);
               if (isFinite(audio.duration)) {
-                setDuration(maxDuration);
+                setDuration(prev => Math.max(prev, audio.duration));
               }
           });
           newAudioRefs[track.id] = audio;
@@ -145,18 +213,20 @@ const DawPage = () => {
           if (blob) {
             const localUrl = URL.createObjectURL(blob);
             setTrackUrls(prev => ({...prev, [track.id]: localUrl}));
+          } else {
+            // Si estamos en modo offline y no está en caché, no asignamos URL
+            setTrackUrls(prev => ({...prev, [track.id]: ''}));
           }
       } else {
-          // En modo online, siempre usamos la URL directa (proxy)
-          setTrackUrls(prev => ({...prev, [track.id]: track.url}));
+          // En modo online, siempre usamos la URL del proxy (que es la misma que la original por ahora)
+          setTrackUrls(prev => ({...prev, [track.id]: `/api/download?url=${encodeURIComponent(track.url)}`}));
       }
   }
 
   const loadTrack = async (track: SetlistSong) => {
-    if (loadingTracks.includes(track.id)) return;
+    if (loadingTracks.includes(track.id) || cachedTracks.has(track.id)) return;
     setLoadingTracks(prev => [...prev, track.id]);
     try {
-      if (playbackMode === 'offline') {
         let blob = await getCachedAudio(track.url);
         if (!blob) {
           blob = await cacheAudio(track.url);
@@ -164,14 +234,10 @@ const DawPage = () => {
         setCachedTracks(prev => new Set(prev).add(track.id));
         const localUrl = URL.createObjectURL(blob);
         setTrackUrls(prev => ({...prev, [track.id]: localUrl}));
-      } else {
-        // En modo online, usar la URL directa
-        setTrackUrls(prev => ({...prev, [track.id]: track.url}));
-      }
+      
     } catch (error) {
       console.error(`Error loading track ${track.name}:`, error);
-      // Fallback a la URL original si la caché falla
-      setTrackUrls(prev => ({...prev, [track.id]: track.url}));
+      // No hacemos fallback a la URL original, en modo offline estricto
     } finally {
       setLoadingTracks(prev => prev.filter(id => id !== track.id));
     }
@@ -198,7 +264,6 @@ const DawPage = () => {
   // --- Audio Control Handlers ---
 
   const updatePlaybackPosition = () => {
-    // Encuentra la primera pista activa que tenga un audio asociado para usarla como referencia de tiempo
     const referenceTrack = activeTracks.find(t => audioRefs.current[t.id]);
     if (referenceTrack) {
         const audio = audioRefs.current[referenceTrack.id];
@@ -211,35 +276,40 @@ const DawPage = () => {
     
   const handleVolumeChange = useCallback((trackId: string, newVolume: number) => {
     setVolumes(prevVolumes => {
-      // Solo actualiza si el valor realmente cambió para evitar renders innecesarios.
       if (prevVolumes[trackId] === newVolume) {
         return prevVolumes;
       }
-      const newVolumes = { ...prevVolumes, [trackId]: newVolume };
-      const audio = audioRefs.current[trackId];
-      if (audio) {
-          const isMuted = mutedTracks.includes(trackId);
-          const isSoloActive = soloTracks.length > 0;
-          const isThisTrackSolo = soloTracks.includes(trackId);
-
-          if(isMuted) {
-              audio.volume = 0;
-          } else if (isSoloActive) {
-              audio.volume = isThisTrackSolo ? (newVolume / 100) : 0;
-          } else {
-              audio.volume = newVolume / 100;
-          }
-      }
-      return newVolumes;
+      return { ...prevVolumes, [trackId]: newVolume };
     });
-  }, [mutedTracks, soloTracks]);
+  }, []);
+
+  useEffect(() => {
+    activeTracks.forEach(track => {
+      const audio = audioRefs.current[track.id];
+      if (audio) {
+        const isMuted = mutedTracks.includes(track.id);
+        const isSoloActive = soloTracks.length > 0;
+        const isThisTrackSolo = soloTracks.includes(track.id);
+        const volume = volumes[track.id] ?? 75;
+
+        if (isMuted) {
+          audio.volume = 0;
+        } else if (isSoloActive) {
+          audio.volume = isThisTrackSolo ? volume / 100 : 0;
+        } else {
+          audio.volume = volume / 100;
+        }
+      }
+    });
+  }, [volumes, mutedTracks, soloTracks, activeTracks]);
 
   const handlePlay = () => {
+    if (!isReadyToPlay) return;
+
     setIsPlaying(true);
     const playPromises = activeTracks.map(track => {
         const audio = audioRefs.current[track.id];
         if (audio) {
-            // Sincroniza el tiempo antes de reproducir
             audio.currentTime = playbackPosition;
             return audio.play();
         }
@@ -247,7 +317,6 @@ const DawPage = () => {
     }).filter(p => p);
     
     Promise.all(playPromises).catch(e => {
-      // Un solo error puede ser reportado si el usuario no ha interactuado
       console.error("Play error:", e.message);
       setIsPlaying(false);
     });
@@ -313,7 +382,6 @@ const DawPage = () => {
       : [...mutedTracks, trackId];
     setMutedTracks(newMutedTracks);
 
-    // Si se activa el mute, desactivar el solo para esta pista
     if (newMutedTracks.includes(trackId)) {
         setSoloTracks(prevSolo => prevSolo.filter(id => id !== trackId));
     }
@@ -346,7 +414,12 @@ const DawPage = () => {
           if(audio && isFinite(audio.duration)) {
             setDuration(audio.duration);
           } else {
+            // Reset duration if not available
             setDuration(0);
+             const newAudio = new Audio(trackUrls[firstTrackOfSong.id]);
+             newAudio.addEventListener('loadedmetadata', () => {
+                if(isFinite(newAudio.duration)) setDuration(newAudio.duration);
+             })
           }
       } else {
         setDuration(0);
@@ -356,7 +429,7 @@ const DawPage = () => {
 
   // --- Render ---
   const totalTracks = tracks.length;
-  const loadedCount = tracks.filter(t => playbackMode === 'online' || cachedTracks.has(t.id)).length;
+  const loadedCount = cachedTracks.size;
   const loadingProgress = totalTracks > 0 ? (loadedCount / totalTracks) * 100 : 0;
   const showLoadingBar = playbackMode === 'offline' && loadingProgress < 100;
   
@@ -376,6 +449,7 @@ const DawPage = () => {
             onPlaybackModeChange={setPlaybackMode}
             loadingProgress={loadingProgress}
             showLoadingBar={showLoadingBar}
+            isReadyToPlay={isReadyToPlay}
         />
       </div>
       
@@ -413,6 +487,7 @@ const DawPage = () => {
             onSetlistSelected={handleSetlistSelected}
             onSongSelected={handleSongSelected}
             onLoadTrack={loadTrack}
+            cachedTracks={cachedTracks}
         />
         <TonicPad />
       </div>
