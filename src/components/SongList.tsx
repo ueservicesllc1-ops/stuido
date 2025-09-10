@@ -103,46 +103,58 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
   const handleAddSongToSetlist = async (song: Song) => {
     if (!selectedSetlist) return;
 
-    const songToAdd: SetlistSong = {
-        id: song.id,
-        name: song.name,
-        url: song.url,
-        fileKey: song.fileKey
-    }
+    // Cuando se añade una canción (que es un grupo de pistas),
+    // se añaden todas sus pistas al setlist.
+    const tracksToAdd: SetlistSong[] = song.tracks.map(track => ({
+      id: `${song.id}_${track.fileKey}`, // Genera un ID único para la pista en el setlist
+      name: track.name,
+      url: track.url,
+      fileKey: track.fileKey,
+    }));
 
-    if (selectedSetlist.songs.some(s => s.id === song.id)) {
+    // Prevenir duplicados (versión simple, se puede mejorar)
+    const existingTrackIds = new Set(selectedSetlist.songs.map(s => s.id));
+    const newTracks = tracksToAdd.filter(t => !existingTrackIds.has(t.id));
+
+    if (newTracks.length === 0) {
         toast({
             variant: 'destructive',
             title: 'Canción duplicada',
-            description: `"${song.name}" ya está en el setlist.`,
+            description: `Las pistas de "${song.name}" ya están en el setlist.`,
         });
         return;
     }
     
-    const result = await addSongToSetlist(selectedSetlist.id, songToAdd);
+    // Iterar y añadir cada pista individualmente
+    let allAdded = true;
+    for (const track of newTracks) {
+        const result = await addSongToSetlist(selectedSetlist.id, track);
+        if (!result.success) {
+            allAdded = false;
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: result.error || `No se pudo añadir la pista "${track.name}".`,
+            });
+            // Opcional: decidir si se detiene al primer error o se intenta añadir las demás.
+            break; 
+        }
+    }
 
-    if (result.success) {
+    if (allAdded) {
       const updatedSetlist = {
         ...selectedSetlist,
-        songs: [...selectedSetlist.songs, songToAdd]
+        songs: [...selectedSetlist.songs, ...newTracks]
       };
-      // Update state locally first for instant UI feedback
       onSetlistSelected(updatedSetlist);
       setSelectedSetlist(updatedSetlist);
       
-      // Iniciar la carga/cache de la pista
-      onLoadTrack(songToAdd);
+      // Iniciar la carga/cache de las nuevas pistas
+      newTracks.forEach(track => onLoadTrack(track));
 
       toast({
         title: '¡Canción añadida!',
         description: `"${song.name}" se ha añadido a "${selectedSetlist.name}".`,
-      });
-      
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: result.error || 'No se pudo añadir la canción.',
       });
     }
   };
@@ -216,7 +228,10 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
           {songs.map((song) => (
             <div key={song.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent group">
               <Music className="w-5 h-5 text-muted-foreground" />
-              <p className="font-semibold text-foreground flex-grow">{song.name}</p>
+              <div className="flex-grow">
+                 <p className="font-semibold text-foreground">{song.name}</p>
+                 <p className="text-xs text-muted-foreground">{song.artist}</p>
+              </div>
               
               {!forGlobal && (
                 <Button 
@@ -341,20 +356,23 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
                         </Button>
                       </SheetTrigger>
                        <SheetContent side="left" className="w-[400px] sm:w-[500px] bg-card/95 p-0">
-                          <Tabs defaultValue="local" className="flex flex-col h-full">
-                            <TabsList className="m-4">
+                          <SheetHeader>
+                              <SheetTitle className="p-4 pb-0">Añadir Canciones</SheetTitle>
+                          </SheetHeader>
+                          <Tabs defaultValue="local" className="flex flex-col h-full pt-2">
+                            <TabsList className="mx-4">
                               <TabsTrigger value="local" className="gap-2"><Library className="w-4 h-4" /> Biblioteca Local</TabsTrigger>
                               <TabsTrigger value="global" className="gap-2"><Globe className="w-4 h-4"/> Biblioteca Global</TabsTrigger>
                             </TabsList>
                             <TabsContent value="local" className="flex-grow overflow-y-auto px-4">
-                               <div className="flex justify-between items-center mb-4">
+                               <div className="flex justify-between items-center my-4">
                                  <h3 className="font-semibold">Añadir a "{selectedSetlist.name}"</h3>
                                  <UploadSongDialog onUploadFinished={handleFetchSongs} />
                                </div>
                                {renderSongList()}
                             </TabsContent>
                             <TabsContent value="global" className="flex-grow overflow-y-auto px-4">
-                              <div className="flex justify-between items-center mb-4">
+                              <div className="flex justify-between items-center my-4">
                                 <h3 className="font-semibold">Añadir a "{selectedSetlist.name}"</h3>
                               </div>
                               {renderSongList(true)}
@@ -387,14 +405,17 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
         </div>
 
         <SheetContent side="left" className="w-[400px] sm:w-[500px] bg-card/95 p-0">
-          <Tabs defaultValue="local" className="h-full flex flex-col">
-            <TabsList className="m-4">
+          <SheetHeader>
+            <SheetTitle className="p-4 pb-0">Biblioteca de Canciones</SheetTitle>
+          </SheetHeader>
+          <Tabs defaultValue="local" className="h-full flex flex-col pt-2">
+            <TabsList className="mx-4">
               <TabsTrigger value="local" className="gap-2"><Library className="w-4 h-4" /> Biblioteca Local</TabsTrigger>
               <TabsTrigger value="global" className="gap-2"><Globe className="w-4 h-4"/> Biblioteca Global</TabsTrigger>
             </TabsList>
             
             <TabsContent value="local" className="flex-grow overflow-y-auto px-4">
-                <div className="flex justify-between items-center mb-4">
+                <div className="flex justify-between items-center my-4">
                   <h3 className="font-semibold">{selectedSetlist ? `Añadir a "${selectedSetlist.name}"` : 'Biblioteca de Canciones'}</h3>
                   <UploadSongDialog onUploadFinished={handleFetchSongs} />
                 </div>
@@ -402,7 +423,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
             </TabsContent>
 
             <TabsContent value="global" className="flex-grow overflow-y-auto px-4">
-                <div className="flex justify-between items-center mb-4">
+                <div className="flex justify-between items-center my-4">
                   <h3 className="font-semibold">{selectedSetlist ? `Añadir a "${selectedSetlist.name}"` : 'Biblioteca Global'}</h3>
                 </div>
                 {renderSongList(true)}
