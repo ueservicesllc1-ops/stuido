@@ -53,7 +53,7 @@ const TrackPad: React.FC<TrackPadProps> = ({
     setLocalVolume(volume);
   }, [volume]);
 
-  const color = (name.toUpperCase() === 'CLICK' || name.toUpperCase() === 'CUES') ? 'destructive' : 'primary';
+  const color = (name.trim().toUpperCase() === 'CLICK' || name.trim().toUpperCase() === 'CUES') ? 'destructive' : 'primary';
   
   const handleVolumeChange = (value: number[]) => {
     const newVolume = value[0];
