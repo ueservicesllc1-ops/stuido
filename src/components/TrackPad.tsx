@@ -61,7 +61,7 @@ const TrackPad: React.FC<TrackPadProps> = ({
                 )}
             />
         </div>
-      <div className="relative h-40 flex justify-center items-center gap-2">
+      <div className="relative h-40 flex justify-center items-center gap-1.5">
          {isDisabled && (
            <div className="absolute inset-0 flex justify-center items-center bg-card/80 z-20 rounded-lg">
               <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -75,7 +75,7 @@ const TrackPad: React.FC<TrackPadProps> = ({
           onValueChange={handleVolumeChange}
           disabled={isDisabled}
           className={cn(
-            'w-5 [&>span:first-child]:bg-secondary',
+            '[&>span:first-child]:bg-secondary',
             (isSolo || isMuted || isDisabled) && 'opacity-50'
           )}
         />

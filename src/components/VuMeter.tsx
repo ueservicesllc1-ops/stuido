@@ -13,7 +13,7 @@ const VuMeter: React.FC<VuMeterProps> = ({ level }) => {
   const isSaturated = level >= 95;
 
   return (
-    <div className="relative h-40 w-4 bg-secondary/50 rounded-full overflow-hidden">
+    <div className="relative h-40 w-2 bg-secondary/50 rounded-full overflow-hidden">
       <div
         className={cn(
           "absolute bottom-0 w-full transition-[height] duration-75",
