@@ -177,21 +177,6 @@ const DawPage = () => {
       setLoadingTracks(prev => prev.filter(id => id !== track.id));
     }
   };
-
-
-  // --- Audio Control Handlers ---
-
-  const updatePlaybackPosition = () => {
-    // Encuentra la primera pista activa que tenga un audio asociado para usarla como referencia de tiempo
-    const referenceTrack = activeTracks.find(t => audioRefs.current[t.id]);
-    if (referenceTrack) {
-        const audio = audioRefs.current[referenceTrack.id];
-        if (audio && isPlaying) {
-          setPlaybackPosition(audio.currentTime);
-          animationFrameRef.current = requestAnimationFrame(updatePlaybackPosition);
-        }
-    }
-  };
   
   const getPrio = (trackName: string) => {
     const upperCaseName = trackName.trim().toUpperCase();
@@ -210,6 +195,20 @@ const DawPage = () => {
         }
         return a.name.localeCompare(b.name);
     });
+
+  // --- Audio Control Handlers ---
+
+  const updatePlaybackPosition = () => {
+    // Encuentra la primera pista activa que tenga un audio asociado para usarla como referencia de tiempo
+    const referenceTrack = activeTracks.find(t => audioRefs.current[t.id]);
+    if (referenceTrack) {
+        const audio = audioRefs.current[referenceTrack.id];
+        if (audio && isPlaying) {
+          setPlaybackPosition(audio.currentTime);
+          animationFrameRef.current = requestAnimationFrame(updatePlaybackPosition);
+        }
+    }
+  };
     
   const handleVolumeChange = useCallback((trackId: string, newVolume: number) => {
     setVolumes(prevVolumes => {
@@ -241,6 +240,8 @@ const DawPage = () => {
     const playPromises = activeTracks.map(track => {
         const audio = audioRefs.current[track.id];
         if (audio) {
+            // Sincroniza el tiempo antes de reproducir
+            audio.currentTime = playbackPosition;
             return audio.play();
         }
         return null;
