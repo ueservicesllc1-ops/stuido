@@ -20,6 +20,11 @@ const DawPage = () => {
 
   // --- Audio State ---
   const [isPlaying, setIsPlaying] = useState(false);
+  const isPlayingRef = useRef(isPlaying);
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
+
   const [playbackPosition, setPlaybackPosition] = useState(0);
   const [duration, setDuration] = useState(0);
   const audioRefs = useRef<{[key: string]: HTMLAudioElement | null}>({});
@@ -295,12 +300,12 @@ const DawPage = () => {
     const referenceTrack = activeTracks.find(t => audioRefs.current[t.id]);
     if (referenceTrack) {
         const audio = audioRefs.current[referenceTrack.id];
-        if (audio && isPlaying) {
+        if (audio && isPlayingRef.current) {
           setPlaybackPosition(audio.currentTime);
           animationFrameRef.current = requestAnimationFrame(updatePlaybackPosition);
         }
     }
-  }, [activeTracks, isPlaying]);
+  }, [activeTracks]);
     
   const handleVolumeChange = useCallback((trackId: string, newVolume: number) => {
     setVolumes(prevVolumes => {
@@ -483,5 +488,7 @@ const DawPage = () => {
 };
 
 export default DawPage;
+
+    
 
     
