@@ -375,8 +375,8 @@ const DawPage = () => {
   }
 
   return (
-    <div className="grid grid-cols-[280px_1fr_280px] grid-rows-[auto_1fr] h-screen w-screen p-4 gap-4">
-      <div className="col-span-3 row-start-1">
+    <div className="grid grid-cols-[1fr_320px] grid-rows-[auto_1fr] h-screen w-screen p-4 gap-4">
+      <div className="col-span-2 row-start-1">
         <Header 
             isPlaying={isPlaying}
             onPlay={handlePlay}
@@ -390,10 +390,8 @@ const DawPage = () => {
             onPlaybackModeChange={setPlaybackMode}
         />
       </div>
-      <aside className="col-start-1 row-start-2">
-        <TonicPad />
-      </aside>
-      <main className="col-start-2 row-start-2 overflow-y-auto pr-2">
+      
+      <main className="col-start-1 row-start-2 overflow-y-auto pr-2">
         {activeSongId ? (
             <MixerGrid
               tracks={activeTracks}
@@ -419,7 +417,8 @@ const DawPage = () => {
          </div>
         )}
       </main>
-       <div className="col-start-3 row-start-2">
+
+       <div className="col-start-2 row-start-2 flex flex-col gap-4">
         <SongList 
             initialSetlist={initialSetlist}
             activeSongId={activeSongId}
@@ -427,6 +426,7 @@ const DawPage = () => {
             onSongSelected={handleSongSelected}
             onLoadTrack={loadTrack}
         />
+        <TonicPad />
       </div>
     </div>
   );
