@@ -6,6 +6,7 @@ import { Slider } from './ui/slider';
 import { cn } from '@/lib/utils';
 import { Settings } from 'lucide-react';
 import { SetlistSong } from '@/actions/setlists';
+import { PlaybackMode } from '@/app/page';
 
 interface TrackPadProps {
   track: SetlistSong;
@@ -18,6 +19,7 @@ interface TrackPadProps {
   isPlaying: boolean;
   playbackPosition: number;
   duration: number;
+  playbackMode: PlaybackMode;
 }
 
 const TrackPad: React.FC<TrackPadProps> = ({
@@ -31,6 +33,7 @@ const TrackPad: React.FC<TrackPadProps> = ({
   isPlaying,
   playbackPosition,
   duration,
+  playbackMode,
 }) => {
   const { name } = track;
   const sliderRef = useRef<HTMLDivElement>(null);
@@ -72,8 +75,12 @@ const TrackPad: React.FC<TrackPadProps> = ({
           onValueChange={handleVolumeChange}
           className={cn(
             '[&>span:first-child]:bg-secondary',
+            // Default online color
             '[&_.bg-primary]:bg-primary [&_.border-primary]:border-primary',
+            // Special colors
             color === 'destructive' && '[&_.bg-primary]:bg-destructive [&_.border-primary]:border-destructive',
+            // Offline color override
+            playbackMode === 'offline' && color !== 'destructive' && '[&_.bg-primary]:bg-yellow-500 [&_.border-primary]:border-yellow-500',
             (isSolo || isMuted) && 'opacity-50'
           )}
         />
@@ -113,3 +120,5 @@ const TrackPad: React.FC<TrackPadProps> = ({
 };
 
 export default TrackPad;
+
+    

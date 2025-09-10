@@ -5,6 +5,7 @@ import TrackPad from './TrackPad';
 import { SetlistSong } from '@/actions/setlists';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { PlaybackMode } from '@/app/page';
 
 
 interface MixerGridProps {
@@ -19,6 +20,7 @@ interface MixerGridProps {
   playbackPosition: number;
   duration: number;
   loadingTracks: string[];
+  playbackMode: PlaybackMode;
 }
 
 const MixerGrid: React.FC<MixerGridProps> = ({ 
@@ -33,6 +35,7 @@ const MixerGrid: React.FC<MixerGridProps> = ({
   playbackPosition,
   duration,
   loadingTracks,
+  playbackMode,
 }) => {
   return (
     <div className="grid grid-cols-6 gap-4">
@@ -49,6 +52,7 @@ const MixerGrid: React.FC<MixerGridProps> = ({
           isPlaying={isPlaying}
           playbackPosition={playbackPosition}
           duration={duration}
+          playbackMode={playbackMode}
         />
       ))}
       {loadingTracks.map(loadingId => {
@@ -69,3 +73,5 @@ const MixerGrid: React.FC<MixerGridProps> = ({
 };
 
 export default MixerGrid;
+
+    

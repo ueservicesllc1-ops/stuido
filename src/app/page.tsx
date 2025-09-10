@@ -55,7 +55,7 @@ const DawPage = () => {
       setTracks([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialSetlist, playbackMode]);
+  }, [initialSetlist]);
 
 
   // Inicializa volúmenes y refs de audio cuando cambian las pistas
@@ -216,6 +216,8 @@ const DawPage = () => {
     setInitialSetlist(setlist);
   };
   
+  // Filtra las pistas para mostrar solo las que están listas en modo offline
+  // En modo online, se muestran todas
   const visibleTracks = playbackMode === 'offline' 
     ? tracks.filter(t => !loadingTracks.includes(t.id) && trackUrls[t.id]?.startsWith('blob:'))
     : tracks;
@@ -267,7 +269,8 @@ const DawPage = () => {
             isPlaying={isPlaying}
             playbackPosition={playbackPosition}
             duration={duration}
-            loadingTracks={loadingTracks}
+            loadingTracks={loadingTracks.filter(id => !visibleTracks.some(t => t.id === id))}
+            playbackMode={playbackMode}
           />
         </div>
         <div className="col-span-12 lg:col-span-3">
@@ -286,3 +289,5 @@ const DawPage = () => {
 };
 
 export default DawPage;
+
+    
