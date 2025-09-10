@@ -216,10 +216,11 @@ const DawPage = () => {
     setInitialSetlist(setlist);
   };
   
-  // Filtra las pistas para mostrar solo las que están listas en modo offline
-  // En modo online, se muestran todas
+  // Filtra las pistas para mostrar solo las que están listas.
+  // En modo offline, solo se muestran las cacheadas.
+  // En modo online, se muestran todas.
   const visibleTracks = playbackMode === 'offline' 
-    ? tracks.filter(t => !loadingTracks.includes(t.id) && trackUrls[t.id]?.startsWith('blob:'))
+    ? tracks.filter(t => trackUrls[t.id]?.startsWith('blob:'))
     : tracks;
 
 
@@ -269,7 +270,6 @@ const DawPage = () => {
             isPlaying={isPlaying}
             playbackPosition={playbackPosition}
             duration={duration}
-            loadingTracks={loadingTracks.filter(id => !visibleTracks.some(t => t.id === id))}
             playbackMode={playbackMode}
           />
         </div>

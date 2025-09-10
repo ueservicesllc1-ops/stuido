@@ -19,7 +19,6 @@ interface MixerGridProps {
   isPlaying: boolean;
   playbackPosition: number;
   duration: number;
-  loadingTracks: string[];
   playbackMode: PlaybackMode;
 }
 
@@ -34,7 +33,6 @@ const MixerGrid: React.FC<MixerGridProps> = ({
   isPlaying,
   playbackPosition,
   duration,
-  loadingTracks,
   playbackMode,
 }) => {
   return (
@@ -55,19 +53,6 @@ const MixerGrid: React.FC<MixerGridProps> = ({
           playbackMode={playbackMode}
         />
       ))}
-      {loadingTracks.map(loadingId => {
-        // Find the track name from the original tracks list if available
-        // This part is tricky if the track isn't in the visible `tracks` prop
-        // We'll just show a generic loader for now.
-        return (
-          <div key={`loading-${loadingId}`} className="flex flex-col items-center justify-center gap-2 h-[268px]">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <span className={cn(
-                "text-xs font-semibold uppercase text-muted-foreground tracking-wider"
-              )}>Cargando...</span>
-          </div>
-        )
-      })}
     </div>
   );
 };
