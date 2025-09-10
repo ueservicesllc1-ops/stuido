@@ -1,6 +1,6 @@
 'use server';
 
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 function getRegionFromEndpoint(endpoint: string | undefined): string {
   if (!endpoint) {
@@ -51,6 +51,23 @@ export async function uploadFileToB2(file: File) {
     return { success: true, url: fileUrl, fileKey: fileName };
   } catch (error) {
     console.error("Error subiendo a B2:", error);
+    return { success: false, error: (error as Error).message };
+  }
+}
+
+
+export async function deleteFileFromB2(fileKey: string) {
+  const params = {
+    Bucket: process.env.B2_BUCKET_NAME,
+    Key: fileKey,
+  };
+
+  try {
+    const command = new DeleteObjectCommand(params);
+    await s3Client.send(command);
+    return { success: true };
+  } catch (error) {
+    console.error("Error eliminando de B2:", error);
     return { success: false, error: (error as Error).message };
   }
 }

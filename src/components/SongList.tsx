@@ -5,20 +5,23 @@ import { Button } from './ui/button';
 import { AlignJustify, Library, MoreHorizontal, Music, Loader2, Calendar, X, PlusCircle, DownloadCloud, Trash2, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { getSongs } from '@/actions/songs';
+import { getSongs, Song, deleteSong } from '@/actions/songs';
 import CreateSetlistDialog from './CreateSetlistDialog';
 import { getSetlists, Setlist, addSongToSetlist, SetlistSong, removeSongFromSetlist } from '@/actions/setlists';
 import { format } from 'date-fns';
 import { useToast } from './ui/use-toast';
 import UploadSongDialog from './UploadSongDialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
-
-interface Song {
-  id: string;
-  name: string;
-  url: string;
-  fileKey: string;
-}
 
 interface SongListProps {
   initialSetlist?: Setlist | null;
@@ -38,6 +41,8 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
   const [selectedSetlist, setSelectedSetlist] = useState<Setlist | null>(null);
   const [isSetlistSheetOpen, setIsSetlistSheetOpen] = useState(false);
   const [isLibrarySheetOpen, setIsLibrarySheetOpen] = useState(false);
+  const [songToDelete, setSongToDelete] = useState<Song | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
 
@@ -165,9 +170,54 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
         });
     }
   };
+  
+  const confirmDeleteSong = async () => {
+    if (!songToDelete) return;
+    setIsDeleting(true);
+
+    const result = await deleteSong(songToDelete);
+    if (result.success) {
+        toast({
+            title: '¡Canción eliminada!',
+            description: `"${songToDelete.name}" ha sido eliminada de la biblioteca.`,
+        });
+        // Remove from local state for instant feedback
+        setSongs(prevSongs => prevSongs.filter(s => s.id !== songToDelete.id));
+    } else {
+        toast({
+            variant: 'destructive',
+            title: 'Error al eliminar',
+            description: result.error || 'No se pudo eliminar la canción.',
+        });
+    }
+
+    setIsDeleting(false);
+    setSongToDelete(null);
+  };
 
 
   return (
+    <>
+    <AlertDialog open={!!songToDelete} onOpenChange={() => setSongToDelete(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+                Esta acción es permanente y no se puede deshacer. Se eliminará la canción {' '}
+                <span className="font-bold text-foreground">"{songToDelete?.name}"</span> {' '}
+                de tu biblioteca y del almacenamiento.
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteSong} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Sí, eliminar
+            </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+
     <div className="bg-card/50 rounded-lg p-3 flex flex-col h-full">
       <div className="flex justify-between items-center mb-3">
         <h2 className="font-bold text-foreground">{selectedSetlist ? selectedSetlist.name : 'Nuevas betel'}</h2>
@@ -259,10 +309,10 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
                                 <div className="space-y-2 flex-grow overflow-y-auto">
                                 {songs.length > 0 ? (
                                     songs.map((song) => (
-                                    <div key={song.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent">
+                                    <div key={song.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent group">
                                         <Music className="w-5 h-5 text-muted-foreground" />
                                         <p className="font-semibold text-foreground flex-grow">{song.name}</p>
-                                        <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => handleAddSongToSetlist(song)}>
+                                        <Button variant="ghost" size="icon" className="w-8 h-8 opacity-0 group-hover:opacity-100" onClick={() => handleAddSongToSetlist(song)}>
                                             <PlusCircle className="w-5 h-5 text-primary" />
                                         </Button>
                                     </div>
@@ -318,11 +368,21 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
               <div className="space-y-2">
                 {songs.length > 0 ? (
                   songs.map((song) => (
-                    <div key={song.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent">
+                    <div key={song.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent group">
                       <Music className="w-5 h-5 text-muted-foreground" />
                       <p className="font-semibold text-foreground flex-grow">{song.name}</p>
+                      
+                       <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="w-8 h-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                          onClick={() => setSongToDelete(song)}
+                       >
+                          <Trash2 className="w-4 h-4" />
+                       </Button>
+
                       {selectedSetlist && (
-                        <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => handleAddSongToSetlist(song)}>
+                        <Button variant="ghost" size="icon" className="w-8 h-8 opacity-0 group-hover:opacity-100" onClick={() => handleAddSongToSetlist(song)}>
                              <PlusCircle className="w-5 h-5 text-primary" />
                         </Button>
                       )}
@@ -337,6 +397,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
         </SheetContent>
       </Sheet>
     </div>
+    </>
   );
 };
 
