@@ -187,13 +187,14 @@ const DawPage = () => {
             audio.removeEventListener('error', onError);
           };
           
+          audio.src = assignedUrl;
+          audio.load();
+
           if (audio.readyState >= 4) { // HAVE_ENOUGH_DATA
               onCanPlayThrough();
           } else {
               audio.addEventListener('canplaythrough', onCanPlayThrough);
               audio.addEventListener('error', onError);
-              audio.src = assignedUrl;
-              audio.load();
           }
         });
       });
@@ -208,15 +209,27 @@ const DawPage = () => {
         setTrackUrls(finalTrackUrls);
 
         const firstTrackId = tracksForSong[0]?.id;
-        if (firstTrackId) {
-            const referenceAudio = audioRefs.current[firstTrackId];
-            if (referenceAudio && isFinite(referenceAudio.duration)) {
-                setDuration(referenceAudio.duration);
-            } else {
-                setDuration(0);
-            }
-        }
-        setIsReadyToPlay(true);
+        const referenceAudio = firstTrackId ? audioRefs.current[firstTrackId] : null;
+
+        const setDurationFromAudio = () => {
+          if (referenceAudio && isFinite(referenceAudio.duration)) {
+              setDuration(referenceAudio.duration);
+              setIsReadyToPlay(true);
+          } else if(referenceAudio) {
+              // Si no está lista la duración, esperar a que se carguen los metadatos
+              const onMetadataLoaded = () => {
+                  setDuration(referenceAudio.duration);
+                  setIsReadyToPlay(true);
+                  referenceAudio.removeEventListener('loadedmetadata', onMetadataLoaded);
+              }
+              referenceAudio.addEventListener('loadedmetadata', onMetadataLoaded);
+          } else {
+              setIsReadyToPlay(true); // No hay pistas, así que está "listo"
+          }
+        };
+
+        setDurationFromAudio();
+
       } catch (error: any) {
         console.error("One or more tracks failed to become ready, playback disabled.", error.message);
         setIsReadyToPlay(false);
@@ -226,7 +239,7 @@ const DawPage = () => {
     prepareAndVerifyTracks();
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSongId, playbackMode]);
+  }, [activeSongId]);
 
 
   // Inicializa volúmenes y refs de audio cuando cambian las pistas
@@ -239,7 +252,7 @@ const DawPage = () => {
       newVolumes[track.id] = volumes[track.id] ?? 75;
       if (!audioRefs.current[track.id]) {
           const audio = new Audio();
-          audio.preload = 'metadata'; // Cambiado a metadata para carga más ligera inicial
+          audio.preload = 'auto'; 
           newAudioRefs[track.id] = audio;
       } else {
           newAudioRefs[track.id] = audioRefs.current[track.id];
@@ -278,7 +291,7 @@ const DawPage = () => {
   
 
   // --- Audio Control Handlers ---
-  const updatePlaybackPosition = () => {
+  const updatePlaybackPosition = useCallback(() => {
     const referenceTrack = activeTracks.find(t => audioRefs.current[t.id]);
     if (referenceTrack) {
         const audio = audioRefs.current[referenceTrack.id];
@@ -287,7 +300,7 @@ const DawPage = () => {
           animationFrameRef.current = requestAnimationFrame(updatePlaybackPosition);
         }
     }
-  };
+  }, [activeTracks, isPlaying]);
     
   const handleVolumeChange = useCallback((trackId: string, newVolume: number) => {
     setVolumes(prevVolumes => {
@@ -312,7 +325,7 @@ const DawPage = () => {
     });
   }, [volumes, mutedTracks, soloTracks, activeTracks]);
 
-  const handlePlay = () => {
+  const handlePlay = useCallback(() => {
     if (!isReadyToPlay) return;
 
     setIsPlaying(true);
@@ -329,13 +342,21 @@ const DawPage = () => {
       console.error("Play error:", e.message);
       setIsPlaying(false);
     });
+
+    if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+    }
     animationFrameRef.current = requestAnimationFrame(updatePlaybackPosition);
-  };
+  }, [isReadyToPlay, activeTracks, trackUrls, playbackPosition, updatePlaybackPosition]);
+
 
   const handlePause = () => {
     setIsPlaying(false);
     activeTracks.forEach(track => { audioRefs.current[track.id]?.pause() });
-    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = undefined;
+    }
   };
   
   const handleStop = () => {
@@ -348,7 +369,10 @@ const DawPage = () => {
             audio.currentTime = 0;
         }
     });
-    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = undefined;
+    }
   };
   
   const handleRewind = () => {
@@ -459,3 +483,5 @@ const DawPage = () => {
 };
 
 export default DawPage;
+
+    
