@@ -134,6 +134,7 @@ const DawPage = () => {
   }
 
   const loadTrack = async (track: SetlistSong) => {
+    if (loadingTracks.includes(track.id)) return;
     setLoadingTracks(prev => [...prev, track.id]);
     try {
       if (playbackMode === 'offline') {
@@ -150,6 +151,7 @@ const DawPage = () => {
       }
     } catch (error) {
       console.error(`Error loading track ${track.name}:`, error);
+      // Fallback a la URL original si la caché falla
       setTrackUrls(prev => ({...prev, [track.id]: track.url}));
     } finally {
       setLoadingTracks(prev => prev.filter(id => id !== track.id));
@@ -307,7 +309,7 @@ const DawPage = () => {
       </div>
 
       <main className="flex-grow grid grid-cols-12 gap-4 px-4 pb-4 pt-20">
-        <div className="col-span-12 lg:col-span-7">
+        <div className="col-span-12 lg:col-span-8">
           <MixerGrid 
             tracks={activeTracks}
             soloTracks={soloTracks}
@@ -324,17 +326,19 @@ const DawPage = () => {
             cachedTracks={cachedTracks}
           />
         </div>
-        <div className="col-span-12 lg:col-span-3">
-          <SongList 
-            initialSetlist={initialSetlist}
-            activeSongId={activeSongId}
-            onSetlistSelected={handleSetlistUpdate}
-            onSongSelected={handleSongSelect}
-            onLoadTrack={loadTrack}
-          />
-        </div>
-        <div className="col-span-12 lg:col-span-2">
-          <TonicPad />
+        <div className="col-span-12 lg:col-span-4 flex flex-col gap-4">
+          <div className="flex-grow">
+            <SongList 
+                initialSetlist={initialSetlist}
+                activeSongId={activeSongId}
+                onSetlistSelected={handleSetlistUpdate}
+                onSongSelected={handleSongSelect}
+                onLoadTrack={loadTrack}
+            />
+          </div>
+          <div className="h-auto">
+            <TonicPad />
+          </div>
         </div>
       </main>
     </div>

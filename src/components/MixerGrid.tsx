@@ -40,7 +40,7 @@ const MixerGrid: React.FC<MixerGridProps> = ({
   cachedTracks
 }) => {
   return (
-    <div className="grid grid-cols-7 gap-4">
+    <div className="grid grid-cols-7 gap-4 items-start">
       {tracks.map(track => (
         <TrackPad
           key={track.id}
