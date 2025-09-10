@@ -30,7 +30,6 @@ interface SongListProps {
   activeSongId: string | null;
   onSetlistSelected: (setlist: Setlist | null) => void;
   onSongSelected: (songId: string) => void;
-  onLoadTrack: (track: SetlistSong) => void;
   onSongsFetched: (songs: Song[]) => void;
 }
 
@@ -43,7 +42,7 @@ const blobToDataURI = (blob: Blob): Promise<string> => {
     });
 };
 
-const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSetlistSelected, onSongSelected, onLoadTrack, onSongsFetched }) => {
+const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSetlistSelected, onSongSelected, onSongsFetched }) => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [isLoadingSongs, setIsLoadingSongs] = useState(false);
   const [songsError, setSongsError] = useState<string | null>(null);
@@ -170,9 +169,6 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
       onSetlistSelected(updatedSetlist);
       setSelectedSetlist(updatedSetlist);
       
-      // Iniciar la carga/cache de las nuevas pistas
-      tracksToAdd.forEach(track => onLoadTrack(track));
-
       toast({
         title: '¡Canción añadida!',
         description: `"${song.name}" se ha añadido a "${selectedSetlist.name}".`,
@@ -256,7 +252,10 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
 
         if (!audioBlob) {
             toast({ title: 'Descargando audio', description: 'La pista de Cues no está en caché, se descargará ahora.' });
-            audioBlob = await cacheAudio(cuesTrack.url);
+            const response = await fetch(`/api/download?url=${encodeURIComponent(cuesTrack.url)}`);
+            if (!response.ok) throw new Error('Failed to download Cues track for analysis.');
+            audioBlob = await response.blob();
+            await cacheAudio(cuesTrack.url, audioBlob);
         }
         
         const audioDataUri = await blobToDataURI(audioBlob);
@@ -356,6 +355,8 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
   };
 
   const renderSetlist = () => {
+    if (!selectedSetlist) return null;
+    
     // Agrupar pistas por canción
     const songsInSetlist = selectedSetlist.songs.reduce((acc, track) => {
         // Solo procesar pistas que tengan información de la canción padre

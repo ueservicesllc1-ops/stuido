@@ -3,10 +3,6 @@
 import React from 'react';
 import TrackPad from './TrackPad';
 import { SetlistSong } from '@/actions/setlists';
-import { Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { PlaybackMode } from '@/app/page';
-
 
 interface MixerGridProps {
   tracks: SetlistSong[];
@@ -16,13 +12,9 @@ interface MixerGridProps {
   loadingTracks: string[];
   onMuteToggle: (trackId: string) => void;
   onSoloToggle: (trackId: string) => void;
-  onVolumeChange: (trackId: string, volume: number) => void;
+  onVolumeChange: (trackId: string, newVolume: number) => void;
   isPlaying: boolean;
-  playbackPosition: number;
-  duration: number;
-  playbackMode: PlaybackMode;
-  cachedTracks: Set<string>;
-  hybridDownloadingTracks: Set<string>;
+  vuData: Record<string, number>;
 }
 
 const MixerGrid: React.FC<MixerGridProps> = ({ 
@@ -35,11 +27,7 @@ const MixerGrid: React.FC<MixerGridProps> = ({
   onSoloToggle,
   onVolumeChange,
   isPlaying,
-  playbackPosition,
-  duration,
-  playbackMode,
-  cachedTracks,
-  hybridDownloadingTracks
+  vuData
 }) => {
   const isSoloActive = soloTracks.length > 0;
 
@@ -48,8 +36,8 @@ const MixerGrid: React.FC<MixerGridProps> = ({
       {tracks.map(track => {
         const isMuted = mutedTracks.includes(track.id);
         const isSolo = soloTracks.includes(track.id);
-        const isDownloadingForOffline = playbackMode === 'offline' && !cachedTracks.has(track.id);
-        const isDisabled = loadingTracks.includes(track.id) || isDownloadingForOffline;
+        const isLoading = loadingTracks.includes(track.id);
+        const isDisabled = isLoading;
 
         const isAudible = isPlaying && !isDisabled && !isMuted && (!isSoloActive || isSolo);
 
@@ -57,7 +45,7 @@ const MixerGrid: React.FC<MixerGridProps> = ({
           <TrackPad
             key={track.id}
             track={track}
-            isLoading={loadingTracks.includes(track.id)}
+            isLoading={isLoading}
             isMuted={isMuted}
             isSolo={isSolo}
             isAudible={isAudible}
@@ -65,12 +53,7 @@ const MixerGrid: React.FC<MixerGridProps> = ({
             onMuteToggle={() => onMuteToggle(track.id)}
             onSoloToggle={() => onSoloToggle(track.id)}
             onVolumeChange={(newVolume) => onVolumeChange(track.id, newVolume)}
-            isPlaying={isPlaying}
-            playbackPosition={playbackPosition}
-            duration={duration}
-            playbackMode={playbackMode}
-            isCached={cachedTracks.has(track.id)}
-            isHybridDownloading={hybridDownloadingTracks.has(track.id)}
+            vuMeterLevel={vuData[track.id] || 0}
           />
         );
       })}
@@ -79,3 +62,5 @@ const MixerGrid: React.FC<MixerGridProps> = ({
 };
 
 export default MixerGrid;
+
+    

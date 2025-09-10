@@ -4,9 +4,9 @@ import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { Button } from './ui/button';
 import { Slider } from './ui/slider';
 import { cn } from '@/lib/utils';
-import { Loader2, Settings, ArrowDownToLine } from 'lucide-react';
+import { Loader2, Settings } from 'lucide-react';
 import { SetlistSong } from '@/actions/setlists';
-import { PlaybackMode } from '@/app/page';
+import VuMeter from './VuMeter';
 
 interface TrackPadProps {
   track: SetlistSong;
@@ -15,15 +15,10 @@ interface TrackPadProps {
   isSolo: boolean;
   isAudible: boolean;
   volume: number;
-  onVolumeChange: (trackId: string, volume: number) => void;
+  onVolumeChange: (volume: number) => void;
   onMuteToggle: () => void;
   onSoloToggle: () => void;
-  isPlaying: boolean;
-  playbackPosition: number;
-  duration: number;
-  playbackMode: PlaybackMode;
-  isCached: boolean;
-  isHybridDownloading: boolean;
+  vuMeterLevel: number;
 }
 
 const TrackPad: React.FC<TrackPadProps> = ({
@@ -36,62 +31,24 @@ const TrackPad: React.FC<TrackPadProps> = ({
   onVolumeChange,
   onMuteToggle,
   onSoloToggle,
-  isPlaying,
-  playbackPosition,
-  duration,
-  playbackMode,
-  isCached,
-  isHybridDownloading,
+  vuMeterLevel,
 }) => {
-  const { id, name } = track;
-  const sliderRef = useRef<HTMLDivElement>(null);
-  const [sliderHeight, setSliderHeight] = useState(0);
+  const { name } = track;
   const [localVolume, setLocalVolume] = useState(volume);
-
-  useEffect(() => {
-    if (sliderRef.current) {
-      setSliderHeight(sliderRef.current.offsetHeight);
-    }
-  }, []);
 
   useEffect(() => {
     setLocalVolume(volume);
   }, [volume]);
-
-  const color = (name.trim().toUpperCase() === 'CLICK' || name.trim().toUpperCase() === 'CUES') ? 'destructive' : 'primary';
   
   const handleVolumeChange = (value: number[]) => {
     const newVolume = value[0];
     setLocalVolume(newVolume);
-    onVolumeChange(id, newVolume);
+    onVolumeChange(newVolume);
   };
-  
-  const progressPercentage = duration > 0 ? (playbackPosition / duration) * 100 : 0;
-  // Calculate indicator position based on the slider's height. The '8' is a magic number for thumb height adjustment.
-  const indicatorPosition = (progressPercentage / 100) * (sliderHeight > 8 ? sliderHeight - 8 : sliderHeight); 
-
-  const isDownloadingForOffline = playbackMode === 'offline' && !isCached;
-  const isDisabled = isLoading || isDownloadingForOffline;
   
   const sliderValue = useMemo(() => [localVolume], [localVolume]);
-
-  const getSliderColorClass = () => {
-    if (color === 'destructive') return '[&_.bg-primary]:bg-destructive [&_.border-primary]:border-destructive';
-
-    switch (playbackMode) {
-        case 'online':
-            return '[&_.bg-primary]:bg-primary [&_.border-primary]:border-primary';
-        case 'hybrid':
-            return isCached ? '[&_.bg-primary]:bg-green-500 [&_.border-primary]:border-green-500' : '[&_.bg-primary]:bg-primary [&_.border-primary]:border-primary';
-        case 'offline':
-            return '[&_.bg-primary]:bg-yellow-500 [&_.border-primary]:border-yellow-500';
-        default:
-            return '[&_.bg-primary]:bg-primary [&_.border-primary]:border-primary';
-    }
-  };
-
-  const isSaturated = localVolume >= 95;
-
+  const isDisabled = isLoading;
+  const isSaturated = vuMeterLevel >= 95;
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -104,26 +61,12 @@ const TrackPad: React.FC<TrackPadProps> = ({
                 )}
             />
         </div>
-      <div className="relative h-40 flex justify-center items-center" ref={sliderRef}>
-         {isHybridDownloading && (
-            <div className="absolute top-0 right-0 z-20 p-1 bg-card/80 rounded-full">
-               <ArrowDownToLine className="w-3 h-3 text-primary animate-pulse" />
-            </div>
-         )}
+      <div className="relative h-40 flex justify-center items-center gap-2">
          {isDisabled && (
            <div className="absolute inset-0 flex justify-center items-center bg-card/80 z-20 rounded-lg">
               <Loader2 className="w-8 h-8 text-primary animate-spin" />
            </div>
          )}
-         {isPlaying && duration > 0 && !isDisabled && (
-          <div 
-            className="absolute left-1/2 -translate-x-1/2 w-4 h-2 rounded-full bg-green-400 z-10"
-            style={{ 
-              top: `${indicatorPosition}px`,
-              boxShadow: '0 0 8px rgba(134, 239, 172, 0.8)' 
-            }}
-          />
-        )}
         <Slider
           value={sliderValue}
           max={100}
@@ -132,11 +75,11 @@ const TrackPad: React.FC<TrackPadProps> = ({
           onValueChange={handleVolumeChange}
           disabled={isDisabled}
           className={cn(
-            '[&>span:first-child]:bg-secondary',
-            getSliderColorClass(),
+            'w-5 [&>span:first-child]:bg-secondary',
             (isSolo || isMuted || isDisabled) && 'opacity-50'
           )}
         />
+        <VuMeter level={vuMeterLevel} />
       </div>
 
        <div className="flex items-center justify-center w-full mt-2">
@@ -178,3 +121,5 @@ const TrackPad: React.FC<TrackPadProps> = ({
 };
 
 export default TrackPad;
+
+    

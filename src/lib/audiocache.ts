@@ -31,19 +31,13 @@ export const getCachedAudio = async (url: string): Promise<Blob | null> => {
 };
 
 /**
- * Descarga un archivo de audio desde la red y lo guarda en la caché de IndexedDB.
- * @param url La URL del archivo de audio para descargar y cachear.
- * @returns El Blob del audio descargado.
+ * Guarda un blob de audio en la caché de IndexedDB.
+ * @param url La URL del archivo de audio para usar como clave.
+ * @param blob El Blob de audio para guardar.
+ * @returns El Blob guardado.
  */
-export const cacheAudio = async (url: string): Promise<Blob> => {
+export const cacheAudio = async (url: string, blob: Blob): Promise<Blob> => {
   try {
-    // Usamos nuestro endpoint de proxy para evitar problemas de CORS
-    const response = await fetch(`/api/download?url=${encodeURIComponent(url)}`);
-
-    if (!response.ok) {
-       throw new Error(`Failed to fetch audio via proxy: ${response.statusText}`);
-    }
-    const blob = await response.blob();
     await localforage.setItem(url, blob);
     console.log('Audio cacheado:', url);
     return blob;
