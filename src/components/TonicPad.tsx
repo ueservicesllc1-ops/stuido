@@ -30,8 +30,9 @@ const TonicPad = () => {
   const [volume, setVolume] = useState(75);
   const [isMuted, setIsMuted] = useState(false);
   const [isSolo, setIsSolo] = useState(false); // La lógica de Solo podría ser más compleja en una app real
-  const audioRefs = useRef<{ [key: string]: HTMLAudioElement | null }>({});
+  // const audioRefs = useRef<{ [key: string]: HTMLAudioElement | null }>({});
 
+  /*
   useEffect(() => {
     // Precargar los elementos de audio
     keys.forEach(key => {
@@ -51,13 +52,17 @@ const TonicPad = () => {
           }
       })
   }, [volume, isMuted])
+  */
 
   const playSound = (key: string) => {
+    /*
     const audio = audioRefs.current[key];
     if (audio) {
       audio.currentTime = 0; // Reinicia el sonido si ya se está reproduciendo
       audio.play().catch(e => console.error("Error al reproducir sonido:", e));
     }
+    */
+   console.log(`Reproduciendo sonido para: ${key}`);
   };
 
   const handleVolumeChange = (value: number[]) => {
