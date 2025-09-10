@@ -17,7 +17,7 @@ const TonicPad = () => {
                 key={key} 
                 variant="secondary"
                 className={cn(
-                    "w-full aspect-square text-base font-bold",
+                    "w-full h-16 text-base font-bold",
                     key === 'D' ? 'bg-primary text-primary-foreground' : 'bg-secondary hover:bg-accent'
                 )}
             >
