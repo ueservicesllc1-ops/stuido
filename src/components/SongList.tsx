@@ -2,11 +2,11 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
-import { AlignJustify, Library, MoreHorizontal, Music, Loader2, Calendar, X, PlusCircle, DownloadCloud, Trash2, Upload, Globe } from 'lucide-react';
+import { AlignJustify, Library, MoreHorizontal, Music, Loader2, Calendar, X, PlusCircle, DownloadCloud, Trash2, Upload, Globe, ScanSearch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { getSongs, Song, deleteSong } from '@/actions/songs';
+import { getSongs, Song, deleteSong, reanalyzeSongStructure } from '@/actions/songs';
 import CreateSetlistDialog from './CreateSetlistDialog';
 import { getSetlists, Setlist, addSongToSetlist, SetlistSong, removeSongFromSetlist } from '@/actions/setlists';
 import { format } from 'date-fns';
@@ -48,6 +48,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
   const [isLibrarySheetForEditingOpen, setIsLibrarySheetForEditingOpen] = useState(false);
   const [songToDelete, setSongToDelete] = useState<Song | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [analyzingSongId, setAnalyzingSongId] = useState<string | null>(null);
   const { toast } = useToast();
 
 
@@ -226,6 +227,35 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
     setIsDeleting(false);
     setSongToDelete(null);
   };
+  
+  const handleReanalyze = async (song: Song) => {
+    setAnalyzingSongId(song.id);
+    try {
+        const result = await reanalyzeSongStructure(song.id);
+        if (result.success && result.structure) {
+            toast({
+                title: 'Análisis completado',
+                description: `Se ha analizado la estructura de "${song.name}".`,
+            });
+            // Actualizar la canción en el estado local
+            const updatedSongs = songs.map(s => 
+                s.id === song.id ? { ...s, structure: result.structure } : s
+            );
+            setSongs(updatedSongs);
+            onSongsFetched(updatedSongs); // Notificar al padre
+        } else {
+            throw new Error(result.error || 'Ocurrió un error desconocido durante el análisis.');
+        }
+    } catch (error) {
+        toast({
+            variant: 'destructive',
+            title: 'Error en el análisis',
+            description: (error as Error).message,
+        });
+    } finally {
+        setAnalyzingSongId(null);
+    }
+  };
 
 
   const renderSongList = (forGlobal: boolean = false) => {
@@ -244,32 +274,51 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
     if (songs.length > 0) {
       return (
         <div className="space-y-2">
-          {songs.map((song) => (
-            <div key={song.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent group">
-              <Music className="w-5 h-5 text-muted-foreground" />
-              <div className="flex-grow">
-                 <p className="font-semibold text-foreground">{song.name}</p>
-                 <p className="text-xs text-muted-foreground">{song.artist}</p>
-              </div>
-              
-              {!forGlobal && (
-                <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="w-8 h-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
-                    onClick={() => setSongToDelete(song)}
-                >
-                    <Trash2 className="w-4 h-4" />
-                </Button>
-              )}
+          {songs.map((song) => {
+            const hasCuesTrack = song.tracks.some(t => t.name.trim().toUpperCase() === 'CUES');
+            const isAnalyzing = analyzingSongId === song.id;
 
-              {selectedSetlist && (
-                <Button variant="ghost" size="icon" className="w-8 h-8 opacity-0 group-hover:opacity-100" onClick={() => handleAddSongToSetlist(song)}>
-                    <PlusCircle className="w-5 h-5 text-primary" />
-                </Button>
-              )}
-            </div>
-          ))}
+            return (
+                <div key={song.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent group">
+                <Music className="w-5 h-5 text-muted-foreground" />
+                <div className="flex-grow">
+                    <p className="font-semibold text-foreground">{song.name}</p>
+                    <p className="text-xs text-muted-foreground">{song.artist}</p>
+                </div>
+                
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {hasCuesTrack && !forGlobal && (
+                         <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="w-8 h-8 text-muted-foreground hover:text-primary"
+                            onClick={() => handleReanalyze(song)}
+                            disabled={isAnalyzing}
+                        >
+                            {isAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanSearch className="w-4 h-4" />}
+                        </Button>
+                    )}
+
+                    {!forGlobal && (
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="w-8 h-8 text-muted-foreground hover:text-destructive"
+                            onClick={() => setSongToDelete(song)}
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </Button>
+                    )}
+
+                    {selectedSetlist && (
+                        <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => handleAddSongToSetlist(song)}>
+                            <PlusCircle className="w-5 h-5 text-primary" />
+                        </Button>
+                    )}
+                </div>
+                </div>
+            );
+          })}
         </div>
       );
     }

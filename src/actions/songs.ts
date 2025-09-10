@@ -2,7 +2,7 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, serverTimestamp, query, orderBy, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, serverTimestamp, query, orderBy, doc, deleteDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { analyzeSongStructure, SongStructure } from '@/ai/flows/song-structure';
 
 // Represents a single track file within a song
@@ -61,12 +61,37 @@ async function runStructureAnalysis(songId: string, tracks: TrackFile[]) {
             const songRef = doc(db, 'songs', songId);
             await updateDoc(songRef, { structure });
             console.log(`Estructura guardada para la canción ${songId}.`);
+            return structure;
         } else {
             console.log(`No se encontró pista 'CUES' para la canción ${songId}. No se analizará la estructura.`);
+            return null;
         }
     } catch (error) {
         console.error(`Error al analizar la estructura de la canción ${songId}:`, error);
         // No devolvemos error al cliente, es un proceso de fondo.
+        throw error;
+    }
+}
+
+export async function reanalyzeSongStructure(songId: string): Promise<{ success: boolean; structure?: SongStructure, error?: string }> {
+    try {
+        const songRef = doc(db, 'songs', songId);
+        const songSnap = await getDoc(songRef);
+
+        if (!songSnap.exists()) {
+            throw new Error('La canción no existe.');
+        }
+
+        const songData = songSnap.data() as Omit<Song, 'id'>;
+        const structure = await runStructureAnalysis(songId, songData.tracks);
+
+        if (structure) {
+            return { success: true, structure };
+        } else {
+            return { success: false, error: 'No se encontró una pista de "CUES" para analizar.' };
+        }
+    } catch (error) {
+        return { success: false, error: (error as Error).message };
     }
 }
 
