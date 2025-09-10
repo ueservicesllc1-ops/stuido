@@ -27,7 +27,7 @@ import {
 import { Loader2, Upload, FileAudio, X, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { ScrollArea } from './ui/scroll-area';
-import { saveSong, TrackFile } from '@/actions/songs';
+import { saveSong, NewSong, TrackFile } from '@/actions/songs';
 import { cn } from '@/lib/utils';
 
 
@@ -59,12 +59,11 @@ type SongFormValues = z.infer<typeof songFormSchema>;
 
 interface UploadSongDialogProps {
   onUploadFinished: () => void;
-  trigger?: React.ReactNode;
 }
 
 type TrackStatus = 'pending' | 'uploading' | 'success' | 'error';
 
-const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished, trigger }) => {
+const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished }) => {
   const [open, setOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [trackStatuses, setTrackStatuses] = useState<Record<number, TrackStatus>>({});
@@ -89,7 +88,14 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished, t
   });
   
   const resetComponentState = () => {
-    form.reset();
+    form.reset({
+      name: '',
+      artist: '',
+      tempo: 120,
+      key: 'C',
+      timeSignature: '4/4',
+      tracks: [],
+    });
     setIsUploading(false);
     setTrackStatuses({});
     setTrackErrorMessages({});
@@ -120,6 +126,7 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished, t
     setIsUploading(true);
     const uploadedTracks: TrackFile[] = [];
 
+    // Usar un bucle for clásico con índice para asegurar la ejecución secuencial estricta
     for (let i = 0; i < data.tracks.length; i++) {
         const track = data.tracks[i];
         try {
@@ -129,6 +136,7 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished, t
             formData.append('file', track.file);
             formData.append('trackName', track.name);
             
+            // `await` pausará el bucle aquí hasta que esta subida se complete
             const response = await fetch('/api/upload-track', {
                 method: 'POST',
                 body: formData,
@@ -169,7 +177,7 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished, t
     }
 
     try {
-        const songData = {
+        const songData: NewSong = {
           name: data.name,
           artist: data.artist,
           tempo: data.tempo,
@@ -236,7 +244,7 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished, t
       }
     }}>
       <DialogTrigger asChild>
-        {trigger || defaultTrigger}
+        {defaultTrigger}
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
@@ -349,3 +357,5 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished, t
 };
 
 export default UploadSongDialog;
+
+    
