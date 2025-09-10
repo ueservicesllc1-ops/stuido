@@ -22,6 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { cacheAudio, getCachedAudio } from '@/lib/audiocache';
 
 
 interface SongListProps {
@@ -32,6 +33,15 @@ interface SongListProps {
   onLoadTrack: (track: SetlistSong) => void;
   onSongsFetched: (songs: Song[]) => void;
 }
+
+const blobToDataURI = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(blob);
+    });
+};
 
 const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSetlistSelected, onSongSelected, onLoadTrack, onSongsFetched }) => {
   const [songs, setSongs] = useState<Song[]>([]);
@@ -230,27 +240,38 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
   
   const handleReanalyze = async (song: Song) => {
     if (!song.tracks || song.tracks.length === 0) {
-        toast({
-            variant: 'destructive',
-            title: 'Sin pistas',
-            description: `La canción "${song.name}" no tiene pistas para analizar.`,
-        });
+      toast({ variant: 'destructive', title: 'Sin pistas', description: `"${song.name}" no tiene pistas para analizar.`});
+      return;
+    }
+
+    const cuesTrack = song.tracks.find(t => t.name.trim().toUpperCase() === 'CUES');
+    if (!cuesTrack) {
+        toast({ variant: 'destructive', title: 'Sin pista de Cues', description: `"${song.name}" no tiene una pista llamada 'CUES'.`});
         return;
     }
+
     setAnalyzingSongId(song.id);
     try {
-        const result = await reanalyzeSongStructure(song.id);
+        let audioBlob = await getCachedAudio(cuesTrack.url);
+
+        if (!audioBlob) {
+            toast({ title: 'Descargando audio', description: 'La pista de Cues no está en caché, se descargará ahora.' });
+            audioBlob = await cacheAudio(cuesTrack.url);
+        }
+        
+        const audioDataUri = await blobToDataURI(audioBlob);
+
+        const result = await reanalyzeSongStructure(song.id, { audioDataUri });
         if (result.success && result.structure) {
             toast({
                 title: 'Análisis completado',
                 description: `Se ha analizado la estructura de "${song.name}".`,
             });
-            // Actualizar la canción en el estado local
             const updatedSongs = songs.map(s => 
                 s.id === song.id ? { ...s, structure: result.structure } : s
             );
             setSongs(updatedSongs);
-            onSongsFetched(updatedSongs); // Notificar al padre
+            onSongsFetched(updatedSongs);
         } else {
             throw new Error(result.error || 'Ocurrió un error desconocido durante el análisis.');
         }
@@ -566,5 +587,3 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
 };
 
 export default SongList;
-
-    

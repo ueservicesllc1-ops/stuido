@@ -3,7 +3,7 @@
 
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, serverTimestamp, query, orderBy, doc, deleteDoc, updateDoc, getDoc } from 'firebase/firestore';
-import { analyzeSongStructure, SongStructure } from '@/ai/flows/song-structure';
+import { analyzeSongStructure, SongStructure, AnalyzeSongStructureInput } from '@/ai/flows/song-structure';
 
 // Represents a single track file within a song
 export interface TrackFile {
@@ -42,7 +42,7 @@ export async function saveSong(data: NewSong) {
     }
     
     // Disparar el análisis de estructura en segundo plano
-    runStructureAnalysis(newDoc.id, data.tracks);
+    runStructureAnalysisOnUpload(newDoc.id, data.tracks);
 
     return { success: true, song: songData };
   } catch (error) {
@@ -51,11 +51,12 @@ export async function saveSong(data: NewSong) {
   }
 }
 
-async function runStructureAnalysis(songId: string, tracks: TrackFile[]) {
+async function runStructureAnalysisOnUpload(songId: string, tracks: TrackFile[]) {
     try {
         const cuesTrack = tracks.find(t => t.name.trim().toUpperCase() === 'CUES');
         if (cuesTrack) {
             console.log(`Iniciando análisis de estructura para la canción ${songId}...`);
+            // El análisis se hace con la URL pública, ya que el audio puede no estar en caché aún
             const structure = await analyzeSongStructure({ audioDataUri: cuesTrack.url });
             
             const songRef = doc(db, 'songs', songId);
@@ -73,24 +74,20 @@ async function runStructureAnalysis(songId: string, tracks: TrackFile[]) {
     }
 }
 
-export async function reanalyzeSongStructure(songId: string): Promise<{ success: boolean; structure?: SongStructure, error?: string }> {
+// Esta es la nueva función que se llamará desde el cliente con el Data URI
+export async function reanalyzeSongStructure(songId: string, input: AnalyzeSongStructureInput): Promise<{ success: boolean; structure?: SongStructure, error?: string }> {
     try {
+        console.log(`Iniciando re-análisis de estructura para la canción ${songId} desde el cliente...`);
+        const structure = await analyzeSongStructure(input);
+        
         const songRef = doc(db, 'songs', songId);
-        const songSnap = await getDoc(songRef);
-
-        if (!songSnap.exists()) {
-            throw new Error('La canción no existe.');
-        }
-
-        const songData = songSnap.data() as Omit<Song, 'id'>;
-        const structure = await runStructureAnalysis(songId, songData.tracks);
-
-        if (structure) {
-            return { success: true, structure };
-        } else {
-            return { success: false, error: 'No se encontró una pista de "CUES" para analizar.' };
-        }
+        await updateDoc(songRef, { structure });
+        
+        console.log(`Estructura re-analizada y guardada para la canción ${songId}.`);
+        return { success: true, structure };
+        
     } catch (error) {
+        console.error(`Error al re-analizar la estructura de la canción ${songId}:`, error);
         return { success: false, error: (error as Error).message };
     }
 }
