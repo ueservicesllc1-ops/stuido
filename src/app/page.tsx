@@ -9,7 +9,7 @@ import Image from 'next/image';
 import { getSetlists, Setlist, SetlistSong } from '@/actions/setlists';
 import { cacheAudio, getCachedAudio } from '@/lib/audiocache';
 
-export type PlaybackMode = 'online' | 'offline';
+export type PlaybackMode = 'online' | 'hybrid' | 'offline';
 
 const DawPage = () => {
   const [tracks, setTracks] = useState<SetlistSong[]>([]);
@@ -28,9 +28,13 @@ const DawPage = () => {
   const [volumes, setVolumes] = useState<{ [key: string]: number }>({});
   const [trackUrls, setTrackUrls] = useState<{[key: string]: string}>({});
   const [loadingTracks, setLoadingTracks] = useState<string[]>([]);
-  const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('online');
+  const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('hybrid');
   const [cachedTracks, setCachedTracks] = useState<Set<string>>(new Set());
   const [isReadyToPlay, setIsReadyToPlay] = useState(false);
+
+  // Estado para descargas en segundo plano en modo híbrido
+  const [hybridDownloadingTracks, setHybridDownloadingTracks] = useState<Set<string>>(new Set());
+
 
   const getPrio = (trackName: string) => {
     const upperCaseName = trackName.trim().toUpperCase();
@@ -69,19 +73,16 @@ const DawPage = () => {
       setTracks(allTracks);
       
       if (allTracks.length > 0) {
-        // Seleccionar la primera canción del setlist por defecto
         const firstSongId = allTracks[0].songId;
         if (firstSongId) {
-            setActiveSongId(firstSongId);
+            handleSongSelected(firstSongId);
         }
       } else {
         setActiveSongId(null);
       }
-      
       setTrackUrls({});
       setLoadingTracks([]);
-      setCachedTracks(new Set()); // Reset cache status on setlist change
-      
+      setCachedTracks(new Set());
     } else {
       setTracks([]);
       setActiveSongId(null);
@@ -89,38 +90,27 @@ const DawPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSetlist]);
 
-  // Se detiene la reproducción al cambiar de modo
+  // Se detiene la reproducción al cambiar de modo o de canción
   useEffect(() => {
     handleStop();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playbackMode]);
-
-
-  // Prepara las pistas cuando cambia la canción activa
-  useEffect(() => {
-    // Cuando cambia la canción activa, se reinicia la disposición para reproducir
-    setIsReadyToPlay(false);
     if (activeSongId) {
-      // Inicia la preparación de todas las pistas de la canción activa.
-      activeTracks.forEach(prepareAndAssignUrl);
+        prepareTracksForSong(activeSongId);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSongId, playbackMode]); // También reacciona al cambio de modo
-  
+  }, [playbackMode, activeSongId]);
+
+
   // Chequea si las pistas de la canción activa están listas para reproducirse
-  // Este efecto ahora depende de trackUrls, lo que asegura que se ejecuta
-  // solo después de que las URLs hayan sido asignadas.
   useEffect(() => {
       if (!activeSongId) {
           setIsReadyToPlay(false);
           return;
       }
       if (activeTracks.length === 0) {
-          setIsReadyToPlay(true); // No hay pistas, se puede "reproducir" (no hace nada)
+          setIsReadyToPlay(true);
           return;
       }
 
-      // Asegurarse de que todas las pistas activas tengan una URL asignada antes de verificar la preparación
       const allUrlsAssigned = activeTracks.every(track => !!trackUrls[track.id]);
       if (!allUrlsAssigned) {
           setIsReadyToPlay(false);
@@ -130,60 +120,54 @@ const DawPage = () => {
       const readinessPromises = activeTracks.map(track => {
           return new Promise<void>((resolve, reject) => {
               const audio = audioRefs.current[track.id];
-              // Si el audio no existe aún, tampoco está listo.
               if (!audio) {
                   reject(new Error(`No audio element for track ${track.name}`));
                   return;
               }
+               if (!audio.src) {
+                  reject(new Error(`No URL for track ${track.name}`));
+                  return;
+              }
               
-              const onCanPlayThrough = () => {
-                  cleanup();
-                  resolve();
-              };
-
+              const onCanPlayThrough = () => { cleanup(); resolve(); };
               const onError = (e: Event) => {
                   cleanup();
                   const errorDetails = (e.target as HTMLAudioElement).error;
-                  console.error(`Error loading audio source for ${track.name}:`, errorDetails?.message || 'Unknown error', e);
+                  console.error(`Error loading audio source for ${track.name}:`, errorDetails?.message || 'Unknown error');
                   reject(new Error(`Failed to load ${track.name}`));
               };
-              
               const cleanup = () => {
                   audio.removeEventListener('canplaythrough', onCanPlayThrough);
                   audio.removeEventListener('error', onError);
               }
 
-              // Si ya está listo, resolver de inmediato
               if (audio.readyState >= 4) { // HAVE_ENOUGH_DATA
                   resolve();
                   return;
               }
-
-              // Si el readyState es 0, es posible que 'load' no haya sido llamado aún.
-              if (audio.readyState === 0 && audio.src) {
-                audio.load();
-              }
+              if (audio.readyState === 0 && audio.src) audio.load();
 
               audio.addEventListener('canplaythrough', onCanPlayThrough);
               audio.addEventListener('error', onError);
           });
       });
 
-      Promise.all(readinessPromises).then(() => {
-          setIsReadyToPlay(true);
-      }).catch(error => {
-          console.error("One or more tracks failed to become ready, playback disabled.", error.message);
-          setIsReadyToPlay(false);
-      });
+      Promise.all(readinessPromises)
+        .then(() => setIsReadyToPlay(true))
+        .catch(error => {
+            console.error("One or more tracks failed to become ready, playback disabled.", error.message);
+            setIsReadyToPlay(false);
+        });
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trackUrls, activeSongId]); // Depende de que las URLs se hayan asignado y de la canción activa
+  }, [trackUrls]);
 
 
   // Inicializa volúmenes y refs de audio cuando cambian las pistas
   useEffect(() => {
     const newVolumes: { [key: string]: number } = {};
     const newAudioRefs: {[key:string]: HTMLAudioElement | null} = {};
+    const localTrackUrls = { ...trackUrls };
 
     tracks.forEach(track => {
       newVolumes[track.id] = volumes[track.id] ?? 75;
@@ -191,18 +175,23 @@ const DawPage = () => {
           const audio = new Audio();
           audio.preload = 'auto'; 
           audio.addEventListener('loadedmetadata', () => {
-              if (isFinite(audio.duration)) {
-                setDuration(prev => Math.max(prev, audio.duration));
-              }
+            if (isFinite(audio.duration) && track.songId === activeSongId) {
+                setDuration(d => Math.max(d, audio.duration));
+            }
           });
           newAudioRefs[track.id] = audio;
       } else {
           newAudioRefs[track.id] = audioRefs.current[track.id];
       }
+      // Limpiar URLs que no corresponden a las pistas actuales
+       if (!tracks.find(t => t.id === track.id)) {
+           delete localTrackUrls[track.id];
+       }
     });
 
     setVolumes(newVolumes);
     audioRefs.current = newAudioRefs;
+    setTrackUrls(localTrackUrls);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tracks]);
 
@@ -220,44 +209,78 @@ const DawPage = () => {
 
 
   // --- Lógica de Carga y Caché ---
-  
   const prepareAndAssignUrl = async (track: SetlistSong) => {
     const cachedBlob = await getCachedAudio(track.url);
     if(cachedBlob) {
       setCachedTracks(prev => new Set(prev).add(track.id));
       const localUrl = URL.createObjectURL(cachedBlob);
       setTrackUrls(prev => ({...prev, [track.id]: localUrl}));
-    } else {
-      setCachedTracks(prev => {
+      return;
+    }
+    
+    // Si no está en caché
+    setCachedTracks(prev => {
         const newSet = new Set(prev);
         newSet.delete(track.id);
         return newSet;
-      });
+    });
 
-      if (playbackMode === 'online') {
+    switch(playbackMode) {
+      case 'online':
         setTrackUrls(prev => ({...prev, [track.id]: `/api/download?url=${encodeURIComponent(track.url)}`}));
-      } else {
-        // En modo offline, inicia la descarga. La URL se asignará cuando la descarga termine.
-        loadTrack(track);
-      }
+        break;
+      case 'hybrid':
+        // Reproduce online y descarga en segundo plano
+        setTrackUrls(prev => ({...prev, [track.id]: `/api/download?url=${encodeURIComponent(track.url)}`}));
+        setHybridDownloadingTracks(prev => new Set(prev).add(track.id));
+        cacheAudio(track.url)
+          .then(() => {
+              setCachedTracks(prev => new Set(prev).add(track.id));
+          })
+          .catch(err => console.error(`Hybrid download failed for ${track.name}`, err))
+          .finally(() => {
+              setHybridDownloadingTracks(prev => {
+                  const newSet = new Set(prev);
+                  newSet.delete(track.id);
+                  return newSet;
+              });
+          });
+        break;
+      case 'offline':
+        // Inicia la descarga para el modo offline. La URL se asignará cuando termine.
+        loadTrackForOffline(track);
+        break;
     }
   };
 
-  const loadTrack = async (track: SetlistSong) => {
-    if (loadingTracks.includes(track.id) || cachedTracks.has(track.id)) return;
-    
-    setLoadingTracks(prev => [...prev, track.id]);
+  const prepareTracksForSong = (songId: string) => {
+      setIsReadyToPlay(false);
+      setHybridDownloadingTracks(new Set()); // Limpiar descargas de la canción anterior
+      const tracksForSong = tracks.filter(t => t.songId === songId);
+      
+      const newTrackUrls: { [key: string]: string } = {};
+      tracksForSong.forEach(track => {
+        // En modo offline, las URLs se asignarán más tarde.
+        // En los otros modos, se asignan durante prepareAndAssignUrl
+        if(playbackMode !== 'offline') newTrackUrls[track.id] = '';
+      });
 
+      // Se resetean las URLs para la nueva canción, disparando la lógica de carga
+      setTrackUrls(newTrackUrls); 
+      
+      tracksForSong.forEach(prepareAndAssignUrl);
+  }
+
+  const loadTrackForOffline = async (track: SetlistSong) => {
+    if (loadingTracks.includes(track.id) || cachedTracks.has(track.id)) return;
+    setLoadingTracks(prev => [...prev, track.id]);
     try {
         const blob = await cacheAudio(track.url);
         setCachedTracks(prev => new Set(prev).add(track.id));
         const localUrl = URL.createObjectURL(blob);
-        // Una vez descargado, se asigna la URL, lo que disparará el useEffect de 'isReadyToPlay'
         setTrackUrls(prev => ({...prev, [track.id]: localUrl}));
-      
     } catch (error) {
-      console.error(`Error loading track ${track.name}:`, error);
-      // Asegurarse de que la URL quede vacía si falla para que no se intente reproducir
+      console.error(`Error loading track ${track.name} for offline:`, error);
       setTrackUrls(prev => ({...prev, [track.id]: ''})); 
     } finally {
       setLoadingTracks(prev => prev.filter(id => id !== track.id));
@@ -266,7 +289,6 @@ const DawPage = () => {
   
 
   // --- Audio Control Handlers ---
-
   const updatePlaybackPosition = () => {
     const referenceTrack = activeTracks.find(t => audioRefs.current[t.id]);
     if (referenceTrack) {
@@ -280,9 +302,7 @@ const DawPage = () => {
     
   const handleVolumeChange = useCallback((trackId: string, newVolume: number) => {
     setVolumes(prevVolumes => {
-      if (prevVolumes[trackId] === newVolume) {
-        return prevVolumes;
-      }
+      if (prevVolumes[trackId] === newVolume) return prevVolumes;
       return { ...prevVolumes, [trackId]: newVolume };
     });
   }, []);
@@ -296,13 +316,9 @@ const DawPage = () => {
         const isThisTrackSolo = soloTracks.includes(track.id);
         const volume = volumes[track.id] ?? 75;
 
-        if (isMuted) {
-          audio.volume = 0;
-        } else if (isSoloActive) {
-          audio.volume = isThisTrackSolo ? volume / 100 : 0;
-        } else {
-          audio.volume = volume / 100;
-        }
+        if (isMuted) audio.volume = 0;
+        else if (isSoloActive) audio.volume = isThisTrackSolo ? volume / 100 : 0;
+        else audio.volume = volume / 100;
       }
     });
   }, [volumes, mutedTracks, soloTracks, activeTracks]);
@@ -329,22 +345,13 @@ const DawPage = () => {
 
   const handlePause = () => {
     setIsPlaying(false);
-    activeTracks.forEach(track => {
-        const audio = audioRefs.current[track.id];
-        if (audio) {
-            audio.pause();
-        }
-    });
-
-    if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-    }
+    activeTracks.forEach(track => { audioRefs.current[track.id]?.pause() });
+    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
   };
   
   const handleStop = () => {
     setIsPlaying(false);
     setPlaybackPosition(0);
-
     activeTracks.forEach(track => {
         const audio = audioRefs.current[track.id];
         if (audio) {
@@ -352,20 +359,14 @@ const DawPage = () => {
             audio.currentTime = 0;
         }
     });
-
-    if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-    }
+    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
   };
   
   const handleRewind = () => {
     const newPosition = Math.max(0, playbackPosition - 5);
     setPlaybackPosition(newPosition);
     activeTracks.forEach(track => {
-      const audio = audioRefs.current[track.id];
-      if (audio) {
-        audio.currentTime = newPosition;
-      }
+      if (audioRefs.current[track.id]) audioRefs.current[track.id]!.currentTime = newPosition;
     });
   };
 
@@ -373,60 +374,38 @@ const DawPage = () => {
     const newPosition = Math.min(duration, playbackPosition + 5);
     setPlaybackPosition(newPosition);
      activeTracks.forEach(track => {
-      const audio = audioRefs.current[track.id];
-      if (audio) {
-        audio.currentTime = newPosition;
-      }
+      if (audioRefs.current[track.id]) audioRefs.current[track.id]!.currentTime = newPosition;
     });
   };
 
   const handleMuteToggle = (trackId: string) => {
-    const newMutedTracks = mutedTracks.includes(trackId)
-      ? mutedTracks.filter(id => id !== trackId)
-      : [...mutedTracks, trackId];
-    setMutedTracks(newMutedTracks);
-
-    if (newMutedTracks.includes(trackId)) {
-        setSoloTracks(prevSolo => prevSolo.filter(id => id !== trackId));
-    }
+    setMutedTracks(prev => prev.includes(trackId) ? prev.filter(id => id !== trackId) : [...prev, trackId]);
+    if (!mutedTracks.includes(trackId)) setSoloTracks(prev => prev.filter(id => id !== trackId));
   };
 
   const handleSoloToggle = (trackId: string) => {
-    const newSoloTracks = soloTracks.includes(trackId)
-      ? soloTracks.filter(id => id !== trackId)
-      : [...soloTracks, trackId];
-    setSoloTracks(newSoloTracks);
+    setSoloTracks(prev => prev.includes(trackId) ? prev.filter(id => id !== trackId) : [...prev, trackId]);
   };
   
   const handleSetlistSelected = (setlist: Setlist | null) => {
     setInitialSetlist(setlist);
     if (!setlist) {
-        handleStop(); // Detener todo si se limpia el setlist
+        handleStop();
         setTracks([]);
         setActiveSongId(null);
     }
   };
   
   const handleSongSelected = (songId: string) => {
+      if (songId === activeSongId) return;
       handleStop();
       setActiveSongId(songId);
       setPlaybackPosition(0);
       
       const firstTrackOfSong = tracks.find(t => t.songId === songId);
       if (firstTrackOfSong) {
-          const audio = audioRefs.current[firstTrackOfSong.id];
-          if(audio && isFinite(audio.duration)) {
-            setDuration(audio.duration);
-          } else {
-            // Reset duration if not available
-            setDuration(0);
-            if (trackUrls[firstTrackOfSong.id]) {
-                const newAudio = new Audio(trackUrls[firstTrackOfSong.id]);
-                newAudio.addEventListener('loadedmetadata', () => {
-                    if(isFinite(newAudio.duration)) setDuration(newAudio.duration);
-                });
-            }
-          }
+        const audio = audioRefs.current[firstTrackOfSong.id];
+        setDuration(audio && isFinite(audio.duration) ? audio.duration : 0);
       } else {
         setDuration(0);
       }
@@ -475,11 +454,11 @@ const DawPage = () => {
               duration={duration}
               playbackMode={playbackMode}
               cachedTracks={cachedTracks}
+              hybridDownloadingTracks={hybridDownloadingTracks}
             />
         ) : (
           <div className="flex justify-center items-center h-full">
             <div className="text-center text-muted-foreground">
-                <Image src="/logo.png" alt="Multitrack Player" width={200} height={200} className="mx-auto opacity-20"/>
                 <p className="mt-4">Selecciona o crea un setlist para empezar.</p>
             </div>
          </div>
@@ -492,7 +471,7 @@ const DawPage = () => {
             activeSongId={activeSongId}
             onSetlistSelected={handleSetlistSelected}
             onSongSelected={handleSongSelected}
-            onLoadTrack={loadTrack}
+            onLoadTrack={loadTrackForOffline}
         />
         <TonicPad />
       </div>
@@ -501,5 +480,3 @@ const DawPage = () => {
 };
 
 export default DawPage;
-
-    

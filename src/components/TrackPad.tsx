@@ -1,9 +1,10 @@
+
 'use client';
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { Button } from './ui/button';
 import { Slider } from './ui/slider';
 import { cn } from '@/lib/utils';
-import { Loader2, Settings } from 'lucide-react';
+import { Loader2, Settings, ArrowDownToLine } from 'lucide-react';
 import { SetlistSong } from '@/actions/setlists';
 import { PlaybackMode } from '@/app/page';
 
@@ -21,6 +22,7 @@ interface TrackPadProps {
   duration: number;
   playbackMode: PlaybackMode;
   isCached: boolean;
+  isHybridDownloading: boolean;
 }
 
 const TrackPad: React.FC<TrackPadProps> = ({
@@ -37,6 +39,7 @@ const TrackPad: React.FC<TrackPadProps> = ({
   duration,
   playbackMode,
   isCached,
+  isHybridDownloading,
 }) => {
   const { id, name } = track;
   const sliderRef = useRef<HTMLDivElement>(null);
@@ -62,17 +65,37 @@ const TrackPad: React.FC<TrackPadProps> = ({
   };
   
   const progressPercentage = duration > 0 ? (playbackPosition / duration) * 100 : 0;
-  // We subtract the indicator height (8px) from the total height to keep it within bounds
   const indicatorPosition = (progressPercentage / 100) * (sliderHeight - 8); 
 
-  const isDownloading = playbackMode === 'offline' && !isCached;
-  const isDisabled = isLoading || isDownloading;
+  const isDownloadingForOffline = playbackMode === 'offline' && !isCached;
+  const isDisabled = isLoading || isDownloadingForOffline;
   
   const sliderValue = useMemo(() => [localVolume], [localVolume]);
+
+  const getSliderColorClass = () => {
+    if (color === 'destructive') return '[&_.bg-primary]:bg-destructive [&_.border-primary]:border-destructive';
+
+    switch (playbackMode) {
+        case 'online':
+            return '[&_.bg-primary]:bg-primary [&_.border-primary]:border-primary';
+        case 'hybrid':
+            return isCached ? '[&_.bg-primary]:bg-green-500 [&_.border-primary]:border-green-500' : '[&_.bg-primary]:bg-primary [&_.border-primary]:border-primary';
+        case 'offline':
+            return '[&_.bg-primary]:bg-yellow-500 [&_.border-primary]:border-yellow-500';
+        default:
+            return '[&_.bg-primary]:bg-primary [&_.border-primary]:border-primary';
+    }
+  };
+
 
   return (
     <div className="flex flex-col items-center gap-2">
       <div className="relative h-40 flex justify-center items-center" ref={sliderRef}>
+         {isHybridDownloading && (
+            <div className="absolute top-0 right-0 z-20 p-1 bg-card/80 rounded-full">
+               <ArrowDownToLine className="w-3 h-3 text-primary animate-pulse" />
+            </div>
+         )}
          {isDisabled && (
            <div className="absolute inset-0 flex justify-center items-center bg-card/80 z-20 rounded-lg">
               <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -96,12 +119,7 @@ const TrackPad: React.FC<TrackPadProps> = ({
           disabled={isDisabled}
           className={cn(
             '[&>span:first-child]:bg-secondary',
-            // Default online color
-            '[&_.bg-primary]:bg-primary [&_.border-primary]:border-primary',
-            // Special colors
-            color === 'destructive' && '[&_.bg-primary]:bg-destructive [&_.border-primary]:border-destructive',
-            // Offline color override
-            playbackMode === 'offline' && color !== 'destructive' && '[&_.bg-primary]:bg-yellow-500 [&_.border-primary]:border-yellow-500',
+            getSliderColorClass(),
             (isSolo || isMuted || isDisabled) && 'opacity-50'
           )}
         />

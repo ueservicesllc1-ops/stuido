@@ -22,6 +22,7 @@ interface MixerGridProps {
   duration: number;
   playbackMode: PlaybackMode;
   cachedTracks: Set<string>;
+  hybridDownloadingTracks: Set<string>;
 }
 
 const MixerGrid: React.FC<MixerGridProps> = ({ 
@@ -37,7 +38,8 @@ const MixerGrid: React.FC<MixerGridProps> = ({
   playbackPosition,
   duration,
   playbackMode,
-  cachedTracks
+  cachedTracks,
+  hybridDownloadingTracks
 }) => {
   return (
     <div className="grid grid-cols-7 gap-4 items-start">
@@ -57,6 +59,7 @@ const MixerGrid: React.FC<MixerGridProps> = ({
           duration={duration}
           playbackMode={playbackMode}
           isCached={cachedTracks.has(track.id)}
+          isHybridDownloading={hybridDownloadingTracks.has(track.id)}
         />
       ))}
     </div>
@@ -64,5 +67,3 @@ const MixerGrid: React.FC<MixerGridProps> = ({
 };
 
 export default MixerGrid;
-
-    

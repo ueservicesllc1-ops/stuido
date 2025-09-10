@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { Button } from './ui/button';
-import { Rewind, Play, Pause, Square, FastForward, Settings, RadioTower, Disc, Wifi, DownloadCloud, Loader2 } from 'lucide-react';
+import { Rewind, Play, Pause, Square, FastForward, Settings, RadioTower, Disc, DownloadCloud, Loader2 } from 'lucide-react';
 import { Circle } from './icons';
 import PlaybackModeToggle from './PlaybackModeToggle';
 import type { PlaybackMode } from '@/app/page';
@@ -28,6 +28,7 @@ interface HeaderProps {
 }
 
 const formatTime = (seconds: number) => {
+    if (!isFinite(seconds)) return '00:00';
     const minutes = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
