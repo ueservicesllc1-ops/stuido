@@ -22,9 +22,10 @@ interface Song {
 interface SongListProps {
   initialSetlist?: Setlist | null;
   onSetlistSelected: (setlist: Setlist | null) => void;
+  onLoadTrack: (track: SetlistSong) => void;
 }
 
-const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected }) => {
+const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, onLoadTrack }) => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [isLoadingSongs, setIsLoadingSongs] = useState(false);
   const [songsError, setSongsError] = useState<string | null>(null);
@@ -121,6 +122,9 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected }
       // Update state locally first for instant UI feedback
       onSetlistSelected(updatedSetlist);
       setSelectedSetlist(updatedSetlist);
+      
+      // Iniciar la carga/cache de la pista
+      onLoadTrack(songToAdd);
 
       toast({
         title: '¡Canción añadida!',

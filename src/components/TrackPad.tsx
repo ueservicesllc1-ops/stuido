@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useRef, useState, useEffect } from 'react';
 import { Button } from './ui/button';
@@ -17,6 +18,7 @@ interface TrackPadProps {
   isPlaying: boolean;
   playbackPosition: number;
   duration: number;
+  isLoading: boolean;
 }
 
 const TrackPad: React.FC<TrackPadProps> = ({
@@ -30,6 +32,7 @@ const TrackPad: React.FC<TrackPadProps> = ({
   isPlaying,
   playbackPosition,
   duration,
+  isLoading,
 }) => {
   const { name } = track;
   const sliderRef = useRef<HTMLDivElement>(null);
@@ -50,6 +53,17 @@ const TrackPad: React.FC<TrackPadProps> = ({
   const progressPercentage = duration > 0 ? (playbackPosition / duration) * 100 : 0;
   // We subtract the indicator height (8px) from the total height to keep it within bounds
   const indicatorPosition = (progressPercentage / 100) * (sliderHeight - 8); 
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-2 h-[268px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <span className={cn(
+            "text-xs font-semibold uppercase text-muted-foreground tracking-wider"
+          )}>{name}</span>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col items-center gap-2">

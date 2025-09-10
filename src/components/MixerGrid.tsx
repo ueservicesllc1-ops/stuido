@@ -1,3 +1,4 @@
+
 'use client';
 import React from 'react';
 import TrackPad from './TrackPad';
@@ -14,6 +15,7 @@ interface MixerGridProps {
   isPlaying: boolean;
   playbackPosition: number;
   duration: number;
+  loadingTracks: string[];
 }
 
 const MixerGrid: React.FC<MixerGridProps> = ({ 
@@ -27,6 +29,7 @@ const MixerGrid: React.FC<MixerGridProps> = ({
   isPlaying,
   playbackPosition,
   duration,
+  loadingTracks,
 }) => {
   return (
     <div className="grid grid-cols-6 gap-4">
@@ -43,6 +46,7 @@ const MixerGrid: React.FC<MixerGridProps> = ({
           isPlaying={isPlaying}
           playbackPosition={playbackPosition}
           duration={duration}
+          isLoading={loadingTracks.includes(track.id)}
         />
       ))}
     </div>

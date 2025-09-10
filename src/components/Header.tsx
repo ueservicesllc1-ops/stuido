@@ -1,9 +1,13 @@
+
 'use client';
 
 import React from 'react';
 import { Button } from './ui/button';
 import { Rewind, Play, Pause, Square, FastForward, Settings, RadioTower, Disc } from 'lucide-react';
 import { Circle } from './icons';
+import PlaybackModeToggle from './PlaybackModeToggle';
+import type { PlaybackMode } from '@/app/page';
+
 
 interface HeaderProps {
   isPlaying: boolean;
@@ -14,6 +18,8 @@ interface HeaderProps {
   onFastForward: () => void;
   currentTime: number;
   duration: number;
+  playbackMode: PlaybackMode;
+  onPlaybackModeChange: (mode: PlaybackMode) => void;
 }
 
 const formatTime = (seconds: number) => {
@@ -31,7 +37,9 @@ const Header: React.FC<HeaderProps> = ({
   onRewind,
   onFastForward,
   currentTime,
-  duration
+  duration,
+  playbackMode,
+  onPlaybackModeChange
 }) => {
   return (
     <header className="flex items-center justify-between bg-card/50 border-b border-border p-2 gap-4">
@@ -80,10 +88,9 @@ const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center gap-2">
         <Button variant="secondary" className="font-mono">71...</Button>
         <Button variant="secondary" className="font-mono">D</Button>
-        <Button variant="ghost" className="gap-2">
-            <Circle className="w-2 h-2 fill-current" />
-            MIDI IN
-        </Button>
+        
+        <PlaybackModeToggle value={playbackMode} onChange={onPlaybackModeChange} />
+        
         <Button variant="ghost" className="gap-2">
             <Circle className="w-2 h-2 fill-current" />
             OUTS

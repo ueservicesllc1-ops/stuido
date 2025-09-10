@@ -7,6 +7,9 @@ import SongList from '@/components/SongList';
 import TonicPad from '@/components/TonicPad';
 import Image from 'next/image';
 import { getSetlists, Setlist, SetlistSong } from '@/actions/setlists';
+import { cacheAudio, getCachedAudio } from '@/lib/audiocache';
+
+export type PlaybackMode = 'online' | 'offline';
 
 const DawPage = () => {
   const [tracks, setTracks] = useState<SetlistSong[]>([]);
@@ -21,7 +24,12 @@ const DawPage = () => {
   const audioRefs = useRef<{[key: string]: HTMLAudioElement | null}>({});
   const animationFrameRef = useRef<number>();
 
+  const [volumes, setVolumes] = useState<{ [key: string]: number }>({});
+  const [trackUrls, setTrackUrls] = useState<{[key: string]: string}>({});
+  const [loadingTracks, setLoadingTracks] = useState<string[]>([]);
+  const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('online');
 
+  // Carga el último setlist usado al iniciar
   useEffect(() => {
     const fetchLastSetlist = async () => {
       const userId = 'user_placeholder_id';
@@ -33,16 +41,20 @@ const DawPage = () => {
     fetchLastSetlist();
   }, []);
 
+  // Actualiza las pistas cuando cambia el setlist inicial
   useEffect(() => {
     if (initialSetlist && initialSetlist.songs) {
       setTracks(initialSetlist.songs);
+      // Cuando cambia el setlist, cargar todas sus pistas según el modo actual
+      initialSetlist.songs.forEach(song => loadTrack(song));
     } else {
       setTracks([]);
     }
-  }, [initialSetlist]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSetlist, playbackMode]);
 
-  const [volumes, setVolumes] = useState<{ [key: string]: number }>({});
 
+  // Inicializa volúmenes y refs de audio cuando cambian las pistas
   useEffect(() => {
     const newVolumes: { [key: string]: number } = {};
     const newAudioRefs: {[key: string]: HTMLAudioElement | null} = {};
@@ -50,16 +62,47 @@ const DawPage = () => {
     tracks.forEach(track => {
       newVolumes[track.id] = volumes[track.id] ?? 75;
       newAudioRefs[track.id] = audioRefs.current[track.id] || null;
-       // Ensure audio elements are loaded
-      if (newAudioRefs[track.id]) {
-        newAudioRefs[track.id]?.load();
-      }
     });
+
     setVolumes(newVolumes);
     audioRefs.current = newAudioRefs;
-
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tracks]);
+
+  // Forzar la carga del audio cuando la URL cambia
+   useEffect(() => {
+    Object.keys(trackUrls).forEach(trackId => {
+        const audio = audioRefs.current[trackId];
+        if (audio && audio.src !== trackUrls[trackId]) {
+            audio.src = trackUrls[trackId];
+            audio.load();
+        }
+    });
+  }, [trackUrls]);
+
+
+  // --- Lógica de Carga y Caché ---
+  const loadTrack = async (track: SetlistSong) => {
+    setLoadingTracks(prev => [...prev, track.id]);
+    try {
+      if (playbackMode === 'offline') {
+        let blob = await getCachedAudio(track.url);
+        if (!blob) {
+          blob = await cacheAudio(track.url);
+        }
+        const localUrl = URL.createObjectURL(blob);
+        setTrackUrls(prev => ({...prev, [track.id]: localUrl}));
+      } else {
+        setTrackUrls(prev => ({...prev, [track.id]: track.url}));
+      }
+    } catch (error) {
+      console.error(`Error loading track ${track.name}:`, error);
+      // Fallback a online si la caché falla
+      setTrackUrls(prev => ({...prev, [track.id]: track.url}));
+    } finally {
+      setLoadingTracks(prev => prev.filter(id => id !== track.id));
+    }
+  };
 
   // --- Audio Control Handlers ---
 
@@ -73,7 +116,12 @@ const DawPage = () => {
 
   const handlePlay = () => {
     setIsPlaying(true);
-    Object.values(audioRefs.current).forEach(audio => audio?.play().catch(e => console.error("Play error:", e)));
+    const playPromises = Object.values(audioRefs.current).map(audio => audio?.play());
+    Promise.all(playPromises).catch(e => {
+      // Un solo error puede ser reportado si el usuario no ha interactuado
+      console.error("Play error:", e.message);
+      setIsPlaying(false);
+    });
     animationFrameRef.current = requestAnimationFrame(updatePlaybackPosition);
   };
 
@@ -170,7 +218,7 @@ const DawPage = () => {
           <audio
               key={track.id}
               ref={el => audioRefs.current[track.id] = el}
-              src={track.url}
+              src={trackUrls[track.id]}
               onLoadedMetadata={() => onLoadedMetadata(track.id)}
               onEnded={handlePause}
               preload="auto"
@@ -187,6 +235,8 @@ const DawPage = () => {
         onFastForward={handleFastForward}
         currentTime={playbackPosition}
         duration={duration}
+        playbackMode={playbackMode}
+        onPlaybackModeChange={setPlaybackMode}
       />
       
       <div className="relative flex-grow p-4 min-h-0">
@@ -208,12 +258,14 @@ const DawPage = () => {
             isPlaying={isPlaying}
             playbackPosition={playbackPosition}
             duration={duration}
+            loadingTracks={loadingTracks}
           />
         </div>
         <div className="col-span-12 lg:col-span-3">
           <SongList 
             initialSetlist={initialSetlist} 
             onSetlistSelected={handleSetlistUpdate}
+            onLoadTrack={loadTrack}
           />
         </div>
         <div className="col-span-12 lg:col-span-2">
