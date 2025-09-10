@@ -302,15 +302,15 @@ const DawPage = () => {
         onPlaybackModeChange={setPlaybackMode}
       />
       
-      <div className="relative flex-grow p-4 min-h-0">
-        <div className="absolute top-0 left-4 right-4 h-24">
+      <div className="relative p-4 pt-0">
+        <div className="relative h-24">
             <Image src="https://i.imgur.com/kP4MS2H.png" alt="Waveform" fill style={{objectFit: 'contain'}} data-ai-hint="waveform audio" priority />
         </div>
       </div>
 
-      <main className="flex-grow grid grid-cols-12 gap-4 px-4 pb-4 pt-20">
-        <div className="col-span-12 lg:col-span-7 items-start">
-          <div>
+      <main className="flex-grow grid grid-cols-12 gap-4 px-4 pb-4">
+        <div className="col-span-12 lg:col-span-7">
+          <div className="items-start">
             <MixerGrid 
               tracks={activeTracks}
               soloTracks={soloTracks}
@@ -346,3 +346,5 @@ const DawPage = () => {
 };
 
 export default DawPage;
+
+    
