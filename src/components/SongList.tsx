@@ -411,7 +411,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
             </Sheet>
         )}
       </div>
-      <div className="flex-grow space-y-1 overflow-y-auto">
+      <div className="flex-grow space-y-1 overflow-y-auto no-scrollbar">
         {selectedSetlist ? renderSetlist() : <p className="text-muted-foreground text-center pt-10">Selecciona un setlist para ver las canciones.</p>}
       </div>
         <div className="pt-3 mt-auto border-t border-border/50 flex justify-between items-center">
