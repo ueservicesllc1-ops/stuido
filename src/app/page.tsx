@@ -251,9 +251,9 @@ const DawPage = () => {
   return (
     <div className="flex flex-col h-screen bg-background font-sans text-sm">
       {/* Hidden Audio Elements */}
-      {tracks.map(track => (
+      {tracks.map((track, index) => (
           <audio
-              key={track.id}
+              key={`${track.id}-${index}`}
               ref={el => audioRefs.current[track.id] = el}
               src={trackUrls[track.id]}
               onLoadedMetadata={() => onLoadedMetadata(track.id)}
