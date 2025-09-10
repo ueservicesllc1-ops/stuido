@@ -197,6 +197,52 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
   };
 
 
+  const renderSongList = (forGlobal: boolean = false) => {
+    if (isLoadingSongs) {
+      return (
+        <div className="flex justify-center items-center h-full">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      );
+    }
+
+    if (songsError) {
+      return <div className="text-destructive text-center">{songsError}</div>;
+    }
+
+    if (songs.length > 0) {
+      return (
+        <div className="space-y-2">
+          {songs.map((song) => (
+            <div key={song.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent group">
+              <Music className="w-5 h-5 text-muted-foreground" />
+              <p className="font-semibold text-foreground flex-grow">{song.name}</p>
+              
+              {!forGlobal && (
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="w-8 h-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                    onClick={() => setSongToDelete(song)}
+                >
+                    <Trash2 className="w-4 h-4" />
+                </Button>
+              )}
+
+              {selectedSetlist && (
+                <Button variant="ghost" size="icon" className="w-8 h-8 opacity-0 group-hover:opacity-100" onClick={() => handleAddSongToSetlist(song)}>
+                    <PlusCircle className="w-5 h-5 text-primary" />
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+    
+    return <p className="text-muted-foreground text-center">No hay canciones en la biblioteca.</p>;
+  };
+
   return (
     <>
     <AlertDialog open={!!songToDelete} onOpenChange={() => setSongToDelete(null)}>
@@ -305,32 +351,13 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
                                  <h3 className="font-semibold">Añadir a "{selectedSetlist.name}"</h3>
                                  <UploadSongDialog onUploadFinished={handleFetchSongs} />
                                </div>
-                               {isLoadingSongs ? (
-                                  <div className="flex justify-center items-center h-full">
-                                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                                  </div>
-                              ) : songsError ? (
-                                  <div className="text-destructive text-center">{songsError}</div>
-                              ) : (
-                                  <div className="space-y-2 flex-grow overflow-y-auto">
-                                  {songs.length > 0 ? (
-                                      songs.map((song) => (
-                                      <div key={song.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent group">
-                                          <Music className="w-5 h-5 text-muted-foreground" />
-                                          <p className="font-semibold text-foreground flex-grow">{song.name}</p>
-                                          <Button variant="ghost" size="icon" className="w-8 h-8 opacity-0 group-hover:opacity-100" onClick={() => handleAddSongToSetlist(song)}>
-                                              <PlusCircle className="w-5 h-5 text-primary" />
-                                          </Button>
-                                      </div>
-                                      ))
-                                  ) : (
-                                      <p className="text-muted-foreground text-center">No hay canciones en la biblioteca.</p>
-                                  )}
-                                  </div>
-                              )}
+                               {renderSongList()}
                             </TabsContent>
-                            <TabsContent value="global" className="p-10 text-center text-muted-foreground">
-                              <p>La biblioteca global estará disponible próximamente.</p>
+                            <TabsContent value="global" className="flex-grow overflow-y-auto px-4">
+                              <div className="flex justify-between items-center mb-4">
+                                <h3 className="font-semibold">Añadir a "{selectedSetlist.name}"</h3>
+                              </div>
+                              {renderSongList(true)}
                             </TabsContent>
                           </Tabs>
                         </SheetContent>
@@ -371,45 +398,14 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
                   <h3 className="font-semibold">{selectedSetlist ? `Añadir a "${selectedSetlist.name}"` : 'Biblioteca de Canciones'}</h3>
                   <UploadSongDialog onUploadFinished={handleFetchSongs} />
                 </div>
-                {isLoadingSongs ? (
-                  <div className="flex justify-center items-center h-full">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                  </div>
-                ) : songsError ? (
-                  <div className="text-destructive text-center">{songsError}</div>
-                ) : (
-                  <div className="space-y-2">
-                    {songs.length > 0 ? (
-                      songs.map((song) => (
-                        <div key={song.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent group">
-                          <Music className="w-5 h-5 text-muted-foreground" />
-                          <p className="font-semibold text-foreground flex-grow">{song.name}</p>
-                          
-                          <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="w-8 h-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
-                              onClick={() => setSongToDelete(song)}
-                          >
-                              <Trash2 className="w-4 h-4" />
-                          </Button>
-
-                          {selectedSetlist && (
-                            <Button variant="ghost" size="icon" className="w-8 h-8 opacity-0 group-hover:opacity-100" onClick={() => handleAddSongToSetlist(song)}>
-                                <PlusCircle className="w-5 h-5 text-primary" />
-                            </Button>
-                          )}
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-muted-foreground text-center">No hay canciones en la biblioteca.</p>
-                    )}
-                  </div>
-                )}
+                {renderSongList()}
             </TabsContent>
 
-            <TabsContent value="global" className="p-10 text-center text-muted-foreground">
-                <p>La biblioteca global estará disponible próximamente.</p>
+            <TabsContent value="global" className="flex-grow overflow-y-auto px-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-semibold">{selectedSetlist ? `Añadir a "${selectedSetlist.name}"` : 'Biblioteca Global'}</h3>
+                </div>
+                {renderSongList(true)}
             </TabsContent>
           </Tabs>
         </SheetContent>
@@ -420,3 +416,5 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
 };
 
 export default SongList;
+
+    
