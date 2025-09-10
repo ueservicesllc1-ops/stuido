@@ -130,14 +130,14 @@ const DawPage = () => {
               const url = trackUrls[track.id];
               // Si no hay URL (p.ej. offline y no cacheado), no puede estar listo.
               if (!url) {
-                   resolve(); // Resolvemos para no bloquear, pero no estará listo para sonar.
+                   reject(new Error(`No URL for track ${track.name}`));
                    return;
               }
 
               const audio = audioRefs.current[track.id];
               // Si el audio no existe aún, tampoco está listo.
               if (!audio) {
-                  resolve();
+                  reject(new Error(`No audio element for track ${track.name}`));
                   return;
               }
               
@@ -150,9 +150,8 @@ const DawPage = () => {
                   cleanup();
                   const errorDetails = (e.target as HTMLAudioElement).error;
                   console.error(`Error loading audio source for ${track.name}:`, errorDetails?.message || 'Unknown error', e);
-                  // Resolvemos en lugar de rechazar para no bloquear las demás pistas.
-                  // La pista con error simplemente no sonará.
-                  resolve();
+                  // Rechazamos la promesa para que el Promise.all falle
+                  reject(new Error(`Failed to load ${track.name}`));
               };
               
               const cleanup = () => {
@@ -173,12 +172,14 @@ const DawPage = () => {
 
       // Se considera listo para reproducir si TODAS las promesas se resuelven
       Promise.all(readinessPromises).then(() => {
-          const allTracksHaveUrls = activeTracks.every(t => !!trackUrls[t.id]);
-          setIsReadyToPlay(allTracksHaveUrls);
+          setIsReadyToPlay(true);
+      }).catch(error => {
+          console.error("One or more tracks failed to become ready, playback disabled.", error.message);
+          setIsReadyToPlay(false);
       });
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trackUrls]); // Depende de que las URLs se hayan asignado
+  }, [trackUrls, activeSongId]); // Depende de que las URLs se hayan asignado y de la canción activa
 
 
   // Inicializa volúmenes y refs de audio cuando cambian las pistas
