@@ -55,7 +55,7 @@ const DawPage = () => {
       setTracks([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialSetlist]);
+  }, [initialSetlist, playbackMode]);
 
 
   // Inicializa volúmenes y refs de audio cuando cambian las pistas
@@ -289,5 +289,3 @@ const DawPage = () => {
 };
 
 export default DawPage;
-
-    
