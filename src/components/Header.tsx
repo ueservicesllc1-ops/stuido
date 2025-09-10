@@ -11,6 +11,7 @@ import { Progress } from './ui/progress';
 import { cn } from '@/lib/utils';
 import Timeline from './Timeline';
 import { SongStructure } from '@/ai/flows/song-structure';
+import { Slider } from './ui/slider';
 
 
 interface HeaderProps {
@@ -29,6 +30,8 @@ interface HeaderProps {
   showLoadingBar: boolean;
   isReadyToPlay: boolean;
   songStructure: SongStructure | null;
+  masterVolume: number;
+  onMasterVolumeChange: (volume: number) => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -47,15 +50,20 @@ const Header: React.FC<HeaderProps> = ({
   showLoadingBar,
   isReadyToPlay,
   songStructure,
+  masterVolume,
+  onMasterVolumeChange
 }) => {
   
   return (
     <header className="flex flex-col bg-card/50 border-b border-border p-2 gap-2 rounded-lg">
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-            <Button variant="outline" className="bg-white text-black hover:bg-neutral-200 font-bold">
-            MASTER
-            </Button>
+        <div className="flex items-center gap-2 w-56">
+            <Slider 
+                defaultValue={[masterVolume]}
+                max={100}
+                step={1}
+                onValueChange={(value) => onMasterVolumeChange(value[0])}
+            />
             <Button variant="secondary" size="icon"><Disc className="w-5 h-5 text-destructive" /></Button>
             <Button variant="secondary" size="icon"><RadioTower className="w-5 h-5" /></Button>
         </div>
@@ -90,7 +98,7 @@ const Header: React.FC<HeaderProps> = ({
             </Button>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-end gap-2 w-56">
             <Button variant="secondary" className="font-mono">71...</Button>
             <Button variant="secondary" className="font-mono">D</Button>
             

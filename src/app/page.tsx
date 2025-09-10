@@ -35,6 +35,7 @@ const DawPage = () => {
   const animationFrameRef = useRef<number>();
 
   const [volumes, setVolumes] = useState<{ [key: string]: number }>({});
+  const [masterVolume, setMasterVolume] = useState(100);
   const [trackUrls, setTrackUrls] = useState<{[key: string]: string}>({});
   const [loadingTracks, setLoadingTracks] = useState<string[]>([]);
   const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('hybrid');
@@ -259,7 +260,7 @@ const DawPage = () => {
     prepareAndVerifyTracks();
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSongId]);
+  }, [activeSongId, songs]);
 
 
   // Inicializa volúmenes y refs de audio cuando cambian las pistas
@@ -329,6 +330,10 @@ const DawPage = () => {
     });
   }, []);
 
+  const handleMasterVolumeChange = (newVolume: number) => {
+      setMasterVolume(newVolume);
+  };
+
   useEffect(() => {
     activeTracks.forEach(track => {
       const audio = audioRefs.current[track.id];
@@ -336,14 +341,21 @@ const DawPage = () => {
         const isMuted = mutedTracks.includes(track.id);
         const isSoloActive = soloTracks.length > 0;
         const isThisTrackSolo = soloTracks.includes(track.id);
-        const volume = volumes[track.id] ?? 75;
+        const trackVolume = volumes[track.id] ?? 75;
 
-        if (isMuted) audio.volume = 0;
-        else if (isSoloActive) audio.volume = isThisTrackSolo ? volume / 100 : 0;
-        else audio.volume = volume / 100;
+        const masterVol = masterVolume / 100;
+        const trackVol = trackVolume / 100;
+
+        if (isMuted) {
+            audio.volume = 0;
+        } else if (isSoloActive) {
+            audio.volume = isThisTrackSolo ? trackVol * masterVol : 0;
+        } else {
+            audio.volume = trackVol * masterVol;
+        }
       }
     });
-  }, [volumes, mutedTracks, soloTracks, activeTracks]);
+  }, [volumes, masterVolume, mutedTracks, soloTracks, activeTracks]);
 
   const handlePlay = useCallback(() => {
     if (!isReadyToPlay) return;
@@ -471,6 +483,8 @@ const DawPage = () => {
             showLoadingBar={showLoadingBar}
             isReadyToPlay={isReadyToPlay}
             songStructure={songStructure}
+            masterVolume={masterVolume}
+            onMasterVolumeChange={handleMasterVolumeChange}
         />
       </div>
       
