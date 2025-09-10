@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { Button } from './ui/button';
-import { Rewind, Play, Pause, Square, FastForward, Settings, RadioTower, Disc, DownloadCloud, Loader2 } from 'lucide-react';
+import { Rewind, Play, Pause, Square, FastForward, Settings, RadioTower, Disc, Loader2 } from 'lucide-react';
 import { Circle } from './icons';
 import PlaybackModeToggle from './PlaybackModeToggle';
 import type { PlaybackMode } from '@/app/page';
@@ -67,6 +67,8 @@ const Header: React.FC<HeaderProps> = ({
             <Button variant="outline" className="bg-white text-black hover:bg-neutral-200 font-bold">
             MASTER
             </Button>
+            <Button variant="secondary" size="icon"><Disc className="w-5 h-5 text-destructive" /></Button>
+            <Button variant="secondary" size="icon"><RadioTower className="w-5 h-5" /></Button>
         </div>
 
         <div className="flex items-center gap-1 bg-background p-1 rounded-lg">
@@ -99,20 +101,6 @@ const Header: React.FC<HeaderProps> = ({
             </Button>
         </div>
         
-        <div className="flex items-center gap-1">
-            <Button variant="secondary" size="icon"><Disc className="w-5 h-5 text-destructive" /></Button>
-            <Button variant="secondary" size="icon"><RadioTower className="w-5 h-5" /></Button>
-        </div>
-
-
-        <div className="flex items-center gap-2 bg-secondary/50 text-foreground font-mono text-xl p-2 rounded-lg w-40 justify-center">
-            <span>{formatTime(currentTime)}</span>
-            <span className="text-muted-foreground">/</span>
-            <span className="text-muted-foreground">{formatTime(duration)}</span>
-        </div>
-
-        <div className="flex-grow"></div>
-
         <div className="flex items-center gap-2">
             <Button variant="secondary" className="font-mono">71...</Button>
             <Button variant="secondary" className="font-mono">D</Button>
@@ -129,7 +117,10 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
       
-      <div className="px-1 pt-1">
+      <div className="flex items-center gap-3 px-1 pt-1">
+        <span className="font-mono text-sm text-muted-foreground w-14 text-right">
+            {formatTime(currentTime)}
+        </span>
         <Slider
           value={[currentTime]}
           max={duration || 1}
@@ -142,6 +133,9 @@ const Header: React.FC<HeaderProps> = ({
              !isReadyToPlay && 'opacity-50'
           )}
         />
+        <span className="font-mono text-sm text-muted-foreground w-14 text-left">
+            {formatTime(duration)}
+        </span>
       </div>
 
       {showLoadingBar && (
@@ -160,5 +154,3 @@ const Header: React.FC<HeaderProps> = ({
 };
 
 export default Header;
-
-    
