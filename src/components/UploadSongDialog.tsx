@@ -207,6 +207,9 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished, t
                         className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
                     />
                     </FormControl>
+                     <FormMessage className="text-destructive">
+                        {form.formState.errors.tracks?.message}
+                    </FormMessage>
                 </div>
 
                 {fields.length > 0 && (
@@ -239,7 +242,9 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished, t
                     name="tracks"
                     render={() => (
                         <FormItem>
-                            <FormMessage />
+                             {form.formState.errors.tracks?.root?.message && (
+                                <FormMessage>{form.formState.errors.tracks.root.message}</FormMessage>
+                            )}
                         </FormItem>
                     )}
                  />
