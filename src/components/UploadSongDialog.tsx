@@ -122,7 +122,12 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished, t
 
       const result = await response.json();
 
-      if (response.ok && result.success) {
+      if (!response.ok) {
+        // Si la respuesta HTTP no es exitosa (ej. 500), lanza un error con el mensaje del servidor
+        throw new Error(result.error || `Error del servidor: ${response.statusText}`);
+      }
+
+      if (result.success) {
         toast({
           title: '¡Éxito!',
           description: `La canción "${result.song.name}" ha sido subida.`,
@@ -131,12 +136,13 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished, t
         form.reset();
         onUploadFinished();
       } else {
-        throw new Error(result.error || 'Error desconocido al subir.');
+        // Si la respuesta es exitosa pero la operación falló, usa el error devuelto en el JSON
+        throw new Error(result.error || 'Ocurrió un error desconocido durante la subida.');
       }
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Error al subir',
+        title: 'Error al subir la canción',
         description: (error as Error).message,
       });
     } finally {

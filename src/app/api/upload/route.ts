@@ -65,13 +65,15 @@ export async function POST(req: Request) {
     const saveResult = await saveSong(songData);
 
     if (!saveResult.success || !saveResult.song) {
-      return NextResponse.json({ success: false, error: saveResult.error }, { status: 500 });
+       // Devolver un error 500 si falla el guardado en la base de datos
+      return NextResponse.json({ success: false, error: saveResult.error || 'No se pudo guardar la canción en la base de datos.' }, { status: 500 });
     }
     
     return NextResponse.json({ success: true, song: saveResult.song });
 
   } catch (error: any) {
     console.error('Error en el endpoint de subida:', error);
-    return NextResponse.json({ success: false, error: error.message || 'Error del servidor' }, { status: 500 });
+    // Devolver un error 500 con el mensaje de error específico
+    return NextResponse.json({ success: false, error: error.message || 'Error interno del servidor.' }, { status: 500 });
   }
 }
