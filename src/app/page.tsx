@@ -488,7 +488,6 @@ const DawPage = () => {
             onSetlistSelected={handleSetlistSelected}
             onSongSelected={handleSongSelected}
             onLoadTrack={loadTrack}
-            cachedTracks={cachedTracks}
         />
         <TonicPad />
       </div>
@@ -497,3 +496,5 @@ const DawPage = () => {
 };
 
 export default DawPage;
+
+    
