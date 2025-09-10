@@ -21,6 +21,7 @@ interface MixerGridProps {
   playbackPosition: number;
   duration: number;
   playbackMode: PlaybackMode;
+  cachedTracks: Set<string>;
 }
 
 const MixerGrid: React.FC<MixerGridProps> = ({ 
@@ -36,6 +37,7 @@ const MixerGrid: React.FC<MixerGridProps> = ({
   playbackPosition,
   duration,
   playbackMode,
+  cachedTracks
 }) => {
   return (
     <div className="grid grid-cols-6 gap-4">
@@ -54,6 +56,7 @@ const MixerGrid: React.FC<MixerGridProps> = ({
           playbackPosition={playbackPosition}
           duration={duration}
           playbackMode={playbackMode}
+          isCached={cachedTracks.has(track.id)}
         />
       ))}
     </div>

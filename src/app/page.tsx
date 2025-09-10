@@ -29,6 +29,7 @@ const DawPage = () => {
   const [trackUrls, setTrackUrls] = useState<{[key: string]: string}>({});
   const [loadingTracks, setLoadingTracks] = useState<string[]>([]);
   const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('online');
+  const [cachedTracks, setCachedTracks] = useState<Set<string>>(new Set());
 
   // Carga el último setlist usado al iniciar
   useEffect(() => {
@@ -48,26 +49,41 @@ const DawPage = () => {
       const allTracks = initialSetlist.songs;
       setTracks(allTracks);
       
-      // Activa la primera canción del setlist por defecto
       if (allTracks.length > 0 && allTracks[0].songId) {
         setActiveSongId(allTracks[0].songId);
       } else {
         setActiveSongId(null);
       }
       
-      // Reiniciar las URLs y el estado de carga al cambiar de setlist
       setTrackUrls({});
       setLoadingTracks([]);
+      setCachedTracks(new Set()); // Reset cache status on setlist change
       
-      // Cuando cambia el setlist, cargar todas sus pistas según el modo actual
-      allTracks.forEach(song => loadTrack(song));
+      allTracks.forEach(song => checkCacheStatus(song));
 
     } else {
       setTracks([]);
       setActiveSongId(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialSetlist, playbackMode]);
+  }, [initialSetlist]);
+  
+  // Re-evaluar y cargar pistas al cambiar el modo de reproducción
+  useEffect(() => {
+    if(tracks.length > 0) {
+        tracks.forEach(track => {
+            checkCacheStatus(track);
+            // Si estamos en modo offline y no está cacheado, iniciamos la carga
+            if(playbackMode === 'offline' && !cachedTracks.has(track.id)) {
+                loadTrack(track);
+            } else {
+                // En cualquier otro caso, asignamos la URL correcta
+                assignTrackUrl(track);
+            }
+        })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playbackMode, tracks]);
 
 
   // Inicializa volúmenes y refs de audio cuando cambian las pistas
@@ -98,17 +114,34 @@ const DawPage = () => {
 
 
   // --- Lógica de Carga y Caché ---
+  const checkCacheStatus = async (track: SetlistSong) => {
+    const blob = await getCachedAudio(track.url);
+    if(blob) {
+      setCachedTracks(prev => new Set(prev).add(track.id));
+    }
+  }
+
+  const assignTrackUrl = async (track: SetlistSong) => {
+      if (playbackMode === 'offline') {
+          const blob = await getCachedAudio(track.url);
+          if (blob) {
+            const localUrl = URL.createObjectURL(blob);
+            setTrackUrls(prev => ({...prev, [track.id]: localUrl}));
+          }
+      } else {
+          setTrackUrls(prev => ({...prev, [track.id]: track.url}));
+      }
+  }
+
   const loadTrack = async (track: SetlistSong) => {
     setLoadingTracks(prev => [...prev, track.id]);
     try {
       if (playbackMode === 'offline') {
         let blob = await getCachedAudio(track.url);
         if (!blob) {
-          // Si no está en caché, lo descargamos.
-          // Para simular una carga, podemos añadir un pequeño delay
-          // await new Promise(resolve => setTimeout(resolve, 1000));
           blob = await cacheAudio(track.url);
         }
+        setCachedTracks(prev => new Set(prev).add(track.id));
         const localUrl = URL.createObjectURL(blob);
         setTrackUrls(prev => ({...prev, [track.id]: localUrl}));
       } else {
@@ -117,7 +150,6 @@ const DawPage = () => {
       }
     } catch (error) {
       console.error(`Error loading track ${track.name}:`, error);
-      // Si hay un error (ej. offline sin cache), usamos la url online como fallback
       setTrackUrls(prev => ({...prev, [track.id]: track.url}));
     } finally {
       setLoadingTracks(prev => prev.filter(id => id !== track.id));
@@ -240,13 +272,6 @@ const DawPage = () => {
 
   const activeTracks = tracks.filter(t => t.songId === activeSongId);
 
-  // Filtra las pistas para mostrar solo las que están listas.
-  // En modo offline, solo se muestran las cacheadas.
-  // En modo online, se muestran todas.
-  const visibleTracks = playbackMode === 'offline' 
-    ? activeTracks.filter(t => trackUrls[t.id]?.startsWith('blob:'))
-    : activeTracks;
-
 
   return (
     <div className="flex flex-col h-screen bg-background font-sans text-sm">
@@ -284,7 +309,7 @@ const DawPage = () => {
       <main className="flex-grow grid grid-cols-12 gap-4 px-4 pb-4 pt-20">
         <div className="col-span-12 lg:col-span-7">
           <MixerGrid 
-            tracks={visibleTracks}
+            tracks={activeTracks}
             soloTracks={soloTracks}
             mutedTracks={mutedTracks}
             volumes={volumes}
@@ -296,6 +321,7 @@ const DawPage = () => {
             playbackPosition={playbackPosition}
             duration={duration}
             playbackMode={playbackMode}
+            cachedTracks={cachedTracks}
           />
         </div>
         <div className="col-span-12 lg:col-span-3">

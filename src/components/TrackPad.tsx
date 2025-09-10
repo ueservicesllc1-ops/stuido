@@ -21,6 +21,7 @@ interface TrackPadProps {
   playbackPosition: number;
   duration: number;
   playbackMode: PlaybackMode;
+  isCached: boolean;
 }
 
 const TrackPad: React.FC<TrackPadProps> = ({
@@ -36,6 +37,7 @@ const TrackPad: React.FC<TrackPadProps> = ({
   playbackPosition,
   duration,
   playbackMode,
+  isCached,
 }) => {
   const { name } = track;
   const sliderRef = useRef<HTMLDivElement>(null);
@@ -57,15 +59,18 @@ const TrackPad: React.FC<TrackPadProps> = ({
   // We subtract the indicator height (8px) from the total height to keep it within bounds
   const indicatorPosition = (progressPercentage / 100) * (sliderHeight - 8); 
 
+  const isDownloading = playbackMode === 'offline' && !isCached;
+  const isDisabled = isLoading || isDownloading;
+
   return (
     <div className="flex flex-col items-center gap-2">
       <div className="relative h-40 flex justify-center items-center" ref={sliderRef}>
-         {isLoading && (
-           <div className="absolute inset-0 flex justify-center items-center bg-card/50 z-20">
+         {isDisabled && (
+           <div className="absolute inset-0 flex justify-center items-center bg-card/80 z-20 rounded-lg">
               <Loader2 className="w-8 h-8 text-primary animate-spin" />
            </div>
          )}
-         {isPlaying && duration > 0 && !isLoading && (
+         {isPlaying && duration > 0 && !isDisabled && (
           <div 
             className="absolute left-1/2 -translate-x-1/2 w-4 h-2 rounded-full bg-green-400 z-10"
             style={{ 
@@ -80,7 +85,7 @@ const TrackPad: React.FC<TrackPadProps> = ({
           step={1}
           orientation="vertical"
           onValueChange={handleVolumeChange}
-          disabled={isLoading}
+          disabled={isDisabled}
           className={cn(
             '[&>span:first-child]:bg-secondary',
             // Default online color
@@ -89,7 +94,7 @@ const TrackPad: React.FC<TrackPadProps> = ({
             color === 'destructive' && '[&_.bg-primary]:bg-destructive [&_.border-primary]:border-destructive',
             // Offline color override
             playbackMode === 'offline' && color !== 'destructive' && '[&_.bg-primary]:bg-yellow-500 [&_.border-primary]:border-yellow-500',
-            (isSolo || isMuted || isLoading) && 'opacity-50'
+            (isSolo || isMuted || isDisabled) && 'opacity-50'
           )}
         />
       </div>
@@ -97,7 +102,7 @@ const TrackPad: React.FC<TrackPadProps> = ({
        <div className="flex items-center justify-center w-full mt-2">
          <span className={cn(
             "text-xs font-semibold uppercase text-muted-foreground tracking-wider",
-            isLoading && 'opacity-50'
+            isDisabled && 'opacity-50'
           )}>{name}</span>
          {name === 'CUES' && <Button variant="ghost" size="icon" className="w-4 h-4 ml-1 text-muted-foreground"><Settings className="w-3 h-3" /></Button>}
        </div>
@@ -106,10 +111,11 @@ const TrackPad: React.FC<TrackPadProps> = ({
         <Button
           onClick={onMuteToggle}
           variant={isMuted ? 'secondary' : 'ghost'}
-          disabled={isLoading}
+          disabled={isDisabled}
           className={cn(
             'w-full h-7 text-xs font-bold border',
-             isMuted ? 'bg-primary text-primary-foreground' : 'bg-secondary/50'
+             isMuted ? 'bg-primary text-primary-foreground' : 'bg-secondary/50',
+             isDisabled && '!bg-secondary/30 !text-muted-foreground'
           )}
         >
           M
@@ -117,10 +123,11 @@ const TrackPad: React.FC<TrackPadProps> = ({
         <Button
           onClick={onSoloToggle}
           variant={isSolo ? 'secondary' : 'ghost'}
-          disabled={isLoading}
+          disabled={isDisabled}
           className={cn(
             'w-full h-7 text-xs font-bold border',
-            isSolo ? 'bg-yellow-500 text-black' : 'bg-secondary/50'
+            isSolo ? 'bg-yellow-500 text-black' : 'bg-secondary/50',
+             isDisabled && '!bg-secondary/30 !text-muted-foreground'
           )}
         >
           S
