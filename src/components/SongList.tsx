@@ -275,7 +275,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
       return (
         <div className="space-y-2">
           {songs.map((song) => {
-            const hasCuesTrack = song.tracks.some(t => t.name.trim().toUpperCase() === 'CUES');
+            const hasCuesTrack = song.tracks && song.tracks.some(t => t.name.trim().toUpperCase() === 'CUES');
             const isAnalyzing = analyzingSongId === song.id;
 
             return (
@@ -558,3 +558,5 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
 };
 
 export default SongList;
+
+    
