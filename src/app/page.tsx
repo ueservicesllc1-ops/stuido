@@ -327,7 +327,7 @@ const DawPage = () => {
           />
         </div>
         <div className="col-span-12 lg:col-span-5 flex flex-col gap-4 min-h-0">
-            <div className="flex-grow">
+            <div className="flex-grow min-h-0">
                 <SongList 
                     initialSetlist={initialSetlist}
                     activeSongId={activeSongId}
