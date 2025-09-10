@@ -1,33 +1,18 @@
 'use client';
 import React from 'react';
 import { Button } from './ui/button';
-import { Power } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Progress } from './ui/progress';
 
 const keys = [
-    'C', 'Db', 'D', 'Eb', 'E', 'F',
     'Gb', 'G', 'Ab', 'A', 'Bb', 'B'
 ]
 
 const TonicPad = () => {
   return (
-    <div className="bg-card/50 rounded-lg p-3 flex flex-col h-full gap-2">
-      <div className="flex items-center justify-between">
-         <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="w-7 h-7 text-muted-foreground"><Power className="w-5 h-5" /></Button>
-            <div>
-                <p className="text-xs text-muted-foreground">Tonic Pad</p>
-                <p className="font-bold text-foreground">Classic Foundation</p>
-            </div>
-         </div>
-         <div className="text-right">
-             <p className="text-xs text-muted-foreground">Preset</p>
-             <p className="font-bold text-foreground">Lock</p>
-         </div>
-      </div>
-      <div className="grid grid-cols-6 gap-1.5 flex-grow">
-        {keys.map((key, index) => (
+    <div className="bg-card/50 rounded-lg p-3 flex flex-col gap-2">
+      <div className="grid grid-cols-6 gap-1.5">
+        {keys.map((key) => (
             <Button 
                 key={key} 
                 variant="secondary"
