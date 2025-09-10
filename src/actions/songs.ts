@@ -1,8 +1,10 @@
+
 'use server';
 
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, serverTimestamp, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
-import { deleteFileFromB2 } from './upload';
+// Eliminamos la importación de deleteFileFromB2 ya que no se usará
+// import { deleteFileFromB2 } from './upload';
 
 export interface NewSong {
   name: string;
@@ -56,22 +58,16 @@ export async function getSongs() {
 
 export async function deleteSong(song: Song) {
     try {
-        // 1. Delete file from B2
-        const deleteFileResult = await deleteFileFromB2(song.fileKey);
-        if (!deleteFileResult.success) {
-            // Log the error but proceed to delete from Firestore anyway, 
-            // as the file might already be gone. Or handle more gracefully.
-            console.error(`Could not delete file ${song.fileKey} from B2:`, deleteFileResult.error);
-            // Decide if you want to stop or continue. For now, we continue.
-        }
+        // Ya no eliminamos el archivo de B2, solo de Firestore.
+        // La lógica de eliminación del archivo físico ha sido removida.
 
-        // 2. Delete document from Firestore
+        // 1. Delete document from Firestore
         const songRef = doc(db, 'songs', song.id);
         await deleteDoc(songRef);
 
         return { success: true };
     } catch (error) {
-        console.error("Error eliminando la canción:", error);
+        console.error("Error eliminando la canción de la biblioteca:", error);
         return { success: false, error: (error as Error).message };
     }
 }

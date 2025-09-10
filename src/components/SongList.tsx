@@ -203,16 +203,15 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
             <AlertDialogHeader>
             <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
             <AlertDialogDescription>
-                Esta acción es permanente y no se puede deshacer. Se eliminará la canción {' '}
-                <span className="font-bold text-foreground">"{songToDelete?.name}"</span> {' '}
-                de tu biblioteca y del almacenamiento.
+                Esta acción quitará la canción <span className="font-bold text-foreground">"{songToDelete?.name}"</span> de la biblioteca.
+                No se eliminará el archivo de audio, por lo que podrá ser añadido de nuevo más tarde si es necesario.
             </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDeleteSong} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
                 {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Sí, eliminar
+                Sí, quitar de la biblioteca
             </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
