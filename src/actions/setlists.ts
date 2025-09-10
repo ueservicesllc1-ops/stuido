@@ -18,8 +18,8 @@ export interface SetlistSong {
   url: string;
   fileKey: string;
   // Opcionalmente, podrías añadir metadatos de la canción padre si es necesario
-  // songId: string;
-  // songName: string;
+  songId?: string;
+  songName?: string;
 }
 
 export interface Setlist extends NewSetlist {

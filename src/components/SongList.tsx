@@ -110,24 +110,24 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
       name: track.name,
       url: track.url,
       fileKey: track.fileKey,
+      songId: song.id, // Referencia a la canción padre
+      songName: song.name, // Nombre de la canción padre
     }));
 
-    // Prevenir duplicados (versión simple, se puede mejorar)
-    const existingTrackIds = new Set(selectedSetlist.songs.map(s => s.id));
-    const newTracks = tracksToAdd.filter(t => !existingTrackIds.has(t.id));
-
-    if (newTracks.length === 0) {
+    // Prevenir duplicados
+    const existingSongIds = new Set(selectedSetlist.songs.map(s => s.songId));
+    if (existingSongIds.has(song.id)) {
         toast({
             variant: 'destructive',
             title: 'Canción duplicada',
-            description: `Las pistas de "${song.name}" ya están en el setlist.`,
+            description: `La canción "${song.name}" ya está en el setlist.`,
         });
         return;
     }
     
     // Iterar y añadir cada pista individualmente
     let allAdded = true;
-    for (const track of newTracks) {
+    for (const track of tracksToAdd) {
         const result = await addSongToSetlist(selectedSetlist.id, track);
         if (!result.success) {
             allAdded = false;
@@ -136,7 +136,6 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
                 title: 'Error',
                 description: result.error || `No se pudo añadir la pista "${track.name}".`,
             });
-            // Opcional: decidir si se detiene al primer error o se intenta añadir las demás.
             break; 
         }
     }
@@ -144,13 +143,13 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
     if (allAdded) {
       const updatedSetlist = {
         ...selectedSetlist,
-        songs: [...selectedSetlist.songs, ...newTracks]
+        songs: [...selectedSetlist.songs, ...tracksToAdd]
       };
       onSetlistSelected(updatedSetlist);
       setSelectedSetlist(updatedSetlist);
       
       // Iniciar la carga/cache de las nuevas pistas
-      newTracks.forEach(track => onLoadTrack(track));
+      tracksToAdd.forEach(track => onLoadTrack(track));
 
       toast({
         title: '¡Canción añadida!',
@@ -159,13 +158,28 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
     }
   };
   
-  const handleRemoveSongFromSetlist = async (songToRemove: SetlistSong) => {
+  const handleRemoveSongFromSetlist = async (songId: string, songName: string) => {
     if (!selectedSetlist) return;
 
-    const result = await removeSongFromSetlist(selectedSetlist.id, songToRemove);
+    const tracksToRemove = selectedSetlist.songs.filter(s => s.songId === songId);
+    if (tracksToRemove.length === 0) return;
 
-    if (result.success) {
-        const updatedSongs = selectedSetlist.songs.filter(s => s.id !== songToRemove.id);
+    let allRemoved = true;
+    for(const track of tracksToRemove) {
+      const result = await removeSongFromSetlist(selectedSetlist.id, track);
+      if(!result.success) {
+        allRemoved = false;
+        toast({
+            variant: 'destructive',
+            title: 'Error al eliminar',
+            description: result.error || `No se pudo quitar la pista "${track.name}".`,
+        });
+        break;
+      }
+    }
+
+    if (allRemoved) {
+        const updatedSongs = selectedSetlist.songs.filter(s => s.songId !== songId);
         const updatedSetlist = { ...selectedSetlist, songs: updatedSongs };
 
         onSetlistSelected(updatedSetlist);
@@ -173,13 +187,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
 
         toast({
             title: 'Canción eliminada',
-            description: `"${songToRemove.name}" se ha quitado del setlist.`,
-        });
-    } else {
-        toast({
-            variant: 'destructive',
-            title: 'Error al eliminar',
-            description: result.error || 'No se pudo quitar la canción.',
+            description: `"${songName}" se ha quitado del setlist.`,
         });
     }
   };
@@ -258,6 +266,84 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
     return <p className="text-muted-foreground text-center">No hay canciones en la biblioteca.</p>;
   };
 
+  const renderSetlist = () => {
+    if (!selectedSetlist || !selectedSetlist.songs || selectedSetlist.songs.length === 0) {
+        return (
+            <div className="text-center pt-10 text-muted-foreground">
+                <p>Este setlist no tiene canciones.</p>
+                <Sheet open={isLibrarySheetOpen} onOpenChange={setIsLibrarySheetOpen}>
+                    <SheetTrigger asChild>
+                        <Button variant="link" className="text-primary mt-2" onClick={handleFetchSongs}>
+                        <PlusCircle className="w-4 h-4 mr-2" />
+                        Añadir canciones
+                        </Button>
+                    </SheetTrigger>
+                    <SheetContent side="left" className="w-[400px] sm:w-[500px] bg-card/95 p-0">
+                        <SheetHeader className="p-4 pb-0">
+                            <SheetTitle>Añadir Canciones</SheetTitle>
+                            <SheetDescription>
+                            Explora tus bibliotecas y añade canciones al setlist activo.
+                            </SheetDescription>
+                        </SheetHeader>
+                        <Tabs defaultValue="local" className="flex flex-col h-full pt-2">
+                        <TabsList className="mx-4">
+                            <TabsTrigger value="local" className="gap-2"><Library className="w-4 h-4" /> Biblioteca Local</TabsTrigger>
+                            <TabsTrigger value="global" className="gap-2"><Globe className="w-4 h-4"/> Biblioteca Global</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="local" className="flex-grow overflow-y-auto px-4">
+                            <div className="flex justify-between items-center my-4">
+                            <h3 className="font-semibold">Añadir a "{selectedSetlist.name}"</h3>
+                            <UploadSongDialog onUploadFinished={handleFetchSongs} />
+                            </div>
+                            {renderSongList()}
+                        </TabsContent>
+                        <TabsContent value="global" className="flex-grow overflow-y-auto px-4">
+                            <div className="flex justify-between items-center my-4">
+                            <h3 className="font-semibold">Añadir a "{selectedSetlist.name}"</h3>
+                            </div>
+                            {renderSongList(true)}
+                        </TabsContent>
+                        </Tabs>
+                    </SheetContent>
+                </Sheet>
+            </div>
+        );
+    }
+
+    // Agrupar pistas por canción
+    const songsInSetlist = selectedSetlist.songs.reduce((acc, track) => {
+        const songId = track.songId || 'unknown';
+        if (!acc[songId]) {
+            acc[songId] = {
+                songName: track.songName || 'Canción Desconocida',
+                tracks: []
+            };
+        }
+        acc[songId].tracks.push(track);
+        return acc;
+    }, {} as Record<string, { songName: string; tracks: SetlistSong[] }>);
+
+    return (
+        <div className="space-y-3">
+            {Object.entries(songsInSetlist).map(([songId, songGroup]) => (
+                <div key={songId} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent group">
+                    <Music className="w-5 h-5 text-muted-foreground" />
+                    <p className="font-semibold text-foreground flex-grow">{songGroup.songName}</p>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="w-8 h-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                        onClick={() => handleRemoveSongFromSetlist(songId, songGroup.songName)}
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </Button>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+
   return (
     <>
     <AlertDialog open={!!songToDelete} onOpenChange={() => setSongToDelete(null)}>
@@ -299,6 +385,9 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
                 <SheetContent side="right" className="w-[300px] sm:w-[400px] bg-card/95">
                     <SheetHeader>
                         <SheetTitle>Setlists</SheetTitle>
+                        <SheetDescription>
+                            Elige un setlist existente o crea uno nuevo.
+                        </SheetDescription>
                     </SheetHeader>
                     <div className="py-4 h-full flex flex-col">
                         <div className="flex-grow space-y-2">
@@ -329,65 +418,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
         )}
       </div>
       <div className="flex-grow space-y-1 overflow-y-auto">
-        {selectedSetlist ? (
-            selectedSetlist.songs && selectedSetlist.songs.length > 0 ? (
-                selectedSetlist.songs.map((song, index) => (
-                    <div key={index} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent group">
-                        <Music className="w-5 h-5 text-muted-foreground" />
-                        <p className="font-semibold text-foreground flex-grow">{song.name}</p>
-                       <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="w-8 h-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
-                          onClick={() => handleRemoveSongFromSetlist(song)}
-                       >
-                          <Trash2 className="w-4 h-4" />
-                       </Button>
-                    </div>
-                ))
-            ) : (
-                <div className="text-center pt-10 text-muted-foreground">
-                    <p>Este setlist no tiene canciones.</p>
-                    <Sheet open={isLibrarySheetOpen} onOpenChange={setIsLibrarySheetOpen}>
-                      <SheetTrigger asChild>
-                         <Button variant="link" className="text-primary mt-2" onClick={handleFetchSongs}>
-                            <PlusCircle className="w-4 h-4 mr-2" />
-                            Añadir canciones
-                        </Button>
-                      </SheetTrigger>
-                       <SheetContent side="left" className="w-[400px] sm:w-[500px] bg-card/95 p-0">
-                          <SheetHeader className="p-4 pb-0">
-                              <SheetTitle>Añadir Canciones</SheetTitle>
-                              <SheetDescription>
-                                Explora tus bibliotecas y añade canciones al setlist activo.
-                              </SheetDescription>
-                          </SheetHeader>
-                          <Tabs defaultValue="local" className="flex flex-col h-full pt-2">
-                            <TabsList className="mx-4">
-                              <TabsTrigger value="local" className="gap-2"><Library className="w-4 h-4" /> Biblioteca Local</TabsTrigger>
-                              <TabsTrigger value="global" className="gap-2"><Globe className="w-4 h-4"/> Biblioteca Global</TabsTrigger>
-                            </TabsList>
-                            <TabsContent value="local" className="flex-grow overflow-y-auto px-4">
-                               <div className="flex justify-between items-center my-4">
-                                 <h3 className="font-semibold">Añadir a "{selectedSetlist.name}"</h3>
-                                 <UploadSongDialog onUploadFinished={handleFetchSongs} />
-                               </div>
-                               {renderSongList()}
-                            </TabsContent>
-                            <TabsContent value="global" className="flex-grow overflow-y-auto px-4">
-                              <div className="flex justify-between items-center my-4">
-                                <h3 className="font-semibold">Añadir a "{selectedSetlist.name}"</h3>
-                              </div>
-                              {renderSongList(true)}
-                            </TabsContent>
-                          </Tabs>
-                        </SheetContent>
-                    </Sheet>
-                </div>
-            )
-        ) : (
-             <p className="text-muted-foreground text-center pt-10">Selecciona un setlist para ver las canciones.</p>
-        )}
+        {selectedSetlist ? renderSetlist() : <p className="text-muted-foreground text-center pt-10">Selecciona un setlist para ver las canciones.</p>}
       </div>
        <Sheet open={isLibrarySheetOpen} onOpenChange={setIsLibrarySheetOpen}>
         <div className="pt-3 mt-auto border-t border-border/50 flex justify-between items-center">
@@ -443,5 +474,3 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, onSetlistSelected, 
 };
 
 export default SongList;
-
-    
