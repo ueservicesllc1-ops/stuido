@@ -24,9 +24,12 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Loader2, Upload, FileAudio, X } from 'lucide-react';
+import { Loader2, Upload, FileAudio, X, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { ScrollArea } from './ui/scroll-area';
+import { saveSong, TrackFile } from '@/actions/songs';
+import { cn } from '@/lib/utils';
+
 
 const ACCEPTED_AUDIO_TYPES = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio/x-m4a', 'audio/mp3'];
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -59,9 +62,13 @@ interface UploadSongDialogProps {
   trigger?: React.ReactNode;
 }
 
+type TrackStatus = 'pending' | 'uploading' | 'success' | 'error';
+
 const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished, trigger }) => {
   const [open, setOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [trackStatuses, setTrackStatuses] = useState<Record<number, TrackStatus>>({});
+  const [trackErrorMessages, setTrackErrorMessages] = useState<Record<number, string>>({});
   const { toast } = useToast();
 
   const form = useForm<SongFormValues>({
@@ -80,20 +87,29 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished, t
     control: form.control,
     name: 'tracks',
   });
+  
+  const resetComponentState = () => {
+    form.reset();
+    setIsUploading(false);
+    setTrackStatuses({});
+    setTrackErrorMessages({});
+  }
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files) {
-      Array.from(files).forEach(file => {
+      const newTrackStatuses: Record<number, TrackStatus> = {};
+      Array.from(files).forEach((file, index) => {
         let trackName = file.name.split('.').slice(0, -1).join('.') || file.name;
-        // 1. Sin espacios
         trackName = trackName.replace(/\s/g, '');
-        // 2. Limita a 6 caracteres
         trackName = trackName.substring(0, 6);
         
+        const newIndex = fields.length + index;
         append({ file, name: trackName });
+        newTrackStatuses[newIndex] = 'pending';
       });
-      // Set song name from first file if empty
+      setTrackStatuses(prev => ({...prev, ...newTrackStatuses}));
+
       if (!form.getValues('name') && files.length > 0) {
         form.setValue('name', files[0].name.split('.').slice(0, -1).join('.'));
       }
@@ -102,51 +118,91 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished, t
 
   async function onSubmit(data: SongFormValues) {
     setIsUploading(true);
+    const uploadedTracks: TrackFile[] = [];
+
+    for (let i = 0; i < data.tracks.length; i++) {
+        const track = data.tracks[i];
+        try {
+            setTrackStatuses(prev => ({ ...prev, [i]: 'uploading' }));
+            
+            const formData = new FormData();
+            formData.append('file', track.file);
+            formData.append('trackName', track.name);
+            
+            const response = await fetch('/api/upload-track', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || `Error del servidor al subir ${track.name}.`);
+            }
+
+            uploadedTracks.push(result.track);
+            setTrackStatuses(prev => ({ ...prev, [i]: 'success' }));
+
+        } catch (error) {
+            setTrackStatuses(prev => ({ ...prev, [i]: 'error' }));
+            setTrackErrorMessages(prev => ({ ...prev, [i]: (error as Error).message }));
+            // No detenemos el bucle, permitimos que las demás subidas continúen
+        }
+    }
+
+    if (uploadedTracks.length === 0) {
+        toast({
+            variant: 'destructive',
+            title: 'Subida fallida',
+            description: 'Ninguna de las pistas pudo ser subida. Por favor, inténtalo de nuevo.',
+        });
+        setIsUploading(false);
+        return;
+    }
+    
+    if (uploadedTracks.length < data.tracks.length) {
+         toast({
+            variant: 'destructive',
+            title: 'Subida parcial',
+            description: `Se subieron ${uploadedTracks.length} de ${data.tracks.length} pistas. La canción se guardará con las pistas exitosas.`,
+        });
+    }
+
     try {
-      const formData = new FormData();
-      formData.append('name', data.name);
-      formData.append('artist', data.artist);
-      formData.append('tempo', String(data.tempo));
-      formData.append('key', data.key);
-      formData.append('timeSignature', data.timeSignature);
-      
-      data.tracks.forEach(track => {
-        formData.append('files', track.file);
-        formData.append('trackNames', track.name);
-      });
-      
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
+        const songData = {
+          name: data.name,
+          artist: data.artist,
+          tempo: data.tempo,
+          key: data.key,
+          timeSignature: data.timeSignature,
+          tracks: uploadedTracks,
+        };
+        
+        const saveResult = await saveSong(songData);
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        // Si la respuesta HTTP no es exitosa (ej. 500), lanza un error con el mensaje del servidor
-        throw new Error(result.error || `Error del servidor: ${response.statusText}`);
-      }
-
-      if (result.success) {
+        if (!saveResult.success || !saveResult.song) {
+           throw new Error(saveResult.error || 'No se pudo guardar la canción en la base de datos.');
+        }
+        
         toast({
           title: '¡Éxito!',
-          description: `La canción "${result.song.name}" ha sido subida.`,
+          description: `La canción "${saveResult.song.name}" ha sido guardada.`,
         });
-        setOpen(false);
-        form.reset();
-        onUploadFinished();
-      } else {
-        // Si la respuesta es exitosa pero la operación falló, usa el error devuelto en el JSON
-        throw new Error(result.error || 'Ocurrió un error desconocido durante la subida.');
-      }
+
+        // Esperar un poco para que el usuario vea los checks verdes antes de cerrar
+        setTimeout(() => {
+          setOpen(false);
+          onUploadFinished();
+        }, 1000);
+
+
     } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Error al subir la canción',
-        description: (error as Error).message,
-      });
-    } finally {
-      setIsUploading(false);
+         toast({
+            variant: 'destructive',
+            title: 'Error al guardar la canción',
+            description: (error as Error).message,
+        });
+        setIsUploading(false);
     }
   }
   
@@ -156,12 +212,27 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished, t
       Subir Canción
     </Button>
   );
+  
+  const StatusIcon = ({ status }: { status: TrackStatus }) => {
+    switch (status) {
+        case 'uploading':
+            return <Loader2 className="w-5 h-5 text-primary animate-spin" />;
+        case 'success':
+            return <CheckCircle className="w-5 h-5 text-green-500" />;
+        case 'error':
+            return <XCircle className="w-5 h-5 text-destructive" />;
+        case 'pending':
+        default:
+            return <Clock className="w-5 h-5 text-muted-foreground" />;
+    }
+  }
+
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => {
       setOpen(isOpen);
       if (!isOpen) {
-        form.reset();
+        resetComponentState();
       }
     }}>
       <DialogTrigger asChild>
@@ -189,7 +260,7 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished, t
                         <FormItem><FormLabel>Tempo (BPM)</FormLabel><FormControl><Input type="number" placeholder="120" {...field} /></FormControl><FormMessage /></FormItem>
                     )}/>
                     <FormField control={form.control} name="key" render={({ field }) => (
-                        <FormItem><FormLabel>Tonalidad</FormLabel><FormControl><Input placeholder="Ej: G" {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Tonalidad</FormLabel><FormControl><Input placeholder="C" {...field} /></FormControl><FormMessage /></FormItem>
                     )}/>
                     <FormField control={form.control} name="timeSignature" render={({ field }) => (
                         <FormItem><FormLabel>Compás</FormLabel><FormControl><Input placeholder="4/4" {...field} /></FormControl><FormMessage /></FormItem>
@@ -204,35 +275,45 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished, t
                         accept={ACCEPTED_AUDIO_TYPES.join(',')}
                         multiple
                         onChange={handleFileChange}
+                        disabled={isUploading}
                         className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
                     />
                     </FormControl>
-                     <FormMessage className="text-destructive">
-                        {form.formState.errors.tracks?.message}
-                    </FormMessage>
                 </div>
 
                 {fields.length > 0 && (
                   <div className="space-y-2">
                     <FormLabel>Pistas a subir</FormLabel>
                     {fields.map((field, index) => (
-                      <div key={field.id} className="flex items-center gap-2 p-2 border rounded-md">
-                        <FileAudio className="w-5 h-5 text-muted-foreground" />
-                        <FormField
-                          control={form.control}
-                          name={`tracks.${index}.name`}
-                          render={({ field }) => (
-                            <FormItem className="flex-grow">
-                              <FormControl>
-                                <Input {...field} className="h-8"/>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <Button type="button" variant="ghost" size="icon" className="w-8 h-8 text-destructive" onClick={() => remove(index)}>
-                          <X className="w-4 h-4" />
-                        </Button>
+                      <div key={field.id}>
+                        <div className="flex items-center gap-2 p-2 border rounded-md">
+                          <StatusIcon status={trackStatuses[index] || 'pending'} />
+                          <FormField
+                            control={form.control}
+                            name={`tracks.${index}.name`}
+                            render={({ field }) => (
+                              <FormItem className="flex-grow">
+                                <FormControl>
+                                  <Input {...field} className="h-8" disabled={isUploading}/>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                           <div className="w-24 text-sm text-muted-foreground truncate">
+                              {form.getValues(`tracks.${index}.file.name`)}
+                           </div>
+                          <Button type="button" variant="ghost" size="icon" className="w-8 h-8 text-destructive" onClick={() => remove(index)} disabled={isUploading}>
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                         {trackStatuses[index] === 'error' && (
+                            <p className="text-xs text-destructive mt-1 ml-2">{trackErrorMessages[index]}</p>
+                         )}
+                         <FormField
+                              control={form.control}
+                              name={`tracks.${index}.name`}
+                              render={() => <FormMessage />}
+                          />
                       </div>
                     ))}
                   </div>
@@ -242,6 +323,9 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished, t
                     name="tracks"
                     render={() => (
                         <FormItem>
+                             {form.formState.errors.tracks && !form.formState.errors.tracks.root && fields.length === 0 && (
+                                <FormMessage>{form.formState.errors.tracks.message}</FormMessage>
+                            )}
                              {form.formState.errors.tracks?.root?.message && (
                                 <FormMessage>{form.formState.errors.tracks.root.message}</FormMessage>
                             )}
@@ -251,10 +335,10 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished, t
               </div>
             </ScrollArea>
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isUploading}>Cancelar</Button>
               <Button type="submit" disabled={isUploading}>
                 {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Subir canción
+                {isUploading ? 'Subiendo...' : 'Subir canción'}
               </Button>
             </DialogFooter>
           </form>
