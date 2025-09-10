@@ -303,7 +303,7 @@ const DawPage = () => {
         onPlaybackModeChange={setPlaybackMode}
       />
       
-      <div className="relative p-4 pt-0">
+      <div className="p-4 pt-0">
         <div className="relative h-24">
             <div className="relative h-full">
                 <Image src="https://i.imgur.com/kP4MS2H.png" alt="Waveform" fill style={{objectFit: 'contain'}} data-ai-hint="waveform audio" priority />
@@ -314,33 +314,33 @@ const DawPage = () => {
 
       <main className="flex-grow grid grid-cols-12 gap-4 px-4 pb-4">
         <div className="col-span-12 lg:col-span-8">
-            <MixerGrid 
-              tracks={activeTracks}
-              soloTracks={soloTracks}
-              mutedTracks={mutedTracks}
-              volumes={volumes}
-              loadingTracks={loadingTracks}
-              onMuteToggle={toggleMute}
-              onSoloToggle={toggleSolo}
-              onVolumeChange={handleVolumeChange}
-              isPlaying={isPlaying}
-              playbackPosition={playbackPosition}
-              duration={duration}
-              playbackMode={playbackMode}
-              cachedTracks={cachedTracks}
-            />
+          <MixerGrid 
+            tracks={activeTracks}
+            soloTracks={soloTracks}
+            mutedTracks={mutedTracks}
+            volumes={volumes}
+            loadingTracks={loadingTracks}
+            onMuteToggle={toggleMute}
+            onSoloToggle={toggleSolo}
+            onVolumeChange={handleVolumeChange}
+            isPlaying={isPlaying}
+            playbackPosition={playbackPosition}
+            duration={duration}
+            playbackMode={playbackMode}
+            cachedTracks={cachedTracks}
+          />
         </div>
         <div className="col-span-12 lg:col-span-4 flex flex-col gap-4 min-h-0">
-            <div className="flex-grow min-h-0">
-                <SongList 
-                    initialSetlist={initialSetlist}
-                    activeSongId={activeSongId}
-                    onSetlistSelected={handleSetlistUpdate}
-                    onSongSelected={handleSongSelect}
-                    onLoadTrack={loadTrack}
-                />
-            </div>
-            <TonicPad />
+          <div className="flex-grow min-h-0">
+            <SongList 
+              initialSetlist={initialSetlist}
+              activeSongId={activeSongId}
+              onSetlistSelected={handleSetlistUpdate}
+              onSongSelected={handleSongSelect}
+              onLoadTrack={loadTrack}
+            />
+          </div>
+          <TonicPad />
         </div>
       </main>
     </div>
