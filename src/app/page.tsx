@@ -379,7 +379,7 @@ const DawPage = () => {
         />
       </div>
       
-      <main className="col-start-1 row-start-2 overflow-y-auto pr-2">
+      <main className="col-start-1 row-start-2 overflow-y-auto pr-2 no-scrollbar">
         {activeSongId ? (
             <MixerGrid
               tracks={activeTracks}
