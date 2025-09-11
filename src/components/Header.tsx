@@ -43,6 +43,8 @@ interface HeaderProps {
   songTempo: number | null;
   clickSound: ClickSound;
   onClickSoundChange: (sound: ClickSound) => void;
+  fadeOutDuration: number;
+  onFadeOutDurationChange: (duration: number) => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -72,6 +74,8 @@ const Header: React.FC<HeaderProps> = ({
   songTempo,
   clickSound,
   onClickSoundChange,
+  fadeOutDuration,
+  onFadeOutDurationChange,
 }) => {
   
   return (
@@ -161,7 +165,12 @@ const Header: React.FC<HeaderProps> = ({
                 <Circle className="w-2 h-2 fill-current" />
                 OUTS
             </Button>
-            <SettingsDialog clickSound={clickSound} onClickSoundChange={onClickSoundChange}>
+            <SettingsDialog 
+              clickSound={clickSound} 
+              onClickSoundChange={onClickSoundChange}
+              fadeOutDuration={fadeOutDuration}
+              onFadeOutDurationChange={onFadeOutDurationChange}
+            >
                 <Button variant="ghost" size="icon">
                     <Settings />
                 </Button>

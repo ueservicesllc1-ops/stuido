@@ -57,18 +57,19 @@ interface SettingsSliderRowProps {
   label: string;
   value: number;
   onValueChange: (value: number) => void;
+  displayFormatter?: (value: number) => string;
 }
 
-const SettingsSliderRow: React.FC<SettingsSliderRowProps> = ({ label, value, onValueChange }) => (
+const SettingsSliderRow: React.FC<SettingsSliderRowProps> = ({ label, value, onValueChange, displayFormatter }) => (
   <div className="py-3">
     <div className="flex items-center justify-between mb-2">
         <Label className="text-base">{label}</Label>
-        <span className="text-muted-foreground">{value}</span>
+        <span className="text-muted-foreground">{displayFormatter ? displayFormatter(value) : value}</span>
     </div>
     <Slider
       defaultValue={[value]}
-      max={20}
-      step={1}
+      max={5} // Max 5 segundos de fade
+      step={0.1}
       onValueChange={(vals) => onValueChange(vals[0])}
     />
   </div>
@@ -91,13 +92,14 @@ interface SettingsDialogProps {
     children: React.ReactNode;
     clickSound: ClickSound;
     onClickSoundChange: (sound: ClickSound) => void;
+    fadeOutDuration: number;
+    onFadeOutDurationChange: (duration: number) => void;
 }
 
 
-const SettingsDialog = ({ children, clickSound, onClickSoundChange }: SettingsDialogProps) => {
+const SettingsDialog = ({ children, clickSound, onClickSoundChange, fadeOutDuration, onFadeOutDurationChange }: SettingsDialogProps) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('General');
   const [generalView, setGeneralView] = useState<GeneralSettingsView>('main');
-  const [fadeOut, setFadeOut] = useState(10);
   const [transition, setTransition] = useState(12);
   const [tonicFollows, setTonicFollows] = useState(true);
 
@@ -143,7 +145,12 @@ const SettingsDialog = ({ children, clickSound, onClickSoundChange }: SettingsDi
                     <Separator />
                     <SettingsRow label="Click Sound" value={clickSound === 'beep' ? 'Beep' : 'Click'} isSelect onClick={() => setGeneralView('click-sound')} />
                     <Separator />
-                    <SettingsSliderRow label="Fade out / in duration" value={fadeOut} onValueChange={setFadeOut} />
+                    <SettingsSliderRow 
+                      label="Fade out / in duration" 
+                      value={fadeOutDuration} 
+                      onValueChange={onFadeOutDurationChange}
+                      displayFormatter={(value) => `${value.toFixed(1)}s`}
+                    />
                     <Separator />
                     <SettingsSliderRow label="Transition Duration" value={transition} onValueChange={setTransition} />
                     <Separator />
@@ -223,3 +230,5 @@ const SettingsDialog = ({ children, clickSound, onClickSoundChange }: SettingsDi
 };
 
 export default SettingsDialog;
+
+    
