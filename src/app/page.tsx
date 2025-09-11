@@ -139,7 +139,8 @@ const DawPage = () => {
           let blob = await getCachedAudio(track.url);
           
           if (!blob) {
-            const response = await fetch(`/api/download?url=${encodeURIComponent(track.url)}`);
+            const proxyUrl = `/api/download?url=${encodeURIComponent(track.url)}`;
+            const response = await fetch(proxyUrl);
             if (!response.ok) throw new Error(`Failed to fetch ${track.url}`);
             blob = await response.blob();
             // Cache in background
@@ -191,13 +192,18 @@ const DawPage = () => {
       if (node && node.analyserNode) {
         const dataArray = new Uint8Array(node.analyserNode.frequencyBinCount);
         node.analyserNode.getByteTimeDomainData(dataArray);
-        let sum = 0;
+        
+        let peak = 0;
         for (let i = 0; i < dataArray.length; i++) {
-          sum += Math.abs(dataArray[i] - 128); // Suma de amplitudes (desplazadas de 0-255 a -128-127)
+          const value = Math.abs(dataArray[i] - 128); // Amplitud de -128 a 127, centrado en 0
+          if (value > peak) {
+            peak = value;
+          }
         }
-        const avg = sum / dataArray.length;
-        // Normalizar a una escala de 0-100 (el multiplicador se puede ajustar para sensibilidad)
-        newVuData[trackId] = Math.min(100, avg * 5); 
+        
+        // Convertir el pico (0-128) a una escala de 0-100
+        const normalizedPeak = (peak / 128) * 100;
+        newVuData[trackId] = Math.min(100, normalizedPeak * 1.5); // Multiplicador para sensibilidad
       }
     });
     setVuData(newVuData);
