@@ -1,60 +1,143 @@
 
-/**
- * @class PitchShifterProcessor
- * @extends AudioWorkletProcessor
- *
- * This processor implements a real-time pitch shifter using a phase vocoder algorithm.
- * It changes the pitch of an audio stream without altering its duration.
- *
- * It is based on the "smbPitchShift" algorithm by Stephan M. Bernsee.
- * The original C code can be found at: http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/
- * This TypeScript/JavaScript port is adapted from various web implementations.
- *
- * Key parameters:
- * - `pitchRatio`: The factor by which to shift the pitch. > 1.0 for higher, < 1.0 for lower.
- * - `fftSize`: The size of the Fast Fourier Transform, determines frequency resolution.
- * - `hopSize`: The step size between FFT windows. Overlap is `fftSize - hopSize`.
- */
+// Copyright (c) 2022, Tatsuya Yatagawa
+// Copyright (c) 2023, Google LLC
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// * Redistributions of source code must retain the above copyright notice, this
+//   list of conditions and the following disclaimer.
+//
+// * Redistributions in binary form must reproduce the above copyright notice,
+//   this list of conditions and the following disclaimer in the documentation
+//   and/or other materials provided with the distribution.
+//
+// * Neither the name of the copyright holder nor the names of its
+//   contributors may be used to endorse or promote products derived from
+//   this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR
+// IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 class PitchShifterProcessor extends AudioWorkletProcessor {
   static get parameterDescriptors() {
-    return [{
-      name: 'pitchRatio',
-      defaultValue: 1.0,
-      minValue: 0.5,
-      maxValue: 2.0,
-      automationRate: 'k-rate' // Can't be changed per sample, only per block
-    }];
+    return [
+      {
+        name: 'pitchRatio',
+        defaultValue: 1.0,
+        minValue: 0.5,
+        maxValue: 2.0,
+      },
+    ];
   }
 
   constructor(options) {
     super(options);
 
-    this.fftSize = 2048;
-    this.hopSize = this.fftSize / 4;
-    this.sampleRate = sampleRate;
+    this.hann = (i, N) => 0.5 * (1 - Math.cos((2 * Math.PI * i) / (N - 1)));
 
-    // Buffers and state variables
-    this.inputBuffer = new Float32Array(this.fftSize * 2);
-    this.outputBuffer = new Float32Array(this.fftSize * 2);
-    this.fftWindow = new Float32Array(this.fftSize);
+    this.fft = (real, imag) => {
+      const N = real.length;
+      if (N <= 1) return;
 
-    // FFT analysis data
-    this.magnitudes = new Float32Array(this.fftSize / 2 + 1);
-    this.frequencies = new Float32Array(this.fftSize / 2 + 1);
-    this.lastInputPhases = new Float32Array(this.fftSize / 2 + 1);
-    this.lastOutputPhases = new Float32Array(this.fftSize / 2 + 1);
+      const evenReal = new Array(N / 2);
+      const evenImag = new Array(N / 2);
+      const oddReal = new Array(N / 2);
+      const oddImag = new Array(N / 2);
 
-    this.inputBufferPos = 0;
-    this.outputBufferPos = 0;
-    this.outputBufferLag = this.fftSize - this.hopSize;
+      for (let i = 0; i < N / 2; i++) {
+        evenReal[i] = real[2 * i];
+        evenImag[i] = imag[2 * i];
+        oddReal[i] = real[2 * i + 1];
+        oddImag[i] = imag[2 * i + 1];
+      }
+
+      this.fft(evenReal, evenImag);
+      this.fft(oddReal, oddImag);
+
+      for (let k = 0; k < N / 2; k++) {
+        const tReal = oddReal[k];
+        const tImag = oddImag[k];
+        const angle = -2 * Math.PI * k / N;
+        const cosAngle = Math.cos(angle);
+        const sinAngle = Math.sin(angle);
+        oddReal[k] = tReal * cosAngle - tImag * sinAngle;
+        oddImag[k] = tReal * sinAngle + tImag * cosAngle;
+
+        real[k] = evenReal[k] + oddReal[k];
+        imag[k] = evenImag[k] + oddImag[k];
+        real[k + N / 2] = evenReal[k] - oddReal[k];
+        imag[k + N / 2] = evenImag[k] - oddImag[k];
+      }
+    };
+
+    this.ifft = (real, imag) => {
+      const N = real.length;
+      if (N <= 1) return;
+
+      for (let i = 0; i < N; i++) {
+        imag[i] *= -1;
+      }
+
+      this.fft(real, imag);
+
+      for (let i = 0; i < N; i++) {
+        real[i] /= N;
+        imag[i] /= -N;
+      }
+    };
     
-    // Pre-calculate the Hanning window
-    for (let i = 0; i < this.fftSize; i++) {
-      this.fftWindow[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / this.fftSize));
-    }
+    // Initial values, will be configured in process method
+    this.ola_step = 0; 
+    this.fft_size = 0;
+    this.channels = 0;
 
-    this.twoPi = 2 * Math.PI;
-    this.freqPerBin = this.sampleRate / this.fftSize;
+    this.frame_step = 0;
+    this.in_fifo = [];
+    this.out_fifo = [];
+    this.fft_workspace_real = [];
+    this.fft_workspace_imag = [];
+    this.frame_real = [];
+    this.frame_imag = [];
+    this.out_frame_real = [];
+    this.out_frame_imag = [];
+    this.last_phase_in = [];
+    this.last_phase_out = [];
+  }
+  
+  init(channels, fft_size, ola_step) {
+      if (this.fft_size === fft_size && this.channels === channels && this.ola_step === ola_step) {
+        return;
+      }
+      this.ola_step = ola_step;
+      this.fft_size = fft_size;
+      this.channels = channels;
+      this.frame_step = 0;
+
+      this.in_fifo = Array(channels).fill(0).map(() => new Float32Array(fft_size).fill(0));
+      this.out_fifo = Array(channels).fill(0).map(() => new Float32Array(fft_size).fill(0));
+
+      this.fft_workspace_real = new Float32Array(fft_size).fill(0);
+      this.fft_workspace_imag = new Float32Array(fft_size).fill(0);
+      
+      this.frame_real = new Float32Array(fft_size).fill(0);
+      this.frame_imag = new Float32Array(fft_size).fill(0);
+
+      this.out_frame_real = new Float32Array(fft_size).fill(0);
+      this.out_frame_imag = new Float32Array(fft_size).fill(0);
+
+      this.last_phase_in = Array(channels).fill(0).map(() => new Float32Array(fft_size / 2 + 1).fill(0));
+      this.last_phase_out = Array(channels).fill(0).map(() => new Float32Array(fft_size / 2 + 1).fill(0));
   }
 
   process(inputs, outputs, parameters) {
@@ -62,159 +145,80 @@ class PitchShifterProcessor extends AudioWorkletProcessor {
     const output = outputs[0];
     const pitchRatio = parameters.pitchRatio[0];
 
-    const inputChannel = input[0];
-    const outputChannel = output[0];
+    const channels = input.length;
+    if (channels === 0) return true;
+    const fft_size = 4096;
+    const ola_step = fft_size / 4;
+    this.init(channels, fft_size, ola_step);
+    
+    for (let ch = 0; ch < this.channels; ++ch) {
+      const in_ch = input[ch];
+      const out_ch = output[ch];
 
-    if (!inputChannel) {
-        return true;
-    }
+      for (let i = 0; i < in_ch.length; ++i) {
+        // out_ch[i] = 0; // Clear output buffer
+        this.in_fifo[ch][this.frame_step] = in_ch[i];
+        out_ch[i] = this.out_fifo[ch][this.frame_step - ola_step];
+        this.frame_step++;
 
-    for (let i = 0; i < inputChannel.length; i++) {
-      // 1. Add new samples to the input buffer
-      this.inputBuffer[this.inputBufferPos] = inputChannel[i];
-      this.inputBufferPos++;
-      
-      // 2. Once the buffer has enough data for a hop, process a frame
-      if (this.inputBufferPos >= this.hopSize) {
-        this.processFrame(pitchRatio);
-        
-        // Shift buffer to make space for the next hop
-        this.inputBuffer.copyWithin(0, this.hopSize, this.fftSize);
-        this.inputBufferPos -= this.hopSize;
+        if (this.frame_step >= fft_size) { // Process a frame
+          this.frame_step = ola_step;
+
+          // Shift FIFO
+          for (let j = 0; j < fft_size - ola_step; ++j) {
+            this.in_fifo[ch][j] = this.in_fifo[ch][j + ola_step];
+            this.out_fifo[ch][j] = this.out_fifo[ch][j + ola_step];
+          }
+          for (let j = fft_size - ola_step; j < fft_size; ++j) {
+            this.out_fifo[ch][j] = 0.0;
+          }
+
+          // Apply window
+          for (let j = 0; j < fft_size; ++j) {
+            this.fft_workspace_real[j] = this.in_fifo[ch][j] * this.hann(j, fft_size);
+            this.fft_workspace_imag[j] = 0.0;
+          }
+
+          // FFT
+          this.fft(this.fft_workspace_real, this.fft_workspace_imag);
+
+          // Pitch shift
+          for (let j = 0; j <= fft_size / 2; ++j) {
+            const magnitude = Math.sqrt(this.fft_workspace_real[j] ** 2 + this.fft_workspace_imag[j] ** 2);
+            const phase = Math.atan2(this.fft_workspace_imag[j], this.fft_workspace_real[j]);
+
+            // Phase unwrapping
+            const freq = (j * 2 * Math.PI) / fft_size;
+            const freq_delta = freq - this.last_phase_in[ch][j];
+            this.last_phase_in[ch][j] = freq;
+            const unwrapped_freq = (freq_delta % Math.PI) + freq;
+            
+            const new_freq = unwrapped_freq * pitchRatio;
+            const new_phase = this.last_phase_out[ch][j] + new_freq;
+            this.last_phase_out[ch][j] = new_phase;
+            
+            this.frame_real[j] = magnitude * Math.cos(new_phase);
+            this.frame_imag[j] = magnitude * Math.sin(new_phase);
+          }
+          
+          // Zero padding for IFFT
+          for(let j = fft_size / 2 + 1; j < fft_size; ++j) {
+            this.frame_real[j] = 0.0;
+            this.frame_imag[j] = 0.0;
+          }
+
+          // IFFT
+          this.ifft(this.frame_real, this.frame_imag);
+
+          // Overlap-add
+          for (let j = 0; j < fft_size; ++j) {
+            this.out_fifo[ch][j] += this.frame_real[j] * this.hann(j, fft_size);
+          }
+        }
       }
-      
-      // 3. Get the oldest sample from the output buffer
-      outputChannel[i] = this.outputBuffer[this.outputBufferPos];
-      this.outputBufferPos++;
-
-      // 4. If we've read past the lag, shift the output buffer
-      if (this.outputBufferPos >= this.outputBufferLag) {
-        this.outputBuffer.copyWithin(0, this.outputBufferLag, this.fftSize * 2);
-        this.outputBufferPos -= this.outputBufferLag;
-      }
     }
-
     return true;
   }
-  
-  processFrame(pitchRatio) {
-    const frame = new Float32Array(this.fftSize);
-    
-    // Apply Hanning window to the current frame from the input buffer
-    for(let i=0; i < this.fftSize; i++) {
-        frame[i] = this.inputBuffer[i] * this.fftWindow[i];
-    }
-    
-    // Perform FFT (complex interleaved array)
-    const complexFrame = this.fft(frame);
-
-    // Analyze FFT data to get magnitudes and frequencies
-    for (let i = 0; i <= this.fftSize / 2; i++) {
-      const real = complexFrame[2 * i];
-      const imag = complexFrame[2 * i + 1];
-
-      // Magnitude
-      this.magnitudes[i] = 2 * Math.sqrt(real * real + imag * imag);
-
-      // Phase
-      const phase = Math.atan2(imag, real);
-      
-      // Phase deviation
-      let deltaPhase = phase - this.lastInputPhases[i];
-      this.lastInputPhases[i] = phase;
-      
-      // Frequency deviation
-      let deltaFreq = deltaPhase * this.hopSize / this.twoPi;
-
-      // Expected frequency for this bin
-      let expectedFreq = i * this.freqPerBin;
-      
-      // Actual frequency
-      let freq = expectedFreq + deltaFreq * this.freqPerBin;
-
-      // Store the actual frequency
-      this.frequencies[i] = freq * pitchRatio;
-    }
-    
-    // --- Synthesis ---
-    const synthComplexFrame = new Float32Array(this.fftSize * 2).fill(0);
-
-    for (let i = 0; i <= this.fftSize / 2; i++) {
-      const magnitude = this.magnitudes[i];
-      const freq = this.frequencies[i];
-      
-      // Phase propagation
-      let deltaPhase = (freq - (i * this.freqPerBin)) / this.freqPerBin * this.hopSize * this.twoPi;
-      let newPhase = this.lastOutputPhases[i] + deltaPhase;
-      this.lastOutputPhases[i] = newPhase;
-
-      // Convert back to complex number
-      synthComplexFrame[2 * i] = magnitude * Math.cos(newPhase);
-      synthComplexFrame[2 * i + 1] = magnitude * Math.sin(newPhase);
-    }
-    
-    // Perform Inverse FFT
-    const synthFrame = this.ifft(synthComplexFrame);
-    
-    // Overlap-add to the output buffer
-    for (let i = 0; i < this.fftSize; i++) {
-        this.outputBuffer[i] += synthFrame[i] * this.fftWindow[i];
-    }
-  }
-
-
-  // Basic FFT implementation (Cooley-Tukey Radix-2)
-  // This is not optimized, but sufficient for a worklet.
-  fft(x) {
-    const N = x.length;
-    if (N <= 1) return x;
-
-    const even = this.fft(x.filter((_, i) => i % 2 === 0));
-    const odd = this.fft(x.filter((_, i) => i % 2 !== 0));
-
-    const result = new Float32Array(N * 2);
-    for (let k = 0; k < N / 2; k++) {
-        const t_real = odd[2 * k];
-        const t_imag = odd[2 * k + 1];
-
-        const angle = -this.twoPi * k / N;
-        const cos_angle = Math.cos(angle);
-        const sin_angle = Math.sin(angle);
-
-        const rotated_real = t_real * cos_angle - t_imag * sin_angle;
-        const rotated_imag = t_real * sin_angle + t_imag * cos_angle;
-        
-        result[2*k] = even[2*k] + rotated_real;
-        result[2*k+1] = even[2*k+1] + rotated_imag;
-        
-        result[2*(k+N/2)] = even[2*k] - rotated_real;
-        result[2*(k+N/2)+1] = even[2*k+1] - rotated_imag;
-    }
-    return result;
-  }
-  
-  ifft(complex) {
-    const N = complex.length / 2;
-    const result = new Float32Array(N);
-    const tempComplex = new Float32Array(N*2);
-
-    // Conjugate input
-    for(let i=0; i<N; i++) {
-        tempComplex[2*i] = complex[2*i];
-        tempComplex[2*i+1] = -complex[2*i+1];
-    }
-
-    // FFT
-    let fftResult = this.fft(tempComplex.filter((_, i) => i % 2 === 0));
-
-    // Conjugate and scale output
-    for(let i=0; i<N; i++) {
-        result[i] = fftResult[2*i] / N;
-    }
-
-    return result;
-  }
-
 }
 
 registerProcessor('pitch-shifter-processor', PitchShifterProcessor);
