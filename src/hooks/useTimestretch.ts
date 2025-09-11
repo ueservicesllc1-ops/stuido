@@ -42,22 +42,22 @@ export const useTimestretch = (audioContext: AudioContext | null) => {
             }
 
             stretcher.filter.source = {
-                extract: (target, numFrames, position) => {
+                extract: (target, numFramesToExtract, position) => {
                     const l = inputBuffer.getChannelData(0);
                     const r = channels > 1 ? inputBuffer.getChannelData(1) : l;
 
-                    for (let i = 0; i < numFrames; i++) {
+                    for (let i = 0; i < numFramesToExtract; i++) {
                         target[i * 2] = l[i + position];
                         target[i * 2 + 1] = r[i + position];
                     }
-                    return Math.min(numFrames, l.length - position);
+                    return Math.min(numFramesToExtract, l.length - position);
                 },
             };
 
             const samples = new Float32Array(numFrames * 2);
             
-            // CORRECTED LINE: The filter is called as a function, not with .onProcess
-            stretcher.filter(samples);
+            // CORRECTED LOGIC: Extract the processed samples from the filter
+            stretcher.filter.extract(samples, numFrames);
 
             const outL = outputBuffer.getChannelData(0);
             const outR = channels > 1 ? outputBuffer.getChannelData(1) : outL;
