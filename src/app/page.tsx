@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Header from '@/components/Header';
@@ -9,7 +8,6 @@ import { getSetlists, Setlist, SetlistSong } from '@/actions/setlists';
 import { cacheAudio, getCachedAudio } from '@/lib/audiocache';
 import { Song } from '@/actions/songs';
 import { SongStructure } from '@/ai/flows/song-structure';
-import { usePitchShifter } from '@/hooks/usePitchShifter';
 
 export type PlaybackMode = 'online' | 'hybrid' | 'offline';
 
@@ -26,10 +24,9 @@ const DawPage = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
   const trackNodesRef = useRef<Record<string, {
     buffer: AudioBuffer;
-    source?: AudioBufferSourceNode;
+    source: AudioBufferSourceNode;
     gainNode: GainNode;
     analyserNode: AnalyserNode;
-    pitchShifterNode?: AudioWorkletNode;
   }>>({});
   const [vuData, setVuData] = useState<Record<string, number>>({});
   const [audioBuffers, setAudioBuffers] = useState<Record<string, AudioBuffer>>({});
@@ -48,14 +45,7 @@ const DawPage = () => {
   const [masterVolume, setMasterVolume] = useState(100);
   const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('hybrid');
   const [isReadyToPlay, setIsReadyToPlay] = useState(false);
-  const [transpose, setTranspose] = useState(0); // Estado para la transposición
-
-  // --- Pitch Shifter Hook ---
-  const { isPitchShifterReady, createPitchShifterNode } = usePitchShifter(audioContextRef.current);
-
-
-  // Estado para descargas en segundo plano en modo híbrido
-  const [hybridDownloadingTracks, setHybridDownloadingTracks] = useState<Set<string>>(new Set());
+  const [transpose, setTranspose] = useState(0); // Estado para la transposición en semitonos
 
   // Initialize AudioContext
   useEffect(() => {
@@ -67,7 +57,8 @@ const DawPage = () => {
         }
     }
     return () => {
-        audioContextRef.current?.close();
+        // No cerramos el context para evitar problemas en HMR
+        // audioContextRef.current?.close();
     }
   }, []);
 
@@ -122,7 +113,7 @@ const DawPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSetlist]);
 
-  // Lógica de carga de canciones y preparación de audios (Refactorizado para Web Audio API)
+  // Lógica de carga de canciones y preparación de audios
   useEffect(() => {
     if (!activeSongId || !audioContextRef.current) {
       setIsReadyToPlay(false);
@@ -150,7 +141,6 @@ const DawPage = () => {
             const response = await fetch(proxyUrl);
             if (!response.ok) throw new Error(`Failed to fetch ${track.url}`);
             blob = await response.blob();
-            // Cache in background
             if (playbackMode !== 'online') {
               cacheAudio(track.url, blob);
             }
@@ -202,26 +192,23 @@ const DawPage = () => {
         
         let peak = 0;
         for (let i = 0; i < dataArray.length; i++) {
-          const value = Math.abs(dataArray[i] - 128); // Amplitud de -128 a 127, centrado en 0
+          const value = Math.abs(dataArray[i] - 128);
           if (value > peak) {
             peak = value;
           }
         }
         
-        // Convertir el pico (0-128) a una escala de 0-100
         const normalizedPeak = (peak / 128) * 100;
-        newVuData[trackId] = Math.min(100, normalizedPeak * 1.5); // Multiplicador para sensibilidad
+        newVuData[trackId] = Math.min(100, normalizedPeak * 1.5);
       }
     });
     setVuData(newVuData);
     
-    // Update playback position
     const elapsedTime = audioContextRef.current.currentTime - playbackStartTimeRef.current;
     const newPosition = playbackStartOffsetRef.current + elapsedTime;
     if (newPosition <= duration) {
       setPlaybackPosition(newPosition);
     } else {
-      // La canción terminó
       handleStop();
     }
 
@@ -237,7 +224,6 @@ const DawPage = () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
-      // Limpiar los vúmetros al detener
       setVuData({});
     }
     return () => {
@@ -269,63 +255,48 @@ const DawPage = () => {
             finalVolume = trackVol * masterVol;
         }
 
-        // Usar setValueAtTime para un cambio suave
         node.gainNode.gain.setValueAtTime(finalVolume, audioContextRef.current.currentTime);
       }
     });
   }, [volumes, masterVolume, mutedTracks, soloTracks, activeTracks]);
 
-
   const handlePlay = useCallback(() => {
-    if (!isReadyToPlay || isPlaying || !audioContextRef.current || !isPitchShifterReady) return;
+    if (!isReadyToPlay || isPlaying || !audioContextRef.current) return;
 
+    if (audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume();
+    }
+    
     const context = audioContextRef.current;
     const newTrackNodes: typeof trackNodesRef.current = {};
 
     playbackStartTimeRef.current = context.currentTime;
     playbackStartOffsetRef.current = playbackPosition;
     
-    // El 'pitch ratio' se calcula una vez y se pasa al worklet
-    const pitchRatio = Math.pow(2, transpose / 12);
+    const detuneValue = transpose * 100; // 1 semitono = 100 cents
 
     activeTracks.forEach(track => {
       const buffer = audioBuffers[track.id];
       if (buffer) {
         const source = context.createBufferSource();
         source.buffer = buffer;
-
-        const pitchShifterNode = createPitchShifterNode();
-        if (pitchShifterNode) {
-          const pitchRatioParam = pitchShifterNode.parameters.get('pitchRatio');
-          if (pitchRatioParam) {
-            pitchRatioParam.value = pitchRatio;
-          }
-        }
+        source.detune.value = detuneValue;
 
         const gainNode = context.createGain();
         const analyserNode = context.createAnalyser();
         analyserNode.fftSize = 256;
 
-        if (pitchShifterNode) {
-            source.connect(pitchShifterNode)
-                  .connect(gainNode)
-                  .connect(analyserNode)
-                  .connect(context.destination);
-        } else {
-            // Fallback si el worklet no está listo (no debería pasar con isPitchShifterReady)
-            source.connect(gainNode).connect(analyserNode).connect(context.destination);
-        }
+        source.connect(gainNode).connect(analyserNode).connect(context.destination);
         
         source.start(0, playbackPosition);
 
-        newTrackNodes[track.id] = { buffer, source, gainNode, analyserNode, pitchShifterNode };
+        newTrackNodes[track.id] = { buffer, source, gainNode, analyserNode };
       }
     });
 
     trackNodesRef.current = newTrackNodes;
     setIsPlaying(true);
-  }, [isReadyToPlay, isPlaying, activeTracks, audioBuffers, playbackPosition, transpose, isPitchShifterReady, createPitchShifterNode]);
-
+  }, [isReadyToPlay, isPlaying, activeTracks, audioBuffers, playbackPosition, transpose]);
 
   const handlePause = () => {
     if (!isPlaying || !audioContextRef.current) return;
@@ -398,15 +369,12 @@ const DawPage = () => {
   
   const handleTransposeChange = (newTranspose: number) => {
     setTranspose(newTranspose);
-    if (isPlaying && isPitchShifterReady && audioContextRef.current) {
-        const newPitchRatio = Math.pow(2, newTranspose / 12);
+    if (isPlaying) {
+        const detuneValue = newTranspose * 100;
         Object.values(trackNodesRef.current).forEach(node => {
-            if (node.pitchShifterNode) {
-                const pitchRatioParam = node.pitchShifterNode.parameters.get('pitchRatio');
-                if (pitchRatioParam) {
-                    // Usar setTargetAtTime para una transición más suave
-                    pitchRatioParam.setTargetAtTime(newPitchRatio, audioContextRef.current!.currentTime, 0.01);
-                }
+            if (node.source) {
+                // Usar setTargetAtTime para una transición más suave
+                node.source.detune.setTargetAtTime(detuneValue, audioContextRef.current!.currentTime, 0.01);
             }
         });
     }
@@ -434,7 +402,7 @@ const DawPage = () => {
             onPlaybackModeChange={setPlaybackMode}
             loadingProgress={loadingProgress}
             showLoadingBar={showLoadingBar}
-            isReadyToPlay={isReadyToPlay && isPitchShifterReady}
+            isReadyToPlay={isReadyToPlay}
             songStructure={songStructure}
             masterVolume={masterVolume}
             onMasterVolumeChange={handleMasterVolumeChange}
