@@ -20,6 +20,7 @@ const DawPage = () => {
   const [activeSongId, setActiveSongId] = useState<string | null>(null);
   const [songs, setSongs] = useState<Song[]>([]);
   const [songStructure, setSongStructure] = useState<SongStructure | null>(null);
+  const [songTempo, setSongTempo] = useState<number | null>(null);
 
   // --- Web Audio API State ---
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -35,7 +36,7 @@ const DawPage = () => {
   // --- Metronome State ---
   const [isClickEnabled, setIsClickEnabled] = useState(false);
   const [clickVolume, setClickVolume] = useState(75);
-  const [clickTempo, setClickTempo] = useState(120);
+  const [clickTempo, setClickTempo] = useState(150);
   const clickSchedulerRef = useRef<number | null>(null);
   const nextClickTimeRef = useRef(0);
   const clickGainNodeRef = useRef<GainNode | null>(null);
@@ -119,11 +120,13 @@ const DawPage = () => {
       } else {
         setActiveSongId(null);
         setSongStructure(null);
+        setSongTempo(null);
       }
     } else {
       setTracks([]);
       setActiveSongId(null);
       setSongStructure(null);
+      setSongTempo(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSetlist]);
@@ -196,9 +199,7 @@ const DawPage = () => {
 
     const currentSong = songs.find(s => s.id === activeSongId);
     setSongStructure(currentSong?.structure || null);
-    if (currentSong?.tempo) {
-        setClickTempo(currentSong.tempo);
-    }
+    setSongTempo(currentSong?.tempo || null);
     
     handleStop();
     const tracksForSong = tracks.filter(t => t.songId === activeSongId);
@@ -479,6 +480,8 @@ const DawPage = () => {
             clickVolume={clickVolume}
             onClickVolumeChange={setClickVolume}
             clickTempo={clickTempo}
+            onTempoChange={setClickTempo}
+            songTempo={songTempo}
         />
       </div>
       

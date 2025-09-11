@@ -13,6 +13,7 @@ import Timeline from './Timeline';
 import { SongStructure } from '@/ai/flows/song-structure';
 import { Slider } from './ui/slider';
 import SettingsDialog from './SettingsDialog';
+import { Input } from './ui/input';
 
 
 interface HeaderProps {
@@ -38,6 +39,8 @@ interface HeaderProps {
   clickVolume: number;
   onClickVolumeChange: (volume: number) => void;
   clickTempo: number;
+  onTempoChange: (tempo: number) => void;
+  songTempo: number | null;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -63,6 +66,8 @@ const Header: React.FC<HeaderProps> = ({
   clickVolume,
   onClickVolumeChange,
   clickTempo,
+  onTempoChange,
+  songTempo,
 }) => {
   
   return (
@@ -100,10 +105,19 @@ const Header: React.FC<HeaderProps> = ({
                 </div>
 
                 <div className="flex flex-col items-center justify-center bg-secondary/30 rounded-md w-24 h-16">
-                    <span className="text-3xl font-mono font-bold text-primary">{clickTempo}</span>
+                     <Input
+                        type="number"
+                        className="bg-transparent border-0 text-center text-3xl font-mono font-bold text-primary focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto"
+                        value={clickTempo}
+                        onChange={(e) => onTempoChange(parseInt(e.target.value, 10))}
+                    />
                     <span className="text-xs text-muted-foreground -mt-1">BPM</span>
                 </div>
 
+                <div className="flex flex-col items-center justify-center bg-secondary/30 rounded-md w-24 h-16">
+                    <span className="text-3xl font-mono font-bold text-foreground">{songTempo ?? '--'}</span>
+                    <span className="text-xs text-muted-foreground -mt-1">Song BPM</span>
+                </div>
             </div>
             <div className="flex items-center gap-1 bg-background p-1 rounded-lg">
                 <Button variant="secondary" size="icon" className="w-12 h-10" onClick={onRewind} disabled={!isReadyToPlay}>
