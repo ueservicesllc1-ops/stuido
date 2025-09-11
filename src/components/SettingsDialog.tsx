@@ -122,8 +122,6 @@ const SettingsDialog = ({ children }: { children: React.ReactNode }) => {
             <div className="p-8 overflow-y-auto">
                 {activeTab === 'General' && (
                     <div className="max-w-md mx-auto">
-                        <SettingsRow label="Cue Sound" value="Matt McCoy" isSelect />
-                        <Separator />
                         <SettingsRow label="Click Sound" value="Beep" isSelect />
                         <Separator />
                         <SettingsRow label="Appearance" value="Dark" isSelect />
