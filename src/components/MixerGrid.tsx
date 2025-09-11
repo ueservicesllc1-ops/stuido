@@ -44,26 +44,18 @@ const MixerGrid: React.FC<MixerGridProps> = ({
 
         const isAudible = isPlaying && !isDisabled && !isMuted && (!isSoloActive || isSolo);
         
-        // Asignar ID para la pista de click si existe
-        const isClickTrack = track.name.trim().toUpperCase() === 'CLICK';
-        const trackId = isClickTrack ? `${track.songId}_CLICK` : track.id;
-        
-        const effectiveVolume = isClickTrack 
-            ? volumes[`${track.songId}_CLICK`] ?? 75
-            : volumes[track.id] ?? 75;
-
         return (
           <TrackPad
-            key={trackId}
+            key={track.id}
             track={track}
             isLoading={isLoading}
-            isMuted={mutedTracks.includes(trackId)}
-            isSolo={soloTracks.includes(trackId)}
+            isMuted={isMuted}
+            isSolo={isSolo}
             isAudible={isAudible}
-            volume={effectiveVolume}
-            onMuteToggle={() => onMuteToggle(trackId)}
-            onSoloToggle={() => onSoloToggle(trackId)}
-            onVolumeChange={(newVolume) => onVolumeChange(trackId, newVolume)}
+            volume={volumes[track.id] ?? 75}
+            onMuteToggle={() => onMuteToggle(track.id)}
+            onSoloToggle={() => onSoloToggle(track.id)}
+            onVolumeChange={(newVolume) => onVolumeChange(track.id, newVolume)}
             vuMeterLevel={vuData[track.id] || 0}
             playbackMode={playbackMode}
           />

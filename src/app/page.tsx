@@ -71,8 +71,8 @@ const DawPage = () => {
   // Set readiness to play
   useEffect(() => {
     const activeTracksForSong = tracks.filter(t => t.songId === activeSongId);
-    // All non-click tracks loaded
-    const allTracksLoaded = loadingTracks.filter(id => !id.endsWith('_CLICK')).length === 0 && activeTracksForSong.length > 0;
+    // All tracks loaded
+    const allTracksLoaded = loadingTracks.length === 0 && activeTracksForSong.length > 0;
     setIsReadyToPlay(allTracksLoaded);
   }, [loadingTracks, tracks, activeSongId]);
 
@@ -181,12 +181,11 @@ const DawPage = () => {
   }, [isPlaying, isClickEnabled, clickScheduler]);
 
   useEffect(() => {
-    if (clickGainNodeRef.current) {
-        const isMuted = mutedTracks.includes(`${activeSongId}_CLICK`);
-        const finalVolume = isClickEnabled && !isMuted ? (clickVolume / 100) * (masterVolume / 100) : 0;
-        clickGainNodeRef.current.gain.setValueAtTime(finalVolume, audioContextRef.current!.currentTime);
+    if (clickGainNodeRef.current && audioContextRef.current) {
+        const finalVolume = isClickEnabled ? (clickVolume / 100) * (masterVolume / 100) : 0;
+        clickGainNodeRef.current.gain.setValueAtTime(finalVolume, audioContextRef.current.currentTime);
     }
-  }, [clickVolume, isClickEnabled, mutedTracks, activeSongId, masterVolume]);
+  }, [clickVolume, isClickEnabled, masterVolume]);
 
 
   // Lógica de carga de canciones y preparación de audios
@@ -202,7 +201,7 @@ const DawPage = () => {
     }
     
     handleStop();
-    const tracksForSong = tracks.filter(t => t.songId === activeSongId && t.name.toUpperCase() !== 'CLICK');
+    const tracksForSong = tracks.filter(t => t.songId === activeSongId);
     setLoadingTracks(tracksForSong.map(t => t.id));
 
     const loadAudioData = async () => {
@@ -351,7 +350,6 @@ const DawPage = () => {
     playbackStartOffsetRef.current = playbackPosition;
 
     activeTracks.forEach(track => {
-      if (track.name.toUpperCase() === 'CLICK') return;
       const buffer = audioBuffers[track.id];
       if (buffer) {
         const source = context.createBufferSource();
@@ -450,7 +448,7 @@ const DawPage = () => {
   }, []);
 
   // --- Render ---
-  const totalTracksForSong = activeTracks.filter(t => t.name.toUpperCase() !== 'CLICK').length;
+  const totalTracksForSong = activeTracks.length;
   const loadedTracksCount = totalTracksForSong - loadingTracks.length;
   const loadingProgress = totalTracksForSong > 0 ? (loadedTracksCount / totalTracksForSong) * 100 : 0;
   const showLoadingBar = loadingTracks.length > 0 && totalTracksForSong > 0;
