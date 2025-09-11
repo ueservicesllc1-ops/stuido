@@ -296,7 +296,10 @@ const DawPage = () => {
 
         const pitchShifterNode = createPitchShifterNode();
         if (pitchShifterNode) {
-          pitchShifterNode.parameters.get('pitchRatio')!.value = pitchRatio;
+          const pitchRatioParam = pitchShifterNode.parameters.get('pitchRatio');
+          if (pitchRatioParam) {
+            pitchRatioParam.value = pitchRatio;
+          }
         }
 
         const gainNode = context.createGain();
@@ -305,12 +308,12 @@ const DawPage = () => {
 
         if (pitchShifterNode) {
             source.connect(pitchShifterNode)
-                  .connect(analyserNode)
                   .connect(gainNode)
+                  .connect(analyserNode)
                   .connect(context.destination);
         } else {
             // Fallback si el worklet no está listo (no debería pasar con isPitchShifterReady)
-            source.connect(analyserNode).connect(gainNode).connect(context.destination);
+            source.connect(gainNode).connect(analyserNode).connect(context.destination);
         }
         
         source.start(0, playbackPosition);
@@ -401,7 +404,8 @@ const DawPage = () => {
             if (node.pitchShifterNode) {
                 const pitchRatioParam = node.pitchShifterNode.parameters.get('pitchRatio');
                 if (pitchRatioParam) {
-                    pitchRatioParam.setValueAtTime(newPitchRatio, audioContextRef.current!.currentTime);
+                    // Usar setTargetAtTime para una transición más suave
+                    pitchRatioParam.setTargetAtTime(newPitchRatio, audioContextRef.current!.currentTime, 0.01);
                 }
             }
         });

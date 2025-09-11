@@ -18,6 +18,10 @@ export const usePitchShifter = (audioContext: AudioContext | null) => {
 
     const initializeWorklet = async () => {
       try {
+        // Asegurarse que el contexto de audio está corriendo
+        if (audioContext.state === 'suspended') {
+            await audioContext.resume();
+        }
         await audioContext.audioWorklet.addModule(WORKLET_PATH);
         if (!isCancelled) {
           setIsPitchShifterReady(true);
@@ -31,16 +35,7 @@ export const usePitchShifter = (audioContext: AudioContext | null) => {
       }
     };
 
-    if (audioContext.state === 'running') {
-        initializeWorklet();
-    } else {
-        const resumeAndInit = async () => {
-            await audioContext.resume();
-            initializeWorklet();
-        };
-        resumeAndInit();
-    }
-    
+    initializeWorklet();
 
     return () => {
       isCancelled = true;
