@@ -9,6 +9,7 @@ import { getSetlists, Setlist, SetlistSong } from '@/actions/setlists';
 import { cacheAudio, getCachedAudio } from '@/lib/audiocache';
 import { Song } from '@/actions/songs';
 import { SongStructure } from '@/ai/flows/song-structure';
+import { usePitchShifter } from '@/hooks/usePitchShifter';
 
 export type PlaybackMode = 'online' | 'hybrid' | 'offline';
 
@@ -28,6 +29,7 @@ const DawPage = () => {
     source?: AudioBufferSourceNode;
     gainNode: GainNode;
     analyserNode: AnalyserNode;
+    pitchShifterNode?: AudioWorkletNode;
   }>>({});
   const [vuData, setVuData] = useState<Record<string, number>>({});
   const [audioBuffers, setAudioBuffers] = useState<Record<string, AudioBuffer>>({});
@@ -47,6 +49,10 @@ const DawPage = () => {
   const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('hybrid');
   const [isReadyToPlay, setIsReadyToPlay] = useState(false);
   const [transpose, setTranspose] = useState(0); // Estado para la transposición
+
+  // --- Pitch Shifter Hook ---
+  const { isPitchShifterReady, createPitchShifterNode } = usePitchShifter(audioContextRef.current);
+
 
   // Estado para descargas en segundo plano en modo híbrido
   const [hybridDownloadingTracks, setHybridDownloadingTracks] = useState<Set<string>>(new Set());
@@ -271,55 +277,64 @@ const DawPage = () => {
 
 
   const handlePlay = useCallback(() => {
-    if (!isReadyToPlay || isPlaying || !audioContextRef.current) return;
+    if (!isReadyToPlay || isPlaying || !audioContextRef.current || !isPitchShifterReady) return;
 
     const context = audioContextRef.current;
     const newTrackNodes: typeof trackNodesRef.current = {};
 
-    // Sincronizar el tiempo de inicio
     playbackStartTimeRef.current = context.currentTime;
     playbackStartOffsetRef.current = playbackPosition;
     
-    // Calcular el playbackRate basado en la transposición
-    const playbackRate = Math.pow(2, transpose / 12);
+    // El 'pitch ratio' se calcula una vez y se pasa al worklet
+    const pitchRatio = Math.pow(2, transpose / 12);
 
     activeTracks.forEach(track => {
       const buffer = audioBuffers[track.id];
       if (buffer) {
         const source = context.createBufferSource();
         source.buffer = buffer;
-        source.playbackRate.value = playbackRate;
+
+        const pitchShifterNode = createPitchShifterNode();
+        if (pitchShifterNode) {
+          pitchShifterNode.parameters.get('pitchRatio')!.value = pitchRatio;
+        }
 
         const gainNode = context.createGain();
         const analyserNode = context.createAnalyser();
-        analyserNode.fftSize = 256; // Tamaño para el análisis de VU
+        analyserNode.fftSize = 256;
 
-        source.connect(analyserNode).connect(gainNode).connect(context.destination);
+        if (pitchShifterNode) {
+            source.connect(pitchShifterNode)
+                  .connect(analyserNode)
+                  .connect(gainNode)
+                  .connect(context.destination);
+        } else {
+            // Fallback si el worklet no está listo (no debería pasar con isPitchShifterReady)
+            source.connect(analyserNode).connect(gainNode).connect(context.destination);
+        }
         
-        // Iniciar la reproducción desde la posición actual
         source.start(0, playbackPosition);
 
-        newTrackNodes[track.id] = { buffer, source, gainNode, analyserNode };
+        newTrackNodes[track.id] = { buffer, source, gainNode, analyserNode, pitchShifterNode };
       }
     });
 
     trackNodesRef.current = newTrackNodes;
     setIsPlaying(true);
-  }, [isReadyToPlay, isPlaying, activeTracks, audioBuffers, playbackPosition, transpose]);
+  }, [isReadyToPlay, isPlaying, activeTracks, audioBuffers, playbackPosition, transpose, isPitchShifterReady, createPitchShifterNode]);
+
 
   const handlePause = () => {
     if (!isPlaying || !audioContextRef.current) return;
     
-    // Detener todas las fuentes de audio
     Object.values(trackNodesRef.current).forEach(node => node.source?.stop());
 
-    // Calcular y guardar la nueva posición de reproducción
     const elapsedTime = audioContextRef.current.currentTime - playbackStartTimeRef.current;
     playbackStartOffsetRef.current += elapsedTime;
     setPlaybackPosition(playbackStartOffsetRef.current);
     
     setIsPlaying(false);
-    trackNodesRef.current = {}; // Limpiar los nodos
+    trackNodesRef.current = {};
   };
   
   const handleStop = () => {
@@ -336,13 +351,11 @@ const DawPage = () => {
     if (!isReadyToPlay || newPosition < 0 || newPosition > duration) return;
 
     if (isPlaying) {
-      handlePause(); // Pausar primero
-      playbackStartOffsetRef.current = newPosition; // Actualizar el offset
+      handlePause();
+      playbackStartOffsetRef.current = newPosition;
       setPlaybackPosition(newPosition);
-      // Usar un pequeño retardo para asegurar que el estado se actualice antes de volver a reproducir
       setTimeout(handlePlay, 50); 
     } else {
-      // Si está pausado, solo actualiza la posición
       setPlaybackPosition(newPosition);
       playbackStartOffsetRef.current = newPosition;
     }
@@ -353,7 +366,6 @@ const DawPage = () => {
 
   const handleMuteToggle = (trackId: string) => {
     setMutedTracks(prev => prev.includes(trackId) ? prev.filter(id => id !== trackId) : [...prev, trackId]);
-    // Si se mutea una pista, también se quita del modo solo si estaba activado
     if (!mutedTracks.includes(trackId)) setSoloTracks(prev => prev.filter(id => id !== trackId));
   };
 
@@ -383,14 +395,16 @@ const DawPage = () => {
   
   const handleTransposeChange = (newTranspose: number) => {
     setTranspose(newTranspose);
-    // Si está reproduciendo, necesita reaplicar el cambio
-    if(isPlaying) {
-      Object.values(trackNodesRef.current).forEach(node => {
-        if(node.source) {
-          const newPlaybackRate = Math.pow(2, newTranspose / 12);
-          node.source.playbackRate.setValueAtTime(newPlaybackRate, audioContextRef.current!.currentTime);
-        }
-      });
+    if (isPlaying && isPitchShifterReady && audioContextRef.current) {
+        const newPitchRatio = Math.pow(2, newTranspose / 12);
+        Object.values(trackNodesRef.current).forEach(node => {
+            if (node.pitchShifterNode) {
+                const pitchRatioParam = node.pitchShifterNode.parameters.get('pitchRatio');
+                if (pitchRatioParam) {
+                    pitchRatioParam.setValueAtTime(newPitchRatio, audioContextRef.current!.currentTime);
+                }
+            }
+        });
     }
   }
 
@@ -416,7 +430,7 @@ const DawPage = () => {
             onPlaybackModeChange={setPlaybackMode}
             loadingProgress={loadingProgress}
             showLoadingBar={showLoadingBar}
-            isReadyToPlay={isReadyToPlay}
+            isReadyToPlay={isReadyToPlay && isPitchShifterReady}
             songStructure={songStructure}
             masterVolume={masterVolume}
             onMasterVolumeChange={handleMasterVolumeChange}
@@ -464,5 +478,3 @@ const DawPage = () => {
 };
 
 export default DawPage;
-
-    
