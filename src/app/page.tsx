@@ -27,6 +27,7 @@ const DawPage = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
   const trackNodesRef = useRef<Record<string, {
     source: AudioBufferSourceNode;
+    pannerNode: StereoPannerNode;
     gainNode: GainNode;
     analyserNode: AnalyserNode;
   }>>({});
@@ -54,6 +55,7 @@ const DawPage = () => {
   const playbackStartOffsetRef = useRef(0);
   
   const [volumes, setVolumes] = useState<{ [key: string]: number }>({});
+  const [pans, setPans] = useState<{ [key: string]: number }>({});
   const [masterVolume, setMasterVolume] = useState(100);
   const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('hybrid');
   const [isReadyToPlay, setIsReadyToPlay] = useState(false);
@@ -177,7 +179,11 @@ const DawPage = () => {
                 context.resume();
             }
             nextClickTimeRef.current = context.currentTime;
-            clickSchedulerRef.current = window.setTimeout(clickScheduler, 0);
+            // Clear any existing timer to avoid duplicates
+            if (clickSchedulerRef.current) {
+                clearTimeout(clickSchedulerRef.current);
+            }
+            clickScheduler();
         }
     } else {
         if (clickSchedulerRef.current) {
@@ -256,13 +262,16 @@ const DawPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSongId, songs]);
 
-  // Inicializa volúmenes
+  // Inicializa volúmenes y paneos
   useEffect(() => {
     const newVolumes: { [key: string]: number } = {};
+    const newPans: { [key: string]: number } = {};
     tracks.forEach(track => {
       newVolumes[track.id] = volumes[track.id] ?? 75;
+      newPans[track.id] = pans[track.id] ?? 0;
     });
     setVolumes(newVolumes);
+    setPans(newPans);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tracks]);
 
@@ -327,13 +336,16 @@ const DawPage = () => {
     const context = audioContextRef.current;
     Object.keys(trackNodesRef.current).forEach(trackId => {
         const node = trackNodesRef.current[trackId];
-        if (node && node.gainNode) {
+        if (node?.gainNode) {
             const finalVolume = getGainValue(trackId);
-            // No usamos ramp aquí para cambios de volumen instantáneos durante la reproducción
             node.gainNode.gain.setValueAtTime(finalVolume, context.currentTime);
         }
+        if (node?.pannerNode) {
+            const panValue = pans[trackId] ?? 0;
+            node.pannerNode.pan.setValueAtTime(panValue, context.currentTime);
+        }
     });
-  }, [volumes, masterVolume, mutedTracks, soloTracks, getGainValue]);
+  }, [volumes, masterVolume, mutedTracks, soloTracks, getGainValue, pans]);
 
 
   const handlePlay = useCallback(() => {
@@ -356,47 +368,63 @@ const DawPage = () => {
         const source = context.createBufferSource();
         source.buffer = buffer;
         
+        const pannerNode = context.createStereoPanner();
         const gainNode = context.createGain();
         const analyserNode = context.createAnalyser();
         analyserNode.fftSize = 256;
         
-        source.connect(gainNode);
+        source.connect(pannerNode);
+        pannerNode.connect(gainNode);
         gainNode.connect(analyserNode);
         analyserNode.connect(context.destination);
         
         const finalVolume = getGainValue(track.id);
+        const panValue = pans[track.id] ?? 0;
+
+        pannerNode.pan.setValueAtTime(panValue, now);
         gainNode.gain.setValueAtTime(0, now); // Empezar en silencio
         gainNode.gain.linearRampToValueAtTime(finalVolume, now + fadeOutDuration); // Fade in
         
         source.start(now, playbackPosition);
 
-        newTrackNodes[track.id] = { source, gainNode, analyserNode };
+        newTrackNodes[track.id] = { source, pannerNode, gainNode, analyserNode };
       }
     });
 
     trackNodesRef.current = newTrackNodes;
     setIsPlaying(true);
-  }, [isReadyToPlay, isPlaying, activeTracks, audioBuffers, playbackPosition, fadeOutDuration, getGainValue]);
+    isPlayingRef.current = true;
+    animationFrameRef.current = requestAnimationFrame(updateVuMeters);
+
+  }, [isReadyToPlay, isPlaying, activeTracks, audioBuffers, playbackPosition, fadeOutDuration, getGainValue, pans, updateVuMeters]);
 
   const handleFadeOutAndStop = useCallback((onStopComplete?: () => void) => {
-    if (!audioContextRef.current) return;
+    if (!audioContextRef.current || !isPlayingRef.current) {
+        if(onStopComplete) onStopComplete();
+        return;
+    };
     const context = audioContextRef.current;
     const now = context.currentTime;
     
     Object.values(trackNodesRef.current).forEach(node => {
         if (node.source) {
-            // Empezar el fade out desde el valor actual
             node.gainNode.gain.cancelScheduledValues(now);
             node.gainNode.gain.setValueAtTime(node.gainNode.gain.value, now);
             node.gainNode.gain.linearRampToValueAtTime(0, now + fadeOutDuration);
-            node.source.stop(now + fadeOutDuration);
+            try {
+              node.source.stop(now + fadeOutDuration);
+            } catch(e) {
+              console.warn("Audio source already stopped", e);
+            }
         }
     });
 
-    // Esperar a que termine el fade out para limpiar
     setTimeout(() => {
         setIsPlaying(false);
+        isPlayingRef.current = false;
+        if(animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
         trackNodesRef.current = {};
+        setVuData({});
         if (onStopComplete) {
             onStopComplete();
         }
@@ -412,78 +440,51 @@ const DawPage = () => {
     const newPosition = playbackStartOffsetRef.current + elapsedTime;
 
     handleFadeOutAndStop(() => {
-      setPlaybackPosition(newPosition);
+      if (newPosition < duration) {
+        setPlaybackPosition(newPosition);
+      } else {
+        setPlaybackPosition(0); // or duration, depending on desired behavior
+      }
     });
   };
   
   const handleStop = (immediate = false) => {
     if (immediate) {
-        if (isPlaying) {
+        if (isPlayingRef.current) {
             Object.values(trackNodesRef.current).forEach(node => {
-                node.source?.stop();
+                try {
+                  node.source?.stop();
+                } catch(e) {
+                   console.warn("Audio source already stopped", e);
+                }
             });
         }
         setIsPlaying(false);
+        isPlayingRef.current = false;
+        if(animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
         setPlaybackPosition(0);
         trackNodesRef.current = {};
+        setVuData({});
     } else if (isPlaying) {
         handleFadeOutAndStop(() => {
             setPlaybackPosition(0);
         });
-    } else { // Si no está sonando, simplemente resetea la posición
+    } else {
         setPlaybackPosition(0);
     }
   };
   
   const handleSeek = (newPosition: number) => {
     if (!isReadyToPlay || newPosition < 0 || newPosition > duration) return;
-
-    const wasPlaying = isPlaying;
-    if (wasPlaying) {
-      // Detener con fade out antes de buscar una nueva posición
-      handleFadeOutAndStop(() => {
-        setPlaybackPosition(newPosition);
-        // Volver a reproducir con fade in desde la nueva posición
-        setTimeout(() => {
-            if (audioContextRef.current) { // Comprobar que el contexto sigue ahí
-                const context = audioContextRef.current;
-                if (context.state === 'suspended') {
-                    context.resume();
-                }
-                
-                const newTrackNodes: typeof trackNodesRef.current = {};
-                const now = context.currentTime;
-    
-                playbackStartTimeRef.current = now;
-                playbackStartOffsetRef.current = newPosition;
-    
-                activeTracks.forEach(track => {
-                  const buffer = audioBuffers[track.id];
-                  if (buffer) {
-                    const source = context.createBufferSource();
-                    source.buffer = buffer;
-                    const gainNode = context.createGain();
-                    const analyserNode = context.createAnalyser();
-                    analyserNode.fftSize = 256;
-                    source.connect(gainNode).connect(analyserNode).connect(context.destination);
-                    
-                    const finalVolume = getGainValue(track.id);
-                    gainNode.gain.setValueAtTime(0, now);
-                    gainNode.gain.linearRampToValueAtTime(finalVolume, now + fadeOutDuration);
-                    
-                    source.start(now, newPosition);
-                    newTrackNodes[track.id] = { source, gainNode, analyserNode };
-                  }
-                });
-    
-                trackNodesRef.current = newTrackNodes;
-                setIsPlaying(true);
-            }
-        }, 50); // Pequeño delay para asegurar que todo se ha limpiado
-      });
-    } else {
-        // Si no estaba sonando, simplemente actualiza la posición
-        setPlaybackPosition(newPosition);
+  
+    setPlaybackPosition(newPosition);
+  
+    if (isPlaying) {
+      handleStop(true);
+      // Use a timeout to ensure the state has updated before playing again
+      setTimeout(() => {
+        handlePlay();
+      }, 50);
     }
   };
 
@@ -517,6 +518,10 @@ const DawPage = () => {
   };
   const handleVolumeChange = useCallback((trackId: string, newVolume: number) => {
     setVolumes(prevVolumes => ({ ...prevVolumes, [trackId]: newVolume }));
+  }, []);
+
+  const handlePanChange = useCallback((trackId: string, newPan: number) => {
+    setPans(prevPans => ({ ...prevPans, [trackId]: newPan }));
   }, []);
 
   const handleToggleClick = () => {
@@ -575,10 +580,12 @@ const DawPage = () => {
               soloTracks={soloTracks}
               mutedTracks={mutedTracks}
               volumes={volumes}
+              pans={pans}
               loadingTracks={loadingTracks}
               onMuteToggle={handleMuteToggle}
               onSoloToggle={handleSoloToggle}
               onVolumeChange={handleVolumeChange}
+              onPanChange={handlePanChange}
               isPlaying={isPlaying}
               vuData={vuData}
               playbackMode={playbackMode}

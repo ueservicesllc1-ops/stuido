@@ -4,7 +4,7 @@ import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { Button } from './ui/button';
 import { Slider } from './ui/slider';
 import { cn } from '@/lib/utils';
-import { Loader2, Settings, Timer } from 'lucide-react';
+import { Loader2, Settings } from 'lucide-react';
 import { SetlistSong } from '@/actions/setlists';
 import VuMeter from './VuMeter';
 import { PlaybackMode } from '@/app/page';
@@ -16,7 +16,9 @@ interface TrackPadProps {
   isSolo: boolean;
   isAudible: boolean;
   volume: number;
+  pan: number;
   onVolumeChange: (volume: number) => void;
+  onPanChange: (pan: number) => void;
   onMuteToggle: () => void;
   onSoloToggle: () => void;
   vuMeterLevel: number;
@@ -30,7 +32,9 @@ const TrackPad: React.FC<TrackPadProps> = ({
   isSolo,
   isAudible,
   volume,
+  pan,
   onVolumeChange,
+  onPanChange,
   onSoloToggle,
   onMuteToggle,
   vuMeterLevel,
@@ -38,18 +42,30 @@ const TrackPad: React.FC<TrackPadProps> = ({
 }) => {
   const { name } = track;
   const [localVolume, setLocalVolume] = useState(volume);
+  const [localPan, setLocalPan] = useState(pan);
 
   useEffect(() => {
     setLocalVolume(volume);
   }, [volume]);
+
+  useEffect(() => {
+    setLocalPan(pan);
+  }, [pan]);
   
   const handleVolumeChange = (value: number[]) => {
     const newVolume = value[0];
     setLocalVolume(newVolume);
     onVolumeChange(newVolume);
   };
+
+  const handlePanChange = (value: number[]) => {
+    const newPan = value[0];
+    setLocalPan(newPan);
+    onPanChange(newPan);
+  }
   
   const sliderValue = useMemo(() => [localVolume], [localVolume]);
+  const panSliderValue = useMemo(() => [localPan], [localPan]);
   const isDisabled = isLoading;
   const isSaturated = vuMeterLevel >= 95;
 
@@ -113,7 +129,23 @@ const TrackPad: React.FC<TrackPadProps> = ({
          {name.trim().toUpperCase() === 'CUES' && <Button variant="ghost" size="icon" className="w-4 h-4 ml-1 text-muted-foreground"><Settings className="w-3 h-3" /></Button>}
        </div>
 
-      <div className="flex gap-1.5 w-full">
+       <div className="w-full px-2">
+            <Slider
+                value={panSliderValue}
+                max={1}
+                min={-1}
+                step={0.05}
+                onValueChange={handlePanChange}
+                disabled={isDisabled}
+                className={cn(
+                    '[&>span:first-child]:bg-secondary',
+                    (isDisabled) && 'opacity-50'
+                )}
+                thumbClassName="h-4 w-2 rounded-sm"
+             />
+       </div>
+
+      <div className="flex gap-1.5 w-full mt-1">
         <Button
           onClick={onMuteToggle}
           variant={isMuted ? 'secondary' : 'ghost'}
@@ -144,3 +176,5 @@ const TrackPad: React.FC<TrackPadProps> = ({
 };
 
 export default TrackPad;
+
+    

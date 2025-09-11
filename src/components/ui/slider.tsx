@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils"
 
 const Slider = React.forwardRef<
   React.ElementRef<typeof SliderPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root> & { rangeClassName?: string }
->(({ className, orientation = 'horizontal', rangeClassName, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root> & { rangeClassName?: string, thumbClassName?: string }
+>(({ className, orientation = 'horizontal', rangeClassName, thumbClassName, ...props }, ref) => (
   <SliderPrimitive.Root
     ref={ref}
     orientation={orientation}
@@ -33,9 +33,14 @@ const Slider = React.forwardRef<
           rangeClassName
       )} />
     </SliderPrimitive.Track>
-    <SliderPrimitive.Thumb className="block h-4 w-4 rounded-full border-2 border-primary bg-background ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50" />
+    <SliderPrimitive.Thumb className={cn(
+      "block h-4 w-4 rounded-full border-2 border-primary bg-background ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+      thumbClassName
+      )} />
   </SliderPrimitive.Root>
 ))
 Slider.displayName = SliderPrimitive.Root.displayName
 
 export { Slider }
+
+    
