@@ -99,7 +99,6 @@ const Header: React.FC<HeaderProps> = ({
         </div>
         
         <div className="flex items-center justify-end gap-2 w-56">
-            <Button variant="secondary" className="font-mono">71...</Button>
             <Button variant="secondary" className="font-mono">D</Button>
             
             <PlaybackModeToggle value={playbackMode} onChange={onPlaybackModeChange} />
