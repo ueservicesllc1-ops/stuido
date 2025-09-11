@@ -37,6 +37,7 @@ const DawPage = () => {
   const [isClickEnabled, setIsClickEnabled] = useState(false);
   const [clickVolume, setClickVolume] = useState(75);
   const [clickTempo, setClickTempo] = useState(150);
+  const isClickEnabledRef = useRef(isClickEnabled);
   const clickSchedulerRef = useRef<number | null>(null);
   const nextClickTimeRef = useRef(0);
   const clickGainNodeRef = useRef<GainNode | null>(null);
@@ -133,26 +134,24 @@ const DawPage = () => {
   
   const clickScheduler = useCallback(() => {
     const context = audioContextRef.current;
-    if (!context || !isPlayingRef.current) return;
+    if (!context || !isClickEnabledRef.current) return;
 
     while (nextClickTimeRef.current < context.currentTime + 0.1) {
-        if (nextClickTimeRef.current >= playbackStartTimeRef.current + playbackStartOffsetRef.current) {
-            const timeRelativeToStart = nextClickTimeRef.current - (playbackStartTimeRef.current + playbackStartOffsetRef.current);
-            const playbackTime = context.currentTime - timeRelativeToStart;
-            
-            const osc = context.createOscillator();
-            const clickGain = context.createGain();
-            
-            osc.connect(clickGain);
-            clickGain.connect(clickGainNodeRef.current!);
-            
-            osc.frequency.setValueAtTime(1000, playbackTime);
-            clickGain.gain.setValueAtTime(1, playbackTime);
-            clickGain.gain.exponentialRampToValueAtTime(0.001, playbackTime + 0.05);
+        // Reproducir el sonido del click
+        const osc = context.createOscillator();
+        const clickGain = context.createGain();
+        
+        osc.connect(clickGain);
+        clickGain.connect(clickGainNodeRef.current!);
+        
+        osc.frequency.setValueAtTime(1000, nextClickTimeRef.current);
+        clickGain.gain.setValueAtTime(1, nextClickTimeRef.current);
+        clickGain.gain.exponentialRampToValueAtTime(0.001, nextClickTimeRef.current + 0.05);
 
-            osc.start(playbackTime);
-            osc.stop(playbackTime + 0.05);
-        }
+        osc.start(nextClickTimeRef.current);
+        osc.stop(nextClickTimeRef.current + 0.05);
+
+        // Planificar el siguiente click
         const secondsPerBeat = 60.0 / clickTempo;
         nextClickTimeRef.current += secondsPerBeat;
     }
@@ -160,7 +159,9 @@ const DawPage = () => {
   }, [clickTempo]);
   
   useEffect(() => {
-    if (isPlaying && isClickEnabled) {
+    isClickEnabledRef.current = isClickEnabled; // Sync ref with state
+
+    if (isClickEnabled) {
         if (audioContextRef.current) {
             const context = audioContextRef.current;
             if (context.state === 'suspended') {
@@ -181,14 +182,14 @@ const DawPage = () => {
             clearTimeout(clickSchedulerRef.current);
         }
     };
-  }, [isPlaying, isClickEnabled, clickScheduler]);
+  }, [isClickEnabled, clickScheduler]);
 
   useEffect(() => {
     if (clickGainNodeRef.current && audioContextRef.current) {
-        const finalVolume = isClickEnabled ? (clickVolume / 100) * (masterVolume / 100) : 0;
+        const finalVolume = (clickVolume / 100) * (masterVolume / 100);
         clickGainNodeRef.current.gain.setValueAtTime(finalVolume, audioContextRef.current.currentTime);
     }
-  }, [clickVolume, isClickEnabled, masterVolume]);
+  }, [clickVolume, masterVolume]);
 
 
   // Lógica de carga de canciones y preparación de audios
@@ -448,6 +449,14 @@ const DawPage = () => {
     setVolumes(prevVolumes => ({ ...prevVolumes, [trackId]: newVolume }));
   }, []);
 
+  const handleToggleClick = () => {
+    const context = audioContextRef.current;
+    if (context && context.state === 'suspended') {
+        context.resume();
+    }
+    setIsClickEnabled(prev => !prev);
+  }
+
   // --- Render ---
   const totalTracksForSong = activeTracks.length;
   const loadedTracksCount = totalTracksForSong - loadingTracks.length;
@@ -476,7 +485,7 @@ const DawPage = () => {
             masterVolume={masterVolume}
             onMasterVolumeChange={handleMasterVolumeChange}
             isClickEnabled={isClickEnabled}
-            onToggleClick={() => setIsClickEnabled(prev => !prev)}
+            onToggleClick={handleToggleClick}
             clickVolume={clickVolume}
             onClickVolumeChange={setClickVolume}
             clickTempo={clickTempo}
@@ -524,3 +533,5 @@ const DawPage = () => {
 };
 
 export default DawPage;
+
+    
