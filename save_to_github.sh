@@ -33,11 +33,16 @@ echo "    => Cambios añadidos al área de preparación."
 # 2. Crear un commit con un mensaje que incluye la fecha y hora actual
 TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
 COMMIT_MESSAGE="Respaldo manual: $TIMESTAMP"
-git commit -m "$COMMIT_MESSAGE"
-if [ $? -ne 0 ]; then
-    echo "⚠️  No se creó un nuevo commit. Probablemente no había cambios nuevos que guardar."
+# Solo intenta hacer commit si hay algo en el staging
+if ! git diff --cached --quiet; then
+    git commit -m "$COMMIT_MESSAGE"
+    if [ $? -ne 0 ]; then
+        echo "⚠️  No se creó un nuevo commit. Probablemente no había cambios nuevos que guardar."
+    else
+        echo "    => Commit creado con el mensaje: '$COMMIT_MESSAGE'"
+    fi
 else
-    echo "    => Commit creado con el mensaje: '$COMMIT_MESSAGE'"
+    echo "✅ No había cambios nuevos para guardar en un commit."
 fi
 
 
