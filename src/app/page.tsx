@@ -46,6 +46,7 @@ const DawPage = () => {
   const [masterVolume, setMasterVolume] = useState(100);
   const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('hybrid');
   const [isReadyToPlay, setIsReadyToPlay] = useState(false);
+  const [transpose, setTranspose] = useState(0); // Estado para la transposición
 
   // Estado para descargas en segundo plano en modo híbrido
   const [hybridDownloadingTracks, setHybridDownloadingTracks] = useState<Set<string>>(new Set());
@@ -278,12 +279,16 @@ const DawPage = () => {
     // Sincronizar el tiempo de inicio
     playbackStartTimeRef.current = context.currentTime;
     playbackStartOffsetRef.current = playbackPosition;
+    
+    // Calcular el playbackRate basado en la transposición
+    const playbackRate = Math.pow(2, transpose / 12);
 
     activeTracks.forEach(track => {
       const buffer = audioBuffers[track.id];
       if (buffer) {
         const source = context.createBufferSource();
         source.buffer = buffer;
+        source.playbackRate.value = playbackRate;
 
         const gainNode = context.createGain();
         const analyserNode = context.createAnalyser();
@@ -300,7 +305,7 @@ const DawPage = () => {
 
     trackNodesRef.current = newTrackNodes;
     setIsPlaying(true);
-  }, [isReadyToPlay, isPlaying, activeTracks, audioBuffers, playbackPosition]);
+  }, [isReadyToPlay, isPlaying, activeTracks, audioBuffers, playbackPosition, transpose]);
 
   const handlePause = () => {
     if (!isPlaying || !audioContextRef.current) return;
@@ -375,6 +380,19 @@ const DawPage = () => {
   const handleVolumeChange = useCallback((trackId: string, newVolume: number) => {
     setVolumes(prevVolumes => ({ ...prevVolumes, [trackId]: newVolume }));
   }, []);
+  
+  const handleTransposeChange = (newTranspose: number) => {
+    setTranspose(newTranspose);
+    // Si está reproduciendo, necesita reaplicar el cambio
+    if(isPlaying) {
+      Object.values(trackNodesRef.current).forEach(node => {
+        if(node.source) {
+          const newPlaybackRate = Math.pow(2, newTranspose / 12);
+          node.source.playbackRate.setValueAtTime(newPlaybackRate, audioContextRef.current!.currentTime);
+        }
+      });
+    }
+  }
 
   // --- Render ---
   const totalTracksForSong = activeTracks.length;
@@ -402,6 +420,8 @@ const DawPage = () => {
             songStructure={songStructure}
             masterVolume={masterVolume}
             onMasterVolumeChange={handleMasterVolumeChange}
+            transpose={transpose}
+            onTransposeChange={handleTransposeChange}
         />
       </div>
       
@@ -444,3 +464,5 @@ const DawPage = () => {
 };
 
 export default DawPage;
+
+    
