@@ -21,9 +21,6 @@ interface TrackPadProps {
   onSoloToggle: () => void;
   vuMeterLevel: number;
   playbackMode: PlaybackMode;
-  isClickTrack?: boolean;
-  isClickEnabled?: boolean;
-  onToggleClick?: () => void;
 }
 
 const TrackPad: React.FC<TrackPadProps> = ({
@@ -38,9 +35,6 @@ const TrackPad: React.FC<TrackPadProps> = ({
   onMuteToggle,
   vuMeterLevel,
   playbackMode,
-  isClickTrack = false,
-  isClickEnabled,
-  onToggleClick,
 }) => {
   const { name } = track;
   const [localVolume, setLocalVolume] = useState(volume);
@@ -94,41 +88,20 @@ const TrackPad: React.FC<TrackPadProps> = ({
               <Loader2 className="w-8 h-8 text-primary animate-spin" />
            </div>
          )}
-        {isClickTrack ? (
-            <div className="h-full w-full flex flex-col items-center justify-center gap-2">
-                <Button 
-                    variant={isClickEnabled ? 'default' : 'secondary'}
-                    size="icon"
-                    className="w-16 h-16 rounded-full"
-                    onClick={onToggleClick}
-                >
-                    <Timer className="w-8 h-8" />
-                </Button>
-                <Slider
-                    value={sliderValue}
-                    max={100} step={1}
-                    onValueChange={handleVolumeChange}
-                    className="w-20"
-                />
-            </div>
-        ) : (
-          <>
-            <Slider
-              value={sliderValue}
-              max={100}
-              step={1}
-              orientation="vertical"
-              onValueChange={handleVolumeChange}
-              disabled={isDisabled}
-              className={cn(
-                '[&>span:first-child]:bg-secondary',
-                (isSolo || isMuted || isDisabled) && 'opacity-50'
-              )}
-              rangeClassName={rangeColorClass}
-            />
-            <VuMeter level={vuMeterLevel} />
-          </>
-        )}
+        <Slider
+            value={sliderValue}
+            max={100}
+            step={1}
+            orientation="vertical"
+            onValueChange={handleVolumeChange}
+            disabled={isDisabled}
+            className={cn(
+            '[&>span:first-child]:bg-secondary',
+            (isSolo || isMuted || isDisabled) && 'opacity-50'
+            )}
+            rangeClassName={rangeColorClass}
+        />
+        <VuMeter level={vuMeterLevel} />
       </div>
 
        <div className="flex items-center justify-center w-full mt-2">
@@ -156,11 +129,11 @@ const TrackPad: React.FC<TrackPadProps> = ({
         <Button
           onClick={onSoloToggle}
           variant={isSolo ? 'secondary' : 'ghost'}
-          disabled={isDisabled || isClickTrack}
+          disabled={isDisabled || isSpecialTrack}
           className={cn(
             'w-full h-7 text-xs font-bold border',
             isSolo ? 'bg-yellow-500 text-black' : 'bg-secondary/50',
-             (isDisabled || isClickTrack) && '!bg-secondary/30 !text-muted-foreground'
+             (isDisabled || isSpecialTrack) && '!bg-secondary/30 !text-muted-foreground'
           )}
         >
           S

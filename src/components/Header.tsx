@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { Button } from './ui/button';
-import { Rewind, Play, Pause, Square, FastForward, Settings, RadioTower, Disc, Loader2, DownloadCloud } from 'lucide-react';
+import { Rewind, Play, Pause, Square, FastForward, Settings, RadioTower, Disc, Loader2, DownloadCloud, Timer } from 'lucide-react';
 import { Circle } from './icons';
 import PlaybackModeToggle from './PlaybackModeToggle';
 import type { PlaybackMode } from '@/app/page';
@@ -33,6 +33,10 @@ interface HeaderProps {
   songStructure: SongStructure | null;
   masterVolume: number;
   onMasterVolumeChange: (volume: number) => void;
+  isClickEnabled: boolean;
+  onToggleClick: () => void;
+  clickVolume: number;
+  onClickVolumeChange: (volume: number) => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -53,6 +57,10 @@ const Header: React.FC<HeaderProps> = ({
   songStructure,
   masterVolume,
   onMasterVolumeChange,
+  isClickEnabled,
+  onToggleClick,
+  clickVolume,
+  onClickVolumeChange,
 }) => {
   
   return (
@@ -69,34 +77,53 @@ const Header: React.FC<HeaderProps> = ({
             <Button variant="secondary" size="icon"><RadioTower className="w-5 h-5" /></Button>
         </div>
 
-        <div className="flex items-center gap-1 bg-background p-1 rounded-lg">
-            <Button variant="secondary" size="icon" className="w-12 h-10" onClick={onRewind} disabled={!isReadyToPlay}>
-            <Rewind className="w-6 h-6" />
-            </Button>
-            <div className="bg-white rounded-lg p-1">
+        <div className="flex items-center justify-center flex-grow gap-4">
+            <div className="flex flex-col items-center gap-2">
                 <Button 
-                    variant="secondary" 
+                    variant={isClickEnabled ? 'default' : 'secondary'}
                     size="icon" 
-                    className={cn(
-                      "w-20 h-10 bg-white text-black hover:bg-neutral-200",
-                      !isReadyToPlay && "bg-neutral-300 text-neutral-500 cursor-not-allowed"
-                    )}
-                    onClick={isPlaying ? onPause : onPlay}
-                    disabled={!isReadyToPlay}
+                    className="w-10 h-10"
+                    onClick={onToggleClick}
                 >
-                    {isReadyToPlay ? (
-                      isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8" />
-                    ) : (
-                      <Loader2 className="w-8 h-8 animate-spin" />
-                    )}
+                    <Timer className="w-5 h-5" />
+                </Button>
+                <Slider
+                    defaultValue={[clickVolume]}
+                    max={100}
+                    step={1}
+                    onValueChange={(value) => onClickVolumeChange(value[0])}
+                    className="w-20"
+                />
+            </div>
+            <div className="flex items-center gap-1 bg-background p-1 rounded-lg">
+                <Button variant="secondary" size="icon" className="w-12 h-10" onClick={onRewind} disabled={!isReadyToPlay}>
+                <Rewind className="w-6 h-6" />
+                </Button>
+                <div className="bg-white rounded-lg p-1">
+                    <Button 
+                        variant="secondary" 
+                        size="icon" 
+                        className={cn(
+                        "w-20 h-10 bg-white text-black hover:bg-neutral-200",
+                        !isReadyToPlay && "bg-neutral-300 text-neutral-500 cursor-not-allowed"
+                        )}
+                        onClick={isPlaying ? onPause : onPlay}
+                        disabled={!isReadyToPlay}
+                    >
+                        {isReadyToPlay ? (
+                        isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8" />
+                        ) : (
+                        <Loader2 className="w-8 h-8 animate-spin" />
+                        )}
+                    </Button>
+                </div>
+                <Button variant="secondary" size="icon" className="w-12 h-10" onClick={onStop} disabled={!isReadyToPlay}>
+                <Square className="w-6 h-6" />
+                </Button>
+                <Button variant="secondary" size="icon" className="w-12 h-10" onClick={onFastForward} disabled={!isReadyToPlay}>
+                <FastForward className="w-6 h-6" />
                 </Button>
             </div>
-            <Button variant="secondary" size="icon" className="w-12 h-10" onClick={onStop} disabled={!isReadyToPlay}>
-            <Square className="w-6 h-6" />
-            </Button>
-            <Button variant="secondary" size="icon" className="w-12 h-10" onClick={onFastForward} disabled={!isReadyToPlay}>
-            <FastForward className="w-6 h-6" />
-            </Button>
         </div>
         
         <div className="flex items-center justify-end gap-2 w-56">

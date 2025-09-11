@@ -446,11 +446,7 @@ const DawPage = () => {
       setMasterVolume(newVolume);
   };
   const handleVolumeChange = useCallback((trackId: string, newVolume: number) => {
-    if (trackId.endsWith('_CLICK')) {
-        setClickVolume(newVolume);
-    } else {
-        setVolumes(prevVolumes => ({ ...prevVolumes, [trackId]: newVolume }));
-    }
+    setVolumes(prevVolumes => ({ ...prevVolumes, [trackId]: newVolume }));
   }, []);
 
   // --- Render ---
@@ -480,6 +476,10 @@ const DawPage = () => {
             songStructure={songStructure}
             masterVolume={masterVolume}
             onMasterVolumeChange={handleMasterVolumeChange}
+            isClickEnabled={isClickEnabled}
+            onToggleClick={() => setIsClickEnabled(prev => !prev)}
+            clickVolume={clickVolume}
+            onClickVolumeChange={setClickVolume}
         />
       </div>
       
@@ -497,9 +497,6 @@ const DawPage = () => {
               isPlaying={isPlaying}
               vuData={vuData}
               playbackMode={playbackMode}
-              isClickEnabled={isClickEnabled}
-              onToggleClick={() => setIsClickEnabled(prev => !prev)}
-              clickVolume={clickVolume}
             />
         ) : (
           <div className="flex justify-center items-center h-full">
