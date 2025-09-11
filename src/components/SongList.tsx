@@ -451,53 +451,46 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
       <div className="flex justify-between items-center mb-3">
         <h2 className="font-bold text-foreground">{selectedSetlist ? selectedSetlist.name : 'Nuevas betel'}</h2>
         
-        {selectedSetlist ? (
-             <Button variant="ghost" size="sm" className="gap-2 text-primary" onClick={clearSelectedSetlist}>
-                <X className="w-4 h-4" />
-                Limpiar
-             </Button>
-        ) : (
-            <Sheet open={isSetlistSheetOpen} onOpenChange={setIsSetlistSheetOpen}>
-                <SheetTrigger asChild>
-                    <Button variant="ghost" size="sm" className="gap-2 text-primary" onClick={handleFetchSetlists}>
+        <Sheet open={isSetlistSheetOpen} onOpenChange={setIsSetlistSheetOpen}>
+            <SheetTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-2 text-primary" onClick={handleFetchSetlists}>
                     <AlignJustify className="w-4 h-4" />
-                    Setlists
-                    </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-[300px] sm:w-[400px] bg-card/95">
-                    <SheetHeader>
-                        <SheetTitle>Setlists</SheetTitle>
-                        <SheetDescription>
-                            Elige un setlist existente o crea uno nuevo.
-                        </SheetDescription>
-                    </SheetHeader>
-                    <div className="py-4 h-full flex flex-col">
-                        <div className="flex-grow space-y-2">
-                        {isLoadingSetlists ? (
-                            <div className="flex justify-center items-center h-full">
-                            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                            </div>
-                        ) : setlistsError ? (
-                            <div className="text-destructive text-center">{setlistsError}</div>
-                        ) : setlists.length > 0 ? (
-                            setlists.map((setlist) => (
-                            <div key={setlist.id} className="flex flex-col p-2 rounded-md hover:bg-accent gap-1 cursor-pointer" onClick={() => handleSetlistSelect(setlist)}>
-                                <p className="font-semibold text-foreground flex-grow">{setlist.name}</p>
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                <Calendar className="w-4 h-4" />
-                                <p className="text-xs">{format(setlist.date, 'dd/MM/yyyy')}</p>
-                                </div>
-                            </div>
-                            ))
-                        ) : (
-                            <p className="text-muted-foreground text-center pt-10">Aún no has creado un setlist.</p>
-                        )}
+                    {selectedSetlist ? 'Setlists' : 'Setlists'}
+                </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[300px] sm:w-[400px] bg-card/95">
+                <SheetHeader>
+                    <SheetTitle>Setlists</SheetTitle>
+                    <SheetDescription>
+                        Elige un setlist existente o crea uno nuevo.
+                    </SheetDescription>
+                </SheetHeader>
+                <div className="py-4 h-full flex flex-col">
+                    <div className="flex-grow space-y-2">
+                    {isLoadingSetlists ? (
+                        <div className="flex justify-center items-center h-full">
+                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
                         </div>
-                        <CreateSetlistDialog onSetlistCreated={handleFetchSetlists} />
+                    ) : setlistsError ? (
+                        <div className="text-destructive text-center">{setlistsError}</div>
+                    ) : setlists.length > 0 ? (
+                        setlists.map((setlist) => (
+                        <div key={setlist.id} className="flex flex-col p-2 rounded-md hover:bg-accent gap-1 cursor-pointer" onClick={() => handleSetlistSelect(setlist)}>
+                            <p className="font-semibold text-foreground flex-grow">{setlist.name}</p>
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                            <Calendar className="w-4 h-4" />
+                            <p className="text-xs">{format(setlist.date, 'dd/MM/yyyy')}</p>
+                            </div>
+                        </div>
+                        ))
+                    ) : (
+                        <p className="text-muted-foreground text-center pt-10">Aún no has creado un setlist.</p>
+                    )}
                     </div>
-                </SheetContent>
-            </Sheet>
-        )}
+                    <CreateSetlistDialog onSetlistCreated={handleFetchSetlists} />
+                </div>
+            </SheetContent>
+        </Sheet>
       </div>
       <div className="flex-grow space-y-1 overflow-y-auto no-scrollbar">
         {selectedSetlist ? renderSetlist() : <p className="text-muted-foreground text-center pt-10">Selecciona un setlist para ver las canciones.</p>}
