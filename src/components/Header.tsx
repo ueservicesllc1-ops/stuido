@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import Timeline from './Timeline';
 import { SongStructure } from '@/ai/flows/song-structure';
 import { Slider } from './ui/slider';
+import SettingsDialog from './SettingsDialog';
 
 
 interface HeaderProps {
@@ -105,9 +106,11 @@ const Header: React.FC<HeaderProps> = ({
                 <Circle className="w-2 h-2 fill-current" />
                 OUTS
             </Button>
-            <Button variant="ghost" size="icon">
-            <Settings />
-            </Button>
+            <SettingsDialog>
+                <Button variant="ghost" size="icon">
+                    <Settings />
+                </Button>
+            </SettingsDialog>
         </div>
       </div>
       
