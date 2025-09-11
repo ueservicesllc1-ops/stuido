@@ -478,6 +478,7 @@ const DawPage = () => {
             onToggleClick={() => setIsClickEnabled(prev => !prev)}
             clickVolume={clickVolume}
             onClickVolumeChange={setClickVolume}
+            clickTempo={clickTempo}
         />
       </div>
       

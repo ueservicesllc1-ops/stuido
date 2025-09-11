@@ -37,6 +37,7 @@ interface HeaderProps {
   onToggleClick: () => void;
   clickVolume: number;
   onClickVolumeChange: (volume: number) => void;
+  clickTempo: number;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -61,6 +62,7 @@ const Header: React.FC<HeaderProps> = ({
   onToggleClick,
   clickVolume,
   onClickVolumeChange,
+  clickTempo,
 }) => {
   
   return (
@@ -78,22 +80,30 @@ const Header: React.FC<HeaderProps> = ({
         </div>
 
         <div className="flex items-center justify-center flex-grow gap-4">
-            <div className="flex flex-col items-center gap-2">
-                <Button 
-                    variant={isClickEnabled ? 'default' : 'secondary'}
-                    size="icon" 
-                    className="w-10 h-10"
-                    onClick={onToggleClick}
-                >
-                    <Timer className="w-5 h-5" />
-                </Button>
-                <Slider
-                    defaultValue={[clickVolume]}
-                    max={100}
-                    step={1}
-                    onValueChange={(value) => onClickVolumeChange(value[0])}
-                    className="w-20"
-                />
+            <div className="flex items-center gap-4 bg-background p-1 rounded-lg">
+                <div className="flex flex-col items-center gap-2 w-24">
+                    <Button 
+                        variant={isClickEnabled ? 'default' : 'secondary'}
+                        size="icon" 
+                        className="w-10 h-10"
+                        onClick={onToggleClick}
+                    >
+                        <Timer className="w-5 h-5" />
+                    </Button>
+                    <Slider
+                        defaultValue={[clickVolume]}
+                        max={100}
+                        step={1}
+                        onValueChange={(value) => onClickVolumeChange(value[0])}
+                        className="w-20"
+                    />
+                </div>
+
+                <div className="flex flex-col items-center justify-center bg-secondary/30 rounded-md w-24 h-16">
+                    <span className="text-3xl font-mono font-bold text-primary">{clickTempo}</span>
+                    <span className="text-xs text-muted-foreground -mt-1">BPM</span>
+                </div>
+
             </div>
             <div className="flex items-center gap-1 bg-background p-1 rounded-lg">
                 <Button variant="secondary" size="icon" className="w-12 h-10" onClick={onRewind} disabled={!isReadyToPlay}>
