@@ -32,6 +32,14 @@ const DawPage = () => {
   const [audioBuffers, setAudioBuffers] = useState<Record<string, AudioBuffer>>({});
   const [loadingTracks, setLoadingTracks] = useState<string[]>([]);
 
+  // --- Metronome State ---
+  const [isClickEnabled, setIsClickEnabled] = useState(false);
+  const [clickVolume, setClickVolume] = useState(75);
+  const [clickTempo, setClickTempo] = useState(120);
+  const clickSchedulerRef = useRef<number | null>(null);
+  const nextClickTimeRef = useRef(0);
+  const clickGainNodeRef = useRef<GainNode | null>(null);
+
   // --- Playback State ---
   const [isPlaying, setIsPlaying] = useState(false);
   const isPlayingRef = useRef(isPlaying);
@@ -50,7 +58,10 @@ const DawPage = () => {
   useEffect(() => {
     if (!audioContextRef.current) {
         try {
-            audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const context = new (window.AudioContext || (window as any).webkitAudioContext)();
+            audioContextRef.current = context;
+            clickGainNodeRef.current = context.createGain();
+            clickGainNodeRef.current.connect(context.destination);
         } catch (e) {
             console.error("Web Audio API is not supported in this browser", e);
         }
@@ -59,8 +70,9 @@ const DawPage = () => {
 
   // Set readiness to play
   useEffect(() => {
-    const activeTracks = tracks.filter(t => t.songId === activeSongId);
-    const allTracksLoaded = loadingTracks.length === 0 && activeTracks.length > 0;
+    const activeTracksForSong = tracks.filter(t => t.songId === activeSongId);
+    // All non-click tracks loaded
+    const allTracksLoaded = loadingTracks.filter(id => !id.endsWith('_CLICK')).length === 0 && activeTracksForSong.length > 0;
     setIsReadyToPlay(allTracksLoaded);
   }, [loadingTracks, tracks, activeSongId]);
 
@@ -115,6 +127,67 @@ const DawPage = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSetlist]);
+  
+  const clickScheduler = useCallback(() => {
+    const context = audioContextRef.current;
+    if (!context || !isPlayingRef.current) return;
+
+    while (nextClickTimeRef.current < context.currentTime + 0.1) {
+        if (nextClickTimeRef.current >= playbackStartTimeRef.current + playbackStartOffsetRef.current) {
+            const timeRelativeToStart = nextClickTimeRef.current - (playbackStartTimeRef.current + playbackStartOffsetRef.current);
+            const playbackTime = context.currentTime - timeRelativeToStart;
+            
+            const osc = context.createOscillator();
+            const clickGain = context.createGain();
+            
+            osc.connect(clickGain);
+            clickGain.connect(clickGainNodeRef.current!);
+            
+            osc.frequency.setValueAtTime(1000, playbackTime);
+            clickGain.gain.setValueAtTime(1, playbackTime);
+            clickGain.gain.exponentialRampToValueAtTime(0.001, playbackTime + 0.05);
+
+            osc.start(playbackTime);
+            osc.stop(playbackTime + 0.05);
+        }
+        const secondsPerBeat = 60.0 / clickTempo;
+        nextClickTimeRef.current += secondsPerBeat;
+    }
+    clickSchedulerRef.current = window.setTimeout(clickScheduler, 25);
+  }, [clickTempo]);
+  
+  useEffect(() => {
+    if (isPlaying && isClickEnabled) {
+        if (audioContextRef.current) {
+            const context = audioContextRef.current;
+            if (context.state === 'suspended') {
+                context.resume();
+            }
+            nextClickTimeRef.current = context.currentTime;
+            clickSchedulerRef.current = window.setTimeout(clickScheduler, 0);
+        }
+    } else {
+        if (clickSchedulerRef.current) {
+            clearTimeout(clickSchedulerRef.current);
+            clickSchedulerRef.current = null;
+        }
+    }
+
+    return () => {
+        if (clickSchedulerRef.current) {
+            clearTimeout(clickSchedulerRef.current);
+        }
+    };
+  }, [isPlaying, isClickEnabled, clickScheduler]);
+
+  useEffect(() => {
+    if (clickGainNodeRef.current) {
+        const isMuted = mutedTracks.includes(`${activeSongId}_CLICK`);
+        const finalVolume = isClickEnabled && !isMuted ? (clickVolume / 100) * (masterVolume / 100) : 0;
+        clickGainNodeRef.current.gain.setValueAtTime(finalVolume, audioContextRef.current!.currentTime);
+    }
+  }, [clickVolume, isClickEnabled, mutedTracks, activeSongId, masterVolume]);
+
 
   // Lógica de carga de canciones y preparación de audios
   useEffect(() => {
@@ -124,15 +197,19 @@ const DawPage = () => {
 
     const currentSong = songs.find(s => s.id === activeSongId);
     setSongStructure(currentSong?.structure || null);
+    if (currentSong?.tempo) {
+        setClickTempo(currentSong.tempo);
+    }
     
     handleStop();
-    setLoadingTracks(activeTracks.map(t => t.id));
+    const tracksForSong = tracks.filter(t => t.songId === activeSongId && t.name.toUpperCase() !== 'CLICK');
+    setLoadingTracks(tracksForSong.map(t => t.id));
 
     const loadAudioData = async () => {
       const newAudioBuffers: Record<string, AudioBuffer> = {};
       let maxDuration = 0;
       
-      await Promise.all(activeTracks.map(async (track) => {
+      await Promise.all(tracksForSong.map(async (track) => {
         try {
           let audioData: ArrayBuffer;
           let blob = await getCachedAudio(track.url);
@@ -274,6 +351,7 @@ const DawPage = () => {
     playbackStartOffsetRef.current = playbackPosition;
 
     activeTracks.forEach(track => {
+      if (track.name.toUpperCase() === 'CLICK') return;
       const buffer = audioBuffers[track.id];
       if (buffer) {
         const source = context.createBufferSource();
@@ -368,12 +446,17 @@ const DawPage = () => {
       setMasterVolume(newVolume);
   };
   const handleVolumeChange = useCallback((trackId: string, newVolume: number) => {
-    setVolumes(prevVolumes => ({ ...prevVolumes, [trackId]: newVolume }));
+    if (trackId.endsWith('_CLICK')) {
+        setClickVolume(newVolume);
+    } else {
+        setVolumes(prevVolumes => ({ ...prevVolumes, [trackId]: newVolume }));
+    }
   }, []);
 
   // --- Render ---
-  const totalTracksForSong = activeTracks.length;
-  const loadingProgress = totalTracksForSong > 0 ? ((totalTracksForSong - loadingTracks.length) / totalTracksForSong) * 100 : 0;
+  const totalTracksForSong = activeTracks.filter(t => t.name.toUpperCase() !== 'CLICK').length;
+  const loadedTracksCount = totalTracksForSong - loadingTracks.length;
+  const loadingProgress = totalTracksForSong > 0 ? (loadedTracksCount / totalTracksForSong) * 100 : 0;
   const showLoadingBar = loadingTracks.length > 0 && totalTracksForSong > 0;
   
   return (
@@ -414,6 +497,9 @@ const DawPage = () => {
               isPlaying={isPlaying}
               vuData={vuData}
               playbackMode={playbackMode}
+              isClickEnabled={isClickEnabled}
+              onToggleClick={() => setIsClickEnabled(prev => !prev)}
+              clickVolume={clickVolume}
             />
         ) : (
           <div className="flex justify-center items-center h-full">

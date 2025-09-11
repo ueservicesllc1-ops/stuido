@@ -7,8 +7,8 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
   SheetClose,
+  SheetTrigger,
 } from '@/components/ui/sheet';
 import { Button } from './ui/button';
 import { Separator } from './ui/separator';
@@ -122,8 +122,6 @@ const SettingsDialog = ({ children }: { children: React.ReactNode }) => {
             <div className="p-8 overflow-y-auto">
                 {activeTab === 'General' && (
                     <div className="max-w-md mx-auto">
-                        <SettingsRow label="Click Sound" value="Beep" isSelect />
-                        <Separator />
                         <SettingsRow label="Appearance" value="Dark" isSelect />
                         <Separator />
                         <SettingsSliderRow label="Fade out / in duration" value={fadeOut} onValueChange={setFadeOut} />

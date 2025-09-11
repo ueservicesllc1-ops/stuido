@@ -17,6 +17,9 @@ interface MixerGridProps {
   isPlaying: boolean;
   vuData: Record<string, number>;
   playbackMode: PlaybackMode;
+  isClickEnabled: boolean;
+  onToggleClick: () => void;
+  clickVolume: number;
 }
 
 const MixerGrid: React.FC<MixerGridProps> = ({ 
@@ -31,12 +34,40 @@ const MixerGrid: React.FC<MixerGridProps> = ({
   isPlaying,
   vuData,
   playbackMode,
+  isClickEnabled,
+  onToggleClick,
+  clickVolume,
 }) => {
   const isSoloActive = soloTracks.length > 0;
 
   return (
     <div className="grid grid-cols-7 gap-4 items-start">
       {tracks.map(track => {
+        const isClickTrack = track.name.trim().toUpperCase() === 'CLICK';
+        
+        if (isClickTrack) {
+          const clickTrackId = `${track.songId}_CLICK`;
+          return (
+            <TrackPad
+              key={clickTrackId}
+              track={track}
+              isClickTrack={true}
+              isClickEnabled={isClickEnabled}
+              onToggleClick={onToggleClick}
+              isLoading={false}
+              isMuted={mutedTracks.includes(clickTrackId)}
+              isSolo={false}
+              isAudible={isPlaying && isClickEnabled && !mutedTracks.includes(clickTrackId)}
+              volume={clickVolume}
+              onMuteToggle={() => onMuteToggle(clickTrackId)}
+              onSoloToggle={() => {}}
+              onVolumeChange={(newVolume) => onVolumeChange(clickTrackId, newVolume)}
+              vuMeterLevel={0}
+              playbackMode={playbackMode}
+            />
+          );
+        }
+        
         const isMuted = mutedTracks.includes(track.id);
         const isSolo = soloTracks.includes(track.id);
         const isLoading = loadingTracks.includes(track.id);
