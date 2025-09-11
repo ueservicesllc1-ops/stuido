@@ -8,18 +8,18 @@ import {
   SheetHeader,
   SheetTitle,
   SheetClose,
-  SheetTrigger,
 } from '@/components/ui/sheet';
 import { Button } from './ui/button';
 import { Separator } from './ui/separator';
 import { Label } from './ui/label';
 import { Slider } from './ui/slider';
 import { Switch } from './ui/switch';
-import { ChevronRight, X } from 'lucide-react';
+import { ChevronRight, X, ChevronLeft, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ClickSound } from '@/app/page';
 
 type SettingsTab = 'General' | 'MIDI' | 'Audio' | 'Loop Connect™' | 'Prime MD™' | 'About';
+type GeneralSettingsView = 'main' | 'click-sound';
 
 interface SettingsRowProps {
   label: string;
@@ -29,14 +29,28 @@ interface SettingsRowProps {
 }
 
 const SettingsRow: React.FC<SettingsRowProps> = ({ label, value, onClick, isSelect }) => (
-  <div className="flex items-center justify-between py-3" onClick={onClick}>
-    <Label className="text-base">{label}</Label>
+  <div className="flex items-center justify-between py-3 cursor-pointer" onClick={onClick}>
+    <Label className="text-base cursor-pointer">{label}</Label>
     <div className="flex items-center gap-2 text-muted-foreground">
       <span>{value}</span>
       {isSelect && <ChevronRight className="h-5 w-5" />}
     </div>
   </div>
 );
+
+interface SettingsSelectionRowProps {
+    label: string;
+    isSelected: boolean;
+    onClick: () => void;
+}
+
+const SettingsSelectionRow: React.FC<SettingsSelectionRowProps> = ({ label, isSelected, onClick }) => (
+    <div className="flex items-center justify-between py-3 cursor-pointer" onClick={onClick}>
+        <Label className="text-base cursor-pointer">{label}</Label>
+        {isSelected && <Check className="h-5 w-5 text-primary" />}
+    </div>
+);
+
 
 interface SettingsSliderRowProps {
   label: string;
@@ -81,15 +95,75 @@ interface SettingsDialogProps {
 
 const SettingsDialog = ({ children, clickSound, onClickSoundChange }: SettingsDialogProps) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('General');
+  const [generalView, setGeneralView] = useState<GeneralSettingsView>('main');
   const [fadeOut, setFadeOut] = useState(10);
   const [transition, setTransition] = useState(12);
   const [tonicFollows, setTonicFollows] = useState(true);
 
   const tabs: SettingsTab[] = ['General', 'MIDI', 'Audio', 'Loop Connect™', 'Prime MD™', 'About'];
 
+  const renderGeneralSettings = () => {
+    switch (generalView) {
+        case 'click-sound':
+            return (
+                 <div>
+                    <div className="relative flex items-center justify-center mb-4">
+                        <Button variant="ghost" size="icon" className="absolute left-0" onClick={() => setGeneralView('main')}>
+                            <ChevronLeft />
+                        </Button>
+                        <h3 className="font-semibold text-lg">Click Sound</h3>
+                    </div>
+                    <Separator />
+                    <SettingsSelectionRow 
+                        label="Beep" 
+                        isSelected={clickSound === 'beep'} 
+                        onClick={() => {
+                            onClickSoundChange('beep');
+                            setGeneralView('main');
+                        }}
+                    />
+                    <Separator />
+                    <SettingsSelectionRow 
+                        label="Click" 
+                        isSelected={clickSound === 'click'}
+                        onClick={() => {
+                            onClickSoundChange('click');
+                            setGeneralView('main');
+                        }}
+                    />
+                    <Separator />
+                </div>
+            );
+        case 'main':
+        default:
+            return (
+                <div>
+                    <SettingsRow label="Appearance" value="Dark" isSelect />
+                    <Separator />
+                    <SettingsRow label="Click Sound" value={clickSound === 'beep' ? 'Beep' : 'Click'} isSelect onClick={() => setGeneralView('click-sound')} />
+                    <Separator />
+                    <SettingsSliderRow label="Fade out / in duration" value={fadeOut} onValueChange={setFadeOut} />
+                    <Separator />
+                    <SettingsSliderRow label="Transition Duration" value={transition} onValueChange={setTransition} />
+                    <Separator />
+                    <SettingsRow label="Pan" value="" />
+                    <Separator />
+                    <SettingsSwitchRow label="Tonic Pad follows Key of Tracks" checked={tonicFollows} onCheckedChange={setTonicFollows} />
+                    <Separator />
+                </div>
+            );
+    }
+  }
+
   return (
-    <Sheet>
-      <SheetTrigger asChild>{children}</SheetTrigger>
+    <Sheet onOpenChange={(isOpen) => {
+        if (!isOpen) {
+            // Reset views when closing the sheet
+            setActiveTab('General');
+            setGeneralView('main');
+        }
+    }}>
+      <SheetClose asChild>{children}</SheetClose>
       <SheetContent
         side="left"
         className="w-full h-full max-w-full sm:max-w-full md:max-w-full lg:max-w-full xl:max-w-full p-0"
@@ -116,7 +190,10 @@ const SettingsDialog = ({ children, clickSound, onClickSoundChange }: SettingsDi
                                 "justify-start text-lg h-12 px-4",
                                 activeTab === tab && "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
                             )}
-                            onClick={() => setActiveTab(tab)}
+                            onClick={() => {
+                                setActiveTab(tab);
+                                setGeneralView('main'); // Reset sub-view when changing tabs
+                            }}
                         >
                             {tab}
                         </Button>
@@ -129,18 +206,7 @@ const SettingsDialog = ({ children, clickSound, onClickSoundChange }: SettingsDi
             <div className="p-8 overflow-y-auto">
                 {activeTab === 'General' && (
                     <div className="max-w-md mx-auto">
-                        <SettingsRow label="Appearance" value="Dark" isSelect />
-                        <Separator />
-                        <SettingsRow label="Click Sound" value={clickSound === 'beep' ? 'Beep' : 'Click'} isSelect onClick={() => onClickSoundChange(clickSound === 'beep' ? 'click' : 'beep')} />
-                        <Separator />
-                        <SettingsSliderRow label="Fade out / in duration" value={fadeOut} onValueChange={setFadeOut} />
-                        <Separator />
-                        <SettingsSliderRow label="Transition Duration" value={transition} onValueChange={setTransition} />
-                        <Separator />
-                        <SettingsRow label="Pan" value="" />
-                        <Separator />
-                        <SettingsSwitchRow label="Tonic Pad follows Key of Tracks" checked={tonicFollows} onCheckedChange={setTonicFollows} />
-                        <Separator />
+                       {renderGeneralSettings()}
                     </div>
                 )}
                  {activeTab !== 'General' && (
@@ -156,5 +222,3 @@ const SettingsDialog = ({ children, clickSound, onClickSoundChange }: SettingsDi
 };
 
 export default SettingsDialog;
-
-    
