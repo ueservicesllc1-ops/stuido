@@ -9,7 +9,6 @@ import { getSetlists, Setlist, SetlistSong } from '@/actions/setlists';
 import { cacheAudio, getCachedAudio } from '@/lib/audiocache';
 import { Song } from '@/actions/songs';
 import { SongStructure } from '@/ai/flows/song-structure';
-import { useTimestretch } from '@/hooks/useTimestretch';
 
 export type PlaybackMode = 'online' | 'hybrid' | 'offline';
 
@@ -26,7 +25,6 @@ const DawPage = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
   const trackNodesRef = useRef<Record<string, {
     source: AudioBufferSourceNode;
-    stretcher: any; // SoundTouchJS node
     gainNode: GainNode;
     analyserNode: AnalyserNode;
   }>>({});
@@ -47,10 +45,6 @@ const DawPage = () => {
   const [masterVolume, setMasterVolume] = useState(100);
   const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('hybrid');
   const [isReadyToPlay, setIsReadyToPlay] = useState(false);
-  const [transpose, setTranspose] = useState(0);
-
-  // --- Timestretch / Pitch Shift State ---
-  const { isTimestretchReady, createTimestretchNode } = useTimestretch(audioContextRef.current);
 
   // Initialize AudioContext
   useEffect(() => {
@@ -65,11 +59,10 @@ const DawPage = () => {
 
   // Set readiness to play
   useEffect(() => {
-    // Ready only when timestretch is ready and buffers are loaded
     const activeTracks = tracks.filter(t => t.songId === activeSongId);
     const allTracksLoaded = loadingTracks.length === 0 && activeTracks.length > 0;
-    setIsReadyToPlay(isTimestretchReady && allTracksLoaded);
-  }, [isTimestretchReady, loadingTracks, tracks, activeSongId]);
+    setIsReadyToPlay(allTracksLoaded);
+  }, [loadingTracks, tracks, activeSongId]);
 
 
   const getPrio = (trackName: string) => {
@@ -279,8 +272,6 @@ const DawPage = () => {
 
     playbackStartTimeRef.current = context.currentTime;
     playbackStartOffsetRef.current = playbackPosition;
-    
-    const pitch = Math.pow(2, transpose / 12);
 
     activeTracks.forEach(track => {
       const buffer = audioBuffers[track.id];
@@ -288,33 +279,29 @@ const DawPage = () => {
         const source = context.createBufferSource();
         source.buffer = buffer;
         
-        const stretcher = createTimestretchNode(2, pitch);
-
         const gainNode = context.createGain();
         const analyserNode = context.createAnalyser();
         analyserNode.fftSize = 256;
         
-        source.connect(stretcher.node);
-        stretcher.node.connect(gainNode);
+        source.connect(gainNode);
         gainNode.connect(analyserNode);
         analyserNode.connect(context.destination);
         
         source.start(0, playbackPosition);
 
-        newTrackNodes[track.id] = { source, stretcher, gainNode, analyserNode };
+        newTrackNodes[track.id] = { source, gainNode, analyserNode };
       }
     });
 
     trackNodesRef.current = newTrackNodes;
     setIsPlaying(true);
-  }, [isReadyToPlay, isPlaying, activeTracks, audioBuffers, playbackPosition, transpose, createTimestretchNode]);
+  }, [isReadyToPlay, isPlaying, activeTracks, audioBuffers, playbackPosition]);
 
   const handlePause = () => {
     if (!isPlaying || !audioContextRef.current) return;
     
     Object.values(trackNodesRef.current).forEach(node => {
         node.source?.stop();
-        node.stretcher?.node.disconnect();
     });
 
     const elapsedTime = audioContextRef.current.currentTime - playbackStartTimeRef.current;
@@ -329,7 +316,6 @@ const DawPage = () => {
     if (isPlaying) {
       Object.values(trackNodesRef.current).forEach(node => {
           node.source?.stop();
-          node.stretcher?.node.disconnect();
       });
     }
     setIsPlaying(false);
@@ -384,18 +370,6 @@ const DawPage = () => {
   const handleVolumeChange = useCallback((trackId: string, newVolume: number) => {
     setVolumes(prevVolumes => ({ ...prevVolumes, [trackId]: newVolume }));
   }, []);
-  
-  const handleTransposeChange = (newTranspose: number) => {
-    setTranspose(newTranspose);
-    if (isPlaying) {
-        const pitch = Math.pow(2, newTranspose / 12);
-        Object.values(trackNodesRef.current).forEach(node => {
-            if (node.stretcher) {
-                node.stretcher.pitch = pitch;
-            }
-        });
-    }
-  }
 
   // --- Render ---
   const totalTracksForSong = activeTracks.length;
@@ -423,8 +397,6 @@ const DawPage = () => {
             songStructure={songStructure}
             masterVolume={masterVolume}
             onMasterVolumeChange={handleMasterVolumeChange}
-            transpose={transpose}
-            onTransposeChange={handleTransposeChange}
         />
       </div>
       

@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { Button } from './ui/button';
-import { Rewind, Play, Pause, Square, FastForward, Settings, RadioTower, Disc, Loader2, DownloadCloud, Plus, Minus } from 'lucide-react';
+import { Rewind, Play, Pause, Square, FastForward, Settings, RadioTower, Disc, Loader2, DownloadCloud } from 'lucide-react';
 import { Circle } from './icons';
 import PlaybackModeToggle from './PlaybackModeToggle';
 import type { PlaybackMode } from '@/app/page';
@@ -32,8 +32,6 @@ interface HeaderProps {
   songStructure: SongStructure | null;
   masterVolume: number;
   onMasterVolumeChange: (volume: number) => void;
-  transpose: number;
-  onTransposeChange: (transpose: number) => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -54,8 +52,6 @@ const Header: React.FC<HeaderProps> = ({
   songStructure,
   masterVolume,
   onMasterVolumeChange,
-  transpose,
-  onTransposeChange
 }) => {
   
   return (
@@ -103,14 +99,8 @@ const Header: React.FC<HeaderProps> = ({
         </div>
         
         <div className="flex items-center justify-end gap-2 w-56">
-            <div className="flex items-center gap-1 bg-secondary/50 p-1 rounded-md">
-                <Button variant="ghost" size="icon" className="w-6 h-6" onClick={() => onTransposeChange(transpose - 1)}><Minus className="w-4 h-4" /></Button>
-                <span className="font-mono text-sm w-12 text-center">{transpose > 0 ? '+' : ''}{transpose} st</span>
-                <Button variant="ghost" size="icon" className="w-6 h-6" onClick={() => onTransposeChange(transpose + 1)}><Plus className="w-4 h-4" /></Button>
-            </div>
-            
+             <Button variant="outline">D</Button>
             <PlaybackModeToggle value={playbackMode} onChange={onPlaybackModeChange} />
-            
             <Button variant="ghost" className="gap-2">
                 <Circle className="w-2 h-2 fill-current" />
                 OUTS
