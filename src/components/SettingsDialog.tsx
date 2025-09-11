@@ -8,6 +8,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetClose,
+  SheetTrigger,
 } from '@/components/ui/sheet';
 import { Button } from './ui/button';
 import { Separator } from './ui/separator';
@@ -163,7 +164,7 @@ const SettingsDialog = ({ children, clickSound, onClickSoundChange }: SettingsDi
             setGeneralView('main');
         }
     }}>
-      <SheetClose asChild>{children}</SheetClose>
+      <SheetTrigger asChild>{children}</SheetTrigger>
       <SheetContent
         side="left"
         className="w-full h-full max-w-full sm:max-w-full md:max-w-full lg:max-w-full xl:max-w-full p-0"
