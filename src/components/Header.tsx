@@ -6,7 +6,7 @@ import { Button } from './ui/button';
 import { Rewind, Play, Pause, Square, FastForward, Settings, RadioTower, Disc, Loader2, DownloadCloud, Timer } from 'lucide-react';
 import { Circle } from './icons';
 import PlaybackModeToggle from './PlaybackModeToggle';
-import type { PlaybackMode } from '@/app/page';
+import type { PlaybackMode, ClickSound } from '@/app/page';
 import { Progress } from './ui/progress';
 import { cn } from '@/lib/utils';
 import Timeline from './Timeline';
@@ -41,6 +41,8 @@ interface HeaderProps {
   clickTempo: number;
   onTempoChange: (tempo: number) => void;
   songTempo: number | null;
+  clickSound: ClickSound;
+  onClickSoundChange: (sound: ClickSound) => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -68,6 +70,8 @@ const Header: React.FC<HeaderProps> = ({
   clickTempo,
   onTempoChange,
   songTempo,
+  clickSound,
+  onClickSoundChange,
 }) => {
   
   return (
@@ -157,7 +161,7 @@ const Header: React.FC<HeaderProps> = ({
                 <Circle className="w-2 h-2 fill-current" />
                 OUTS
             </Button>
-            <SettingsDialog>
+            <SettingsDialog clickSound={clickSound} onClickSoundChange={onClickSoundChange}>
                 <Button variant="ghost" size="icon">
                     <Settings />
                 </Button>

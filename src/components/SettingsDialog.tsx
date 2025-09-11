@@ -17,6 +17,7 @@ import { Slider } from './ui/slider';
 import { Switch } from './ui/switch';
 import { ChevronRight, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { ClickSound } from '@/app/page';
 
 type SettingsTab = 'General' | 'MIDI' | 'Audio' | 'Loop Connect™' | 'Prime MD™' | 'About';
 
@@ -71,8 +72,14 @@ const SettingsSwitchRow: React.FC<SettingsSwitchRowProps> = ({ label, checked, o
     </div>
 );
 
+interface SettingsDialogProps {
+    children: React.ReactNode;
+    clickSound: ClickSound;
+    onClickSoundChange: (sound: ClickSound) => void;
+}
 
-const SettingsDialog = ({ children }: { children: React.ReactNode }) => {
+
+const SettingsDialog = ({ children, clickSound, onClickSoundChange }: SettingsDialogProps) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('General');
   const [fadeOut, setFadeOut] = useState(10);
   const [transition, setTransition] = useState(12);
@@ -124,6 +131,8 @@ const SettingsDialog = ({ children }: { children: React.ReactNode }) => {
                     <div className="max-w-md mx-auto">
                         <SettingsRow label="Appearance" value="Dark" isSelect />
                         <Separator />
+                        <SettingsRow label="Click Sound" value={clickSound === 'beep' ? 'Beep' : 'Click'} isSelect onClick={() => onClickSoundChange(clickSound === 'beep' ? 'click' : 'beep')} />
+                        <Separator />
                         <SettingsSliderRow label="Fade out / in duration" value={fadeOut} onValueChange={setFadeOut} />
                         <Separator />
                         <SettingsSliderRow label="Transition Duration" value={transition} onValueChange={setTransition} />
@@ -147,3 +156,5 @@ const SettingsDialog = ({ children }: { children: React.ReactNode }) => {
 };
 
 export default SettingsDialog;
+
+    

@@ -11,6 +11,7 @@ import { Song } from '@/actions/songs';
 import { SongStructure } from '@/ai/flows/song-structure';
 
 export type PlaybackMode = 'online' | 'hybrid' | 'offline';
+export type ClickSound = 'beep' | 'click';
 
 const DawPage = () => {
   const [tracks, setTracks] = useState<SetlistSong[]>([]);
@@ -37,6 +38,7 @@ const DawPage = () => {
   const [isClickEnabled, setIsClickEnabled] = useState(false);
   const [clickVolume, setClickVolume] = useState(75);
   const [clickTempo, setClickTempo] = useState(150);
+  const [clickSound, setClickSound] = useState<ClickSound>('beep');
   const isClickEnabledRef = useRef(isClickEnabled);
   const clickSchedulerRef = useRef<number | null>(null);
   const nextClickTimeRef = useRef(0);
@@ -137,29 +139,33 @@ const DawPage = () => {
     if (!context || !isClickEnabledRef.current) return;
 
     while (nextClickTimeRef.current < context.currentTime + 0.1) {
-        // Reproducir el sonido del click
         const osc = context.createOscillator();
         const clickGain = context.createGain();
         
         osc.connect(clickGain);
         clickGain.connect(clickGainNodeRef.current!);
         
-        osc.frequency.setValueAtTime(1000, nextClickTimeRef.current);
-        clickGain.gain.setValueAtTime(1, nextClickTimeRef.current);
-        clickGain.gain.exponentialRampToValueAtTime(0.001, nextClickTimeRef.current + 0.05);
+        if (clickSound === 'beep') {
+            osc.frequency.setValueAtTime(1000, nextClickTimeRef.current);
+            clickGain.gain.setValueAtTime(1, nextClickTimeRef.current);
+            clickGain.gain.exponentialRampToValueAtTime(0.001, nextClickTimeRef.current + 0.05);
+        } else { // click
+            osc.frequency.setValueAtTime(1500, nextClickTimeRef.current);
+            clickGain.gain.setValueAtTime(1, nextClickTimeRef.current);
+            clickGain.gain.exponentialRampToValueAtTime(0.001, nextClickTimeRef.current + 0.02);
+        }
 
         osc.start(nextClickTimeRef.current);
         osc.stop(nextClickTimeRef.current + 0.05);
 
-        // Planificar el siguiente click
         const secondsPerBeat = 60.0 / clickTempo;
         nextClickTimeRef.current += secondsPerBeat;
     }
     clickSchedulerRef.current = window.setTimeout(clickScheduler, 25);
-  }, [clickTempo]);
+  }, [clickTempo, clickSound]);
   
   useEffect(() => {
-    isClickEnabledRef.current = isClickEnabled; // Sync ref with state
+    isClickEnabledRef.current = isClickEnabled;
 
     if (isClickEnabled) {
         if (audioContextRef.current) {
@@ -491,6 +497,8 @@ const DawPage = () => {
             clickTempo={clickTempo}
             onTempoChange={setClickTempo}
             songTempo={songTempo}
+            clickSound={clickSound}
+            onClickSoundChange={setClickSound}
         />
       </div>
       
@@ -533,5 +541,7 @@ const DawPage = () => {
 };
 
 export default DawPage;
+
+    
 
     
