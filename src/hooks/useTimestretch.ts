@@ -34,6 +34,7 @@ export const useTimestretch = (audioContext: AudioContext | null) => {
         const onAudioProcess = (e: AudioProcessingEvent) => {
             const inputBuffer = e.inputBuffer;
             const outputBuffer = e.outputBuffer;
+            const numFrames = inputBuffer.length;
 
             // Update pitch if it has changed
             if (stretcher.soundtouch.pitch !== stretcher.pitch) {
@@ -54,7 +55,9 @@ export const useTimestretch = (audioContext: AudioContext | null) => {
             };
 
             const samples = new Float32Array(numFrames * 2);
-            stretcher.filter.onProcess(samples);
+            
+            // CORRECTED LINE: The filter is called as a function, not with .onProcess
+            stretcher.filter(samples);
 
             const outL = outputBuffer.getChannelData(0);
             const outR = channels > 1 ? outputBuffer.getChannelData(1) : outL;
@@ -67,7 +70,6 @@ export const useTimestretch = (audioContext: AudioContext | null) => {
             }
         };
 
-        const numFrames = BUFFER_SIZE;
         stretcher.node.onaudioprocess = onAudioProcess;
         
         return stretcher;
