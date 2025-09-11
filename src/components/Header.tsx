@@ -45,6 +45,8 @@ interface HeaderProps {
   onClickSoundChange: (sound: ClickSound) => void;
   fadeOutDuration: number;
   onFadeOutDurationChange: (duration: number) => void;
+  isPanVisible: boolean;
+  onPanVisibilityChange: (isVisible: boolean) => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -76,6 +78,8 @@ const Header: React.FC<HeaderProps> = ({
   onClickSoundChange,
   fadeOutDuration,
   onFadeOutDurationChange,
+  isPanVisible,
+  onPanVisibilityChange,
 }) => {
   
   return (
@@ -170,6 +174,8 @@ const Header: React.FC<HeaderProps> = ({
               onClickSoundChange={onClickSoundChange}
               fadeOutDuration={fadeOutDuration}
               onFadeOutDurationChange={onFadeOutDurationChange}
+              isPanVisible={isPanVisible}
+              onPanVisibilityChange={onPanVisibilityChange}
             >
                 <Button variant="ghost" size="icon">
                     <Settings />

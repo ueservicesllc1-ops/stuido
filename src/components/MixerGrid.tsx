@@ -19,6 +19,7 @@ interface MixerGridProps {
   isPlaying: boolean;
   vuData: Record<string, number>;
   playbackMode: PlaybackMode;
+  isPanVisible: boolean;
 }
 
 const MixerGrid: React.FC<MixerGridProps> = ({ 
@@ -35,6 +36,7 @@ const MixerGrid: React.FC<MixerGridProps> = ({
   isPlaying,
   vuData,
   playbackMode,
+  isPanVisible,
 }) => {
   const isSoloActive = soloTracks.length > 0;
 
@@ -64,6 +66,7 @@ const MixerGrid: React.FC<MixerGridProps> = ({
             onPanChange={(newPan) => onPanChange(track.id, newPan)}
             vuMeterLevel={vuData[track.id] || 0}
             playbackMode={playbackMode}
+            isPanVisible={isPanVisible}
           />
         );
       })}

@@ -62,6 +62,7 @@ const DawPage = () => {
 
   // --- Settings State ---
   const [fadeOutDuration, setFadeOutDuration] = useState(0.5); // Duración en segundos
+  const [isPanVisible, setIsPanVisible] = useState(true);
 
   // Initialize AudioContext
   useEffect(() => {
@@ -570,6 +571,8 @@ const DawPage = () => {
             onClickSoundChange={setClickSound}
             fadeOutDuration={fadeOutDuration}
             onFadeOutDurationChange={setFadeOutDuration}
+            isPanVisible={isPanVisible}
+            onPanVisibilityChange={setIsPanVisible}
         />
       </div>
       
@@ -589,6 +592,7 @@ const DawPage = () => {
               isPlaying={isPlaying}
               vuData={vuData}
               playbackMode={playbackMode}
+              isPanVisible={isPanVisible}
             />
         ) : (
           <div className="flex justify-center items-center h-full">

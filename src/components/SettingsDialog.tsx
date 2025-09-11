@@ -94,10 +94,20 @@ interface SettingsDialogProps {
     onClickSoundChange: (sound: ClickSound) => void;
     fadeOutDuration: number;
     onFadeOutDurationChange: (duration: number) => void;
+    isPanVisible: boolean;
+    onPanVisibilityChange: (isVisible: boolean) => void;
 }
 
 
-const SettingsDialog = ({ children, clickSound, onClickSoundChange, fadeOutDuration, onFadeOutDurationChange }: SettingsDialogProps) => {
+const SettingsDialog = ({ 
+    children, 
+    clickSound, 
+    onClickSoundChange, 
+    fadeOutDuration, 
+    onFadeOutDurationChange,
+    isPanVisible,
+    onPanVisibilityChange
+}: SettingsDialogProps) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('General');
   const [generalView, setGeneralView] = useState<GeneralSettingsView>('main');
   const [transition, setTransition] = useState(12);
@@ -154,7 +164,7 @@ const SettingsDialog = ({ children, clickSound, onClickSoundChange, fadeOutDurat
                     <Separator />
                     <SettingsSliderRow label="Transition Duration" value={transition} onValueChange={setTransition} />
                     <Separator />
-                    <SettingsRow label="Pan" value="" />
+                    <SettingsSwitchRow label="Show Pan Controls" checked={isPanVisible} onCheckedChange={onPanVisibilityChange} />
                     <Separator />
                     <SettingsSwitchRow label="Tonic Pad follows Key of Tracks" checked={tonicFollows} onCheckedChange={setTonicFollows} />
                     <Separator />

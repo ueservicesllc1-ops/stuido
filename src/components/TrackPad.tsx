@@ -23,6 +23,7 @@ interface TrackPadProps {
   onSoloToggle: () => void;
   vuMeterLevel: number;
   playbackMode: PlaybackMode;
+  isPanVisible: boolean;
 }
 
 const TrackPad: React.FC<TrackPadProps> = ({
@@ -39,6 +40,7 @@ const TrackPad: React.FC<TrackPadProps> = ({
   onMuteToggle,
   vuMeterLevel,
   playbackMode,
+  isPanVisible,
 }) => {
   const { name } = track;
   const [localVolume, setLocalVolume] = useState(volume);
@@ -128,22 +130,24 @@ const TrackPad: React.FC<TrackPadProps> = ({
           )}>{name}</span>
          {name.trim().toUpperCase() === 'CUES' && <Button variant="ghost" size="icon" className="w-4 h-4 ml-1 text-muted-foreground"><Settings className="w-3 h-3" /></Button>}
        </div>
-
-       <div className="w-full px-2">
-            <Slider
-                value={panSliderValue}
-                max={1}
-                min={-1}
-                step={0.05}
-                onValueChange={handlePanChange}
-                disabled={isDisabled}
-                className={cn(
-                    '[&>span:first-child]:bg-secondary',
-                    (isDisabled) && 'opacity-50'
-                )}
-                thumbClassName="h-4 w-2 rounded-sm"
-             />
-       </div>
+       
+       {isPanVisible && (
+        <div className="w-full px-2">
+              <Slider
+                  value={panSliderValue}
+                  max={1}
+                  min={-1}
+                  step={0.05}
+                  onValueChange={handlePanChange}
+                  disabled={isDisabled}
+                  className={cn(
+                      '[&>span:first-child]:bg-secondary',
+                      (isDisabled) && 'opacity-50'
+                  )}
+                  thumbClassName="h-4 w-2 rounded-sm"
+              />
+        </div>
+       )}
 
       <div className="flex gap-1.5 w-full mt-1">
         <Button
