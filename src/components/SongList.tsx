@@ -649,7 +649,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
       </Sheet>
 
       <Sheet open={isEditingSetlist} onOpenChange={setIsEditingSetlist}>
-        <SheetContent side="right" className="w-full max-w-3xl bg-card/95 p-0">
+        <SheetContent side="right" className="w-3/4 max-w-none bg-card/95 p-0">
             <SheetHeader className="p-6">
                 <SheetTitle>Editando Setlist</SheetTitle>
             </SheetHeader>
@@ -698,5 +698,3 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
 };
 
 export default SongList;
-
-    
