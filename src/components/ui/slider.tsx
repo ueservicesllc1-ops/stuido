@@ -34,8 +34,8 @@ const Slider = React.forwardRef<
       )} />
     </SliderPrimitive.Track>
     <SliderPrimitive.Thumb className={cn(
-      "block h-6 w-4 rounded-sm border-2 border-border bg-accent ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 shadow-md",
-      "data-[orientation=horizontal]:h-4 data-[orientation=horizontal]:w-6",
+      "block h-7 w-5 rounded-sm border-2 border-border bg-accent ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 shadow-md",
+      "data-[orientation=horizontal]:h-5 data-[orientation=horizontal]:w-7",
       thumbClassName
       )} />
   </SliderPrimitive.Root>
