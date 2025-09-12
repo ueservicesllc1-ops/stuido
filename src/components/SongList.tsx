@@ -437,7 +437,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
                             )}
                             onClick={() => onSongSelected(songGroup.songId)}
                         >
-                            <span className="justify-self-center text-muted-foreground">{index + 1}</span>
+                            <span className="justify-self-center text-foreground text-base">{index + 1}</span>
                             
                             <div className="flex items-center gap-2 min-w-0">
                                 <div className="w-7 h-7 rounded bg-secondary flex items-center justify-center shrink-0">
