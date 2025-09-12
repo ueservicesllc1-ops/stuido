@@ -44,6 +44,8 @@ const DawPage = () => {
   const clickSchedulerRef = useRef<number | null>(null);
   const nextClickTimeRef = useRef(0);
   const clickGainNodeRef = useRef<GainNode | null>(null);
+  const clickTempoRef = useRef(clickTempo);
+  const clickSoundRef = useRef(clickSound);
 
   // --- Playback State ---
   const [isPlaying, setIsPlaying] = useState(false);
@@ -151,7 +153,7 @@ const DawPage = () => {
         osc.connect(clickGain);
         clickGain.connect(clickGainNodeRef.current!);
         
-        if (clickSound === 'beep') {
+        if (clickSoundRef.current === 'beep') {
             osc.frequency.setValueAtTime(1000, nextClickTimeRef.current);
             clickGain.gain.setValueAtTime(1, nextClickTimeRef.current);
             clickGain.gain.exponentialRampToValueAtTime(0.001, nextClickTimeRef.current + 0.05);
@@ -164,12 +166,21 @@ const DawPage = () => {
         osc.start(nextClickTimeRef.current);
         osc.stop(nextClickTimeRef.current + 0.05);
 
-        const secondsPerBeat = 60.0 / clickTempo;
+        const secondsPerBeat = 60.0 / clickTempoRef.current;
         nextClickTimeRef.current += secondsPerBeat;
     }
     clickSchedulerRef.current = window.setTimeout(clickScheduler, 25);
-  }, [clickTempo, clickSound]);
+  }, []);
   
+  // Sync refs with state
+  useEffect(() => {
+    clickTempoRef.current = clickTempo;
+  }, [clickTempo]);
+
+  useEffect(() => {
+    clickSoundRef.current = clickSound;
+  }, [clickSound]);
+
   useEffect(() => {
     isClickEnabledRef.current = isClickEnabled;
 
