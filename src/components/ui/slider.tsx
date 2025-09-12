@@ -40,11 +40,13 @@ const Slider = React.forwardRef<
     </SliderPrimitive.Track>
     <SliderPrimitive.Thumb 
         className={cn(
-            "block h-2 w-full rounded-sm border-none bg-muted-foreground shadow transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-            "hover:bg-foreground cursor-pointer",
+            "block h-8 w-10 rounded-sm border-none bg-black shadow-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 flex items-center justify-center cursor-pointer",
+            "hover:bg-gray-900",
             thumbClassName
         )}
-    />
+    >
+      <div className="w-8 h-0.5 bg-amber-400 rounded-full shadow-[0_0_3px_1px_rgba(251,191,36,0.5)]" />
+    </SliderPrimitive.Thumb>
   </SliderPrimitive.Root>
 ))
 Slider.displayName = SliderPrimitive.Root.displayName

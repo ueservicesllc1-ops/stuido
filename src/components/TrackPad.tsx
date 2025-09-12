@@ -49,7 +49,7 @@ const FaderTickMarks = React.memo(() => {
 FaderTickMarks.displayName = 'FaderTickMarks';
 
 
-const TrackPad: React.FC<TrackPadProps> = React.memo(({
+const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
   track,
   isLoading,
   isMuted,
@@ -107,7 +107,7 @@ const TrackPad: React.FC<TrackPadProps> = React.memo(({
                 )}
                 trackClassName="bg-transparent"
                 rangeClassName={cn(rangeColorClass)}
-                thumbClassName={cn((isSolo || isMuted) && '!bg-muted-foreground/50')}
+                thumbClassName={cn((isSolo || isMuted) && 'opacity-50')}
             />
             {name.trim().toUpperCase() !== 'CLICK' && <VuMeter level={vuMeterLevel} />}
         </div>

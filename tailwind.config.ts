@@ -51,6 +51,9 @@ export default {
           foreground: 'hsl(var(--card-foreground))',
         },
         copper: '#B87333',
+        amber: {
+          '400': '#FBBF24',
+        },
         yellow: {
           '400': '#FBBF24', // For text/icon
           '500': '#EAB308', // For slider/solo button
