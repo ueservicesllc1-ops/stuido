@@ -62,6 +62,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
   const [isLibrarySheetOpen, setIsLibrarySheetOpen] = useState(false);
   const [isLibrarySheetForEditingOpen, setIsLibrarySheetForEditingOpen] = useState(false);
   const [isEditingSetlist, setIsEditingSetlist] = useState(false);
+  const [showLibraryInEdit, setShowLibraryInEdit] = useState(false);
   const [songToDelete, setSongToDelete] = useState<Song | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [analyzingSongId, setAnalyzingSongId] = useState<string | null>(null);
@@ -301,7 +302,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
   };
 
 
-  const renderSongList = (forGlobal: boolean = false) => {
+  const renderSongLibrary = (forGlobal: boolean = false) => {
     if (isLoadingSongs) {
       return (
         <div className="flex justify-center items-center h-full">
@@ -314,10 +315,12 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
       return <div className="text-destructive text-center">{songsError}</div>;
     }
 
-    if (songs.length > 0) {
+    const librarySongs = forGlobal ? songs.slice(0,5) : songs; // Example: show only first 5 for global
+
+    if (librarySongs.length > 0) {
       return (
         <div className="space-y-2">
-          {songs.map((song) => {
+          {librarySongs.map((song) => {
             const hasCuesTrack = song.tracks && song.tracks.some(t => t.name.trim().toUpperCase() === 'CUES');
             const isAnalyzing = analyzingSongId === song.id;
 
@@ -579,7 +582,10 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
                     variant="ghost" 
                     size="sm" 
                     className="text-muted-foreground" 
-                    onClick={() => setIsEditingSetlist(true)}
+                    onClick={() => {
+                        setShowLibraryInEdit(false); // Reset state on open
+                        setIsEditingSetlist(true)}
+                    }
                  >
                     Editar setlist
                 </Button>
@@ -605,14 +611,14 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
                   <h3 className="font-semibold">Biblioteca de Canciones</h3>
                   <UploadSongDialog onUploadFinished={handleFetchSongs} />
                 </div>
-                {renderSongList()}
+                {renderSongLibrary()}
             </TabsContent>
 
             <TabsContent value="global" className="flex-grow overflow-y-auto px-4">
                 <div className="flex justify-between items-center my-4">
                   <h3 className="font-semibold">Biblioteca Global</h3>
                 </div>
-                {renderSongList(true)}
+                {renderSongLibrary(true)}
             </TabsContent>
           </Tabs>
         </SheetContent>
@@ -636,13 +642,13 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
                 <h3 className="font-semibold">Biblioteca de Canciones</h3>
                 <UploadSongDialog onUploadFinished={handleFetchSongs} />
                 </div>
-                {renderSongList()}
+                {renderSongLibrary()}
             </TabsContent>
             <TabsContent value="global" className="flex-grow overflow-y-auto px-4">
                 <div className="flex justify-between items-center my-4">
                 <h3 className="font-semibold">Biblioteca Global</h3>
                 </div>
-                {renderSongList(true)}
+                {renderSongLibrary(true)}
             </TabsContent>
             </Tabs>
         </SheetContent>
@@ -651,11 +657,11 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
       <Sheet open={isEditingSetlist} onOpenChange={setIsEditingSetlist}>
         <SheetContent side="right" className="w-3/4 max-w-none bg-card/95 p-0">
             <SheetHeader className="p-6">
-                <SheetTitle>Editando Setlist</SheetTitle>
+                <SheetTitle>Editando: {selectedSetlist?.name}</SheetTitle>
             </SheetHeader>
-            <div className="grid grid-cols-2 gap-6 p-6">
+            <div className={cn("grid h-full grid-rows-[1fr_auto] transition-all", showLibraryInEdit ? "grid-cols-3" : "grid-cols-2")}>
                  {/* Columna Izquierda: Detalles del Setlist */}
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-4 p-6 border-r border-border/50">
                      <div className="aspect-square w-1/2 rounded-lg bg-secondary overflow-hidden">
                         <Image
                             src="https://picsum.photos/seed/setlist1/600/600"
@@ -670,24 +676,68 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
                     <p className="text-muted-foreground">{format(selectedSetlist?.date ?? new Date(), 'PPP')}</p>
                 </div>
 
-                 {/* Columna Derecha: Canciones del Setlist */}
-                <div className="flex flex-col gap-4">
-                    <h4 className="font-semibold">Canciones</h4>
+                 {/* Columna Central: Canciones del Setlist */}
+                <div className="flex flex-col gap-4 p-6 border-r border-border/50">
+                    <div className='flex justify-between items-center'>
+                        <h4 className="font-semibold">Canciones en el Setlist</h4>
+                        <Button onClick={() => setShowLibraryInEdit(prev => !prev)} variant="outline" size="sm" className="gap-2">
+                            <PlusCircle className="w-4 h-4" />
+                            {showLibraryInEdit ? 'Cerrar Biblioteca' : 'Añadir Canciones'}
+                        </Button>
+                    </div>
                     <div className="space-y-2 overflow-y-auto pr-2 no-scrollbar">
-                        {groupedSongs.map((songGroup, index) => (
+                        {groupedSongs.length > 0 ? groupedSongs.map((songGroup, index) => (
                              <div key={songGroup.songId} className="flex items-center gap-3 p-2 rounded-md bg-secondary/50">
                                 <span className="text-sm text-muted-foreground">{index + 1}</span>
                                 <div className="flex-grow">
                                     <p className="font-semibold text-foreground">{songGroup.songName}</p>
                                     <p className="text-xs text-muted-foreground">{songs.find(s => s.id === songGroup.songId)?.artist}</p>
                                 </div>
-                                <Button variant="ghost" size="icon" className="w-8 h-8 text-muted-foreground hover:text-destructive">
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="w-8 h-8 text-muted-foreground hover:text-destructive"
+                                    onClick={() => setSongToRemoveFromSetlist({songId: songGroup.songId, songName: songGroup.songName})}
+                                >
                                     <Trash2 className="w-4 h-4" />
                                 </Button>
                              </div>
-                        ))}
+                        )) : (
+                            <div className="text-center py-10 text-muted-foreground">
+                                <p>Aún no hay canciones.</p>
+                                <p>Haz clic en "Añadir Canciones" para empezar.</p>
+                            </div>
+                        )}
                     </div>
                 </div>
+
+                {/* Columna Derecha: Biblioteca de canciones (condicional) */}
+                {showLibraryInEdit && (
+                    <div className="flex flex-col h-full">
+                        <Tabs defaultValue="local" className="flex flex-col h-full pt-2">
+                            <TabsList className="mx-4">
+                                <TabsTrigger value="local" className="gap-2"><Library className="w-4 h-4" /> Local</TabsTrigger>
+                                <TabsTrigger value="global" className="gap-2"><Globe className="w-4 h-4"/> Global</TabsTrigger>
+                            </TabsList>
+                            
+                            <TabsContent value="local" className="flex-grow overflow-y-auto px-4 mt-0">
+                                <div className="flex justify-between items-center my-4">
+                                <h3 className="font-semibold">Biblioteca Local</h3>
+                                <UploadSongDialog onUploadFinished={handleFetchSongs} />
+                                </div>
+                                {renderSongLibrary()}
+                            </TabsContent>
+
+                            <TabsContent value="global" className="flex-grow overflow-y-auto px-4 mt-0">
+                                <div className="flex justify-between items-center my-4">
+                                <h3 className="font-semibold">Biblioteca Global</h3>
+                                </div>
+                                {renderSongLibrary(true)}
+                            </TabsContent>
+                        </Tabs>
+                    </div>
+                )}
+
             </div>
         </SheetContent>
       </Sheet>
