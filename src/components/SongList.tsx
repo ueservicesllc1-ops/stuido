@@ -61,6 +61,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
   const [isSetlistSheetOpen, setIsSetlistSheetOpen] = useState(false);
   const [isLibrarySheetOpen, setIsLibrarySheetOpen] = useState(false);
   const [isLibrarySheetForEditingOpen, setIsLibrarySheetForEditingOpen] = useState(false);
+  const [isEditingSetlist, setIsEditingSetlist] = useState(false);
   const [songToDelete, setSongToDelete] = useState<Song | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [analyzingSongId, setAnalyzingSongId] = useState<string | null>(null);
@@ -368,12 +369,9 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
     return <p className="text-muted-foreground text-center">No hay canciones en la biblioteca.</p>;
   };
 
-  const renderSetlist = () => {
-    if (!selectedSetlist) return null;
-    
-    // Agrupar pistas por canción
+  const getGroupedSongs = () => {
+    if (!selectedSetlist) return [];
     const songsInSetlist = selectedSetlist.songs.reduce((acc, track) => {
-        // Solo procesar pistas que tengan información de la canción padre
         if (track.songId && track.songName) {
             const songId = track.songId;
             if (!acc[songId]) {
@@ -388,7 +386,13 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
         return acc;
     }, {} as Record<string, { songId: string; songName: string; tracks: SetlistSong[] }>);
 
-    const groupedSongs = Object.values(songsInSetlist);
+    return Object.values(songsInSetlist);
+  }
+
+  const groupedSongs = getGroupedSongs();
+
+  const renderSetlist = () => {
+    if (!selectedSetlist) return null;
 
     if (groupedSongs.length === 0) {
         return (
@@ -428,7 +432,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
                             key={songGroup.songId} 
                             className={cn(
                                 "grid grid-cols-[30px_1fr_40px_50px_32px] items-center gap-x-3 rounded-md group cursor-pointer",
-                                "py-1 text-sm", // reduce vertical padding a bit
+                                "py-1 text-sm",
                                 activeSongId === songGroup.songId ? 'bg-primary/20' : 'hover:bg-accent'
                             )}
                             onClick={() => onSongSelected(songGroup.songId)}
@@ -458,9 +462,9 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
                             <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className="w-8 h-8 text-muted-foreground hover:text-destructive shrink-0"
+                                className="w-8 h-8 text-muted-foreground hover:text-destructive"
                                 onClick={(e) => {
-                                    e.stopPropagation(); // Evita que se seleccione la canción al eliminarla
+                                    e.stopPropagation(); 
                                     setSongToRemoveFromSetlist({ songId: songGroup.songId, songName: songGroup.songName });
                                 }}
                             >
@@ -571,10 +575,12 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
             </Button>
 
             {selectedSetlist && (
-                <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => {
-                  handleFetchSongs();
-                  setIsLibrarySheetForEditingOpen(true);
-                }}>
+                 <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-muted-foreground" 
+                    onClick={() => setIsEditingSetlist(true)}
+                 >
                     Editar setlist
                 </Button>
             )}
@@ -641,9 +647,56 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
             </Tabs>
         </SheetContent>
       </Sheet>
+
+      <Sheet open={isEditingSetlist} onOpenChange={setIsEditingSetlist}>
+        <SheetContent side="right" className="w-full max-w-3xl bg-card/95 p-0">
+            <SheetHeader className="p-6">
+                <SheetTitle>Editando Setlist</SheetTitle>
+            </SheetHeader>
+            <div className="grid grid-cols-2 gap-6 p-6">
+                 {/* Columna Izquierda: Detalles del Setlist */}
+                <div className="flex flex-col gap-4">
+                     <div className="aspect-square w-full rounded-lg bg-secondary overflow-hidden">
+                        <Image
+                            src="https://picsum.photos/seed/setlist1/600/600"
+                            width={600}
+                            height={600}
+                            alt={selectedSetlist?.name ?? 'Setlist'}
+                            className="object-cover w-full h-full"
+                            data-ai-hint="abstract music"
+                        />
+                    </div>
+                    <h3 className="text-2xl font-bold">{selectedSetlist?.name}</h3>
+                    <p className="text-muted-foreground">{format(selectedSetlist?.date ?? new Date(), 'PPP')}</p>
+                </div>
+
+                 {/* Columna Derecha: Canciones del Setlist */}
+                <div className="flex flex-col gap-4">
+                    <h4 className="font-semibold">Canciones</h4>
+                    <div className="space-y-2 overflow-y-auto pr-2 no-scrollbar">
+                        {groupedSongs.map((songGroup, index) => (
+                             <div key={songGroup.songId} className="flex items-center gap-3 p-2 rounded-md bg-secondary/50">
+                                <span className="text-sm text-muted-foreground">{index + 1}</span>
+                                <div className="flex-grow">
+                                    <p className="font-semibold text-foreground">{songGroup.songName}</p>
+                                    <p className="text-xs text-muted-foreground">{songs.find(s => s.id === songGroup.songId)?.artist}</p>
+                                </div>
+                                <Button variant="ghost" size="icon" className="w-8 h-8 text-muted-foreground hover:text-destructive">
+                                    <Trash2 className="w-4 h-4" />
+                                </Button>
+                             </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </SheetContent>
+      </Sheet>
+
     </div>
     </>
   );
 };
 
 export default SongList;
+
+    
