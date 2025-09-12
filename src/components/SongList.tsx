@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from './ui/button';
-import { AlignJustify, Library, MoreHorizontal, Music, Loader2, Calendar, X, PlusCircle, DownloadCloud, Trash2, Upload, Globe, ScanSearch, Music2 } from 'lucide-react';
+import { AlignJustify, Library, MoreHorizontal, Music, Loader2, Calendar, X, PlusCircle, DownloadCloud, Trash2, Upload, Globe, ScanSearch, Music2, Hash, Zap, Clock2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -395,57 +395,67 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
         );
     }
 
-
     return (
-        <div className="space-y-1">
-            {groupedSongs.map((songGroup) => {
-                const fullSong = songs.find(s => s.id === songGroup.songId);
+        <div className="flex flex-col">
+            {/* Header */}
+            <div className="grid grid-cols-[30px_1fr_40px_50px_32px] items-center gap-x-3 px-2 py-1 text-xs font-medium text-muted-foreground border-b border-border/50">
+                <Hash className="w-3 h-3 justify-self-center" />
+                <span>Nombre</span>
+                <Zap className="w-3 h-3 justify-self-center" />
+                <Clock2 className="w-3 h-3 justify-self-center" />
+                <span />
+            </div>
+            {/* Song Rows */}
+            <div className="space-y-1 mt-1">
+                {groupedSongs.map((songGroup, index) => {
+                    const fullSong = songs.find(s => s.id === songGroup.songId);
 
-                return (
-                    <div 
-                        key={songGroup.songId} 
-                        className={cn(
-                            "flex items-center gap-3 p-2 rounded-md group cursor-pointer",
-                            activeSongId === songGroup.songId ? 'bg-primary/20' : 'hover:bg-accent'
-                        )}
-                        onClick={() => onSongSelected(songGroup.songId)}
-                    >
-                        <div className="w-10 h-10 rounded-md bg-secondary flex items-center justify-center shrink-0">
-                            {fullSong?.albumImageUrl ? (
-                                <Image 
-                                    src={fullSong.albumImageUrl} 
-                                    alt={songGroup.songName} 
-                                    width={40} 
-                                    height={40} 
-                                    className="rounded-md object-cover w-10 h-10"
-                                />
-                            ) : (
-                                <Music2 className="w-5 h-5 text-muted-foreground" />
+                    return (
+                        <div 
+                            key={songGroup.songId} 
+                            className={cn(
+                                "grid grid-cols-[30px_1fr_40px_50px_32px] items-center gap-x-3 rounded-md group cursor-pointer text-sm",
+                                activeSongId === songGroup.songId ? 'bg-primary/20' : 'hover:bg-accent'
                             )}
-                        </div>
-
-                        <div className="flex-grow min-w-0">
-                            <p className="font-semibold text-foreground truncate">{songGroup.songName}</p>
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                <span>Key: {fullSong?.key ?? '-'}</span>
-                                <span>{fullSong?.tempo ?? '--'} BPM</span>
-                            </div>
-                        </div>
-
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="w-8 h-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive shrink-0"
-                            onClick={(e) => {
-                                e.stopPropagation(); // Evita que se seleccione la canción al eliminarla
-                                handleRemoveSongFromSetlist(songGroup.songId, songGroup.songName)
-                            }}
+                            onClick={() => onSongSelected(songGroup.songId)}
                         >
-                            <Trash2 className="w-4 h-4" />
-                        </Button>
-                    </div>
-                )
-            })}
+                            <span className="justify-self-center text-muted-foreground">{index + 1}</span>
+                            
+                            <div className="flex items-center gap-2 py-1.5 min-w-0">
+                                <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center shrink-0">
+                                    {fullSong?.albumImageUrl ? (
+                                        <Image 
+                                            src={fullSong.albumImageUrl} 
+                                            alt={songGroup.songName} 
+                                            width={32} 
+                                            height={32} 
+                                            className="rounded object-cover w-8 h-8"
+                                        />
+                                    ) : (
+                                        <Music2 className="w-4 h-4 text-muted-foreground" />
+                                    )}
+                                </div>
+                                <span className="font-semibold text-foreground truncate">{songGroup.songName}</span>
+                            </div>
+
+                            <span className="justify-self-center text-foreground font-medium">{fullSong?.key ?? '-'}</span>
+                            <span className="justify-self-center text-foreground font-medium">{fullSong?.tempo ?? '--'}</span>
+
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="w-8 h-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive shrink-0"
+                                onClick={(e) => {
+                                    e.stopPropagation(); // Evita que se seleccione la canción al eliminarla
+                                    handleRemoveSongFromSetlist(songGroup.songId, songGroup.songName)
+                                }}
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </Button>
+                        </div>
+                    )
+                })}
+            </div>
         </div>
     );
 };
@@ -606,3 +616,5 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
 };
 
 export default SongList;
+
+    
