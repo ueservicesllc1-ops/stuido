@@ -107,10 +107,7 @@ const TrackPad: React.FC<TrackPadProps> = React.memo(({
                 )}
                 trackClassName="bg-transparent"
                 rangeClassName={cn(rangeColorClass)}
-                thumbClassName={cn(
-                    "w-full h-2 rounded-sm border-none bg-muted-foreground hover:bg-foreground transition-colors",
-                    (isSolo || isMuted) && '!bg-muted-foreground/50'
-                )}
+                thumbClassName={cn((isSolo || isMuted) && '!bg-muted-foreground/50')}
             />
             {name.trim().toUpperCase() !== 'CLICK' && <VuMeter level={vuMeterLevel} />}
         </div>
