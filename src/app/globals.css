@@ -7,13 +7,13 @@
     --background: 220 13% 10%; /* Very dark grey, almost black */
     --foreground: 210 20% 88%; /* Light grey for text */
     
-    --card: 220 13% 18%; /* Darker grey for inner panels */
+    --card: 220 13% 14%; /* Darker grey for inner panels */
     --card-foreground: 210 20% 88%;
 
     --popover: 220 13% 10%;
     --popover-foreground: 210 20% 88%;
 
-    --primary: 190 80% 55%; /* Cyan blue for active elements */
+    --primary: 180 80% 50%; /* Bright Cyan */
     --primary-foreground: 220 13% 10%;
     
     --secondary: 220 10% 25%; /* Medium grey for button backgrounds */
@@ -29,8 +29,8 @@
     --destructive-foreground: 210 40% 98%;
 
     --border: 220 10% 30%; 
-    --input: 220 10% 15%;
-    --ring: 190 80% 65%;
+    --input: 220 10% 8%; /* Darkest grey for slider track */
+    --ring: 180 80% 60%;
     
     --radius: 0.5rem;
 
@@ -45,13 +45,13 @@
     --background: 220 13% 10%;
     --foreground: 210 20% 88%;
     
-    --card: 220 13% 18%;
+    --card: 220 13% 14%;
     --card-foreground: 210 20% 88%;
 
     --popover: 220 13% 10%;
     --popover-foreground: 210 20% 88%;
 
-    --primary: 190 80% 55%;
+    --primary: 180 80% 50%;
     --primary-foreground: 220 13% 10%;
     
     --secondary: 220 10% 25%;
@@ -67,8 +67,8 @@
     --destructive-foreground: 210 40% 98%;
 
     --border: 220 10% 30%;
-    --input: 220 10% 15%;
-    --ring: 190 80% 65%;
+    --input: 220 10% 8%;
+    --ring: 180 80% 60%;
   }
 }
 
