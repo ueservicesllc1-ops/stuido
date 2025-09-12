@@ -1,20 +1,26 @@
 
 'use client';
-import localforage from 'localforage';
 
 let isConfigured = false;
 
-const configureForage = () => {
-    if (isConfigured) return;
+// We don't import localforage at the top level anymore.
+// Instead, we'll import it dynamically inside the functions.
+
+const getLocalforage = async () => {
+    // Dynamically import localforage
+    const localforage = (await import('localforage')).default;
     
-    localforage.config({
-      driver: localforage.INDEXEDDB,
-      name: 'multitrackPlayerCache',
-      version: 1.0,
-      storeName: 'audio_tracks',
-      description: 'Cache for audio tracks',
-    });
-    isConfigured = true;
+    if (!isConfigured) {
+        localforage.config({
+            driver: localforage.INDEXEDDB,
+            name: 'multitrackPlayerCache',
+            version: 1.0,
+            storeName: 'audio_tracks',
+            description: 'Cache for audio tracks',
+        });
+        isConfigured = true;
+    }
+    return localforage;
 };
 
 
@@ -24,8 +30,8 @@ const configureForage = () => {
  * @returns El Blob del audio si se encuentra, o null si no.
  */
 export const getCachedAudio = async (url: string): Promise<Blob | null> => {
-  configureForage();
   try {
+    const localforage = await getLocalforage();
     const cachedBlob = await localforage.getItem<Blob>(url);
     if (cachedBlob && cachedBlob instanceof Blob) {
       console.log('Audio recuperado de la caché:', url);
@@ -45,8 +51,8 @@ export const getCachedAudio = async (url: string): Promise<Blob | null> => {
  * @returns El Blob guardado.
  */
 export const cacheAudio = async (url: string, blob: Blob): Promise<Blob> => {
-  configureForage();
   try {
+    const localforage = await getLocalforage();
     await localforage.setItem(url, blob);
     console.log('Audio cacheado:', url);
     return blob;
