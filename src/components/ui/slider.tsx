@@ -3,7 +3,6 @@
 
 import * as React from "react"
 import * as SliderPrimitive from "@radix-ui/react-slider"
-import Image from 'next/image';
 
 import { cn } from "@/lib/utils"
 
@@ -34,23 +33,15 @@ const Slider = React.forwardRef<
           rangeClassName
       )} />
     </SliderPrimitive.Track>
-    <SliderPrimitive.Thumb asChild>
-      <div className={cn(
-        "block ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-        "data-[orientation=horizontal]:h-5 data-[orientation=horizontal]:w-7",
-        "data-[orientation=vertical]:h-7 data-[orientation=vertical]:w-5",
-        "relative"
-      )}>
-        <Image 
-          src="/images/b1.png" 
-          alt="Slider Thumb" 
-          layout="fill" 
-          objectFit="contain"
-          className={cn(thumbClassName)}
-          unoptimized
-        />
-      </div>
-    </SliderPrimitive.Thumb>
+    <SliderPrimitive.Thumb 
+        className={cn(
+            "block ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+            "bg-slider-thumb bg-contain bg-no-repeat bg-center",
+            "data-[orientation=horizontal]:h-5 data-[orientation=horizontal]:w-7",
+            "data-[orientation=vertical]:h-7 data-[orientation=vertical]:w-5",
+            thumbClassName
+        )}
+    />
   </SliderPrimitive.Root>
 ))
 Slider.displayName = SliderPrimitive.Root.displayName
