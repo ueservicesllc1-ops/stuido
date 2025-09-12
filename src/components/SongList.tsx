@@ -414,28 +414,28 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
                         <div 
                             key={songGroup.songId} 
                             className={cn(
-                                "grid grid-cols-[30px_1fr_40px_50px_32px] items-center gap-x-3 rounded-md group cursor-pointer text-sm",
+                                "grid grid-cols-[30px_1fr_40px_50px_32px] items-center gap-x-3 rounded-md group cursor-pointer text-xs",
                                 activeSongId === songGroup.songId ? 'bg-primary/20' : 'hover:bg-accent'
                             )}
                             onClick={() => onSongSelected(songGroup.songId)}
                         >
                             <span className="justify-self-center text-muted-foreground">{index + 1}</span>
                             
-                            <div className="flex items-center gap-2 py-1.5 min-w-0">
-                                <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center shrink-0">
+                            <div className="flex items-center gap-2 py-1 min-w-0">
+                                <div className="w-7 h-7 rounded bg-secondary flex items-center justify-center shrink-0">
                                     {fullSong?.albumImageUrl ? (
                                         <Image 
                                             src={fullSong.albumImageUrl} 
                                             alt={songGroup.songName} 
-                                            width={32} 
-                                            height={32} 
-                                            className="rounded object-cover w-8 h-8"
+                                            width={28} 
+                                            height={28} 
+                                            className="rounded object-cover w-7 h-7"
                                         />
                                     ) : (
-                                        <Music2 className="w-4 h-4 text-muted-foreground" />
+                                        <Music2 className="w-3.5 h-3.5 text-muted-foreground" />
                                     )}
                                 </div>
-                                <span className="font-semibold text-foreground truncate">{songGroup.songName}</span>
+                                <span className="font-semibold text-foreground truncate text-sm">{songGroup.songName}</span>
                             </div>
 
                             <span className="justify-self-center text-foreground font-medium">{fullSong?.key ?? '-'}</span>
@@ -616,5 +616,3 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
 };
 
 export default SongList;
-
-    
