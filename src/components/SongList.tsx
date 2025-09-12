@@ -43,6 +43,11 @@ const blobToDataURI = (blob: Blob): Promise<string> => {
     });
 };
 
+type SongToRemove = {
+    songId: string;
+    songName: string;
+}
+
 const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSetlistSelected, onSongSelected, onSongsFetched }) => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [isLoadingSongs, setIsLoadingSongs] = useState(false);
@@ -59,6 +64,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
   const [songToDelete, setSongToDelete] = useState<Song | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [analyzingSongId, setAnalyzingSongId] = useState<string | null>(null);
+  const [songToRemoveFromSetlist, setSongToRemoveFromSetlist] = useState<SongToRemove | null>(null);
   const { toast } = useToast();
 
 
@@ -208,6 +214,13 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
             title: 'Canción eliminada',
             description: `"${songName}" se ha quitado del setlist.`,
         });
+    }
+  };
+
+  const confirmRemoveSongFromSetlist = () => {
+    if (songToRemoveFromSetlist) {
+        handleRemoveSongFromSetlist(songToRemoveFromSetlist.songId, songToRemoveFromSetlist.songName);
+        setSongToRemoveFromSetlist(null);
     }
   };
   
@@ -447,7 +460,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
                                 className="w-8 h-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive shrink-0"
                                 onClick={(e) => {
                                     e.stopPropagation(); // Evita que se seleccione la canción al eliminarla
-                                    handleRemoveSongFromSetlist(songGroup.songId, songGroup.songName)
+                                    setSongToRemoveFromSetlist({ songId: songGroup.songId, songName: songGroup.songName });
                                 }}
                             >
                                 <Trash2 className="w-4 h-4" />
@@ -477,6 +490,23 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
             <AlertDialogAction onClick={confirmDeleteSong} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
                 {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Sí, quitar de la biblioteca
+            </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog open={!!songToRemoveFromSetlist} onOpenChange={() => setSongToRemoveFromSetlist(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+                Esta acción quitará la canción <span className="font-bold text-foreground">"{songToRemoveFromSetlist?.songName}"</span> del setlist actual.
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRemoveSongFromSetlist} className="bg-destructive hover:bg-destructive/90">
+                Sí, quitar
             </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
@@ -616,3 +646,5 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
 };
 
 export default SongList;
+
+    
