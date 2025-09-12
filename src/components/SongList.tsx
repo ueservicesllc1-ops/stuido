@@ -515,7 +515,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
         </div>
 
       <Sheet open={isLibrarySheetOpen} onOpenChange={setIsLibrarySheetOpen}>
-        <SheetContent side="left" className="w-[400px] sm:w-[500px] bg-card/95 p-0">
+        <SheetContent side="left" className="w-[600px] sm:w-[700px] bg-card/95 p-0">
           <SheetHeader className="p-4 pb-0">
             <SheetTitle>Biblioteca de Canciones</SheetTitle>
             <SheetDescription>
@@ -547,7 +547,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
       </Sheet>
 
       <Sheet open={isLibrarySheetForEditingOpen} onOpenChange={setIsLibrarySheetForEditingOpen}>
-        <SheetContent side="left" className="w-[400px] sm:w-[500px] bg-card/95 p-0">
+        <SheetContent side="left" className="w-[600px] sm:w-[700px] bg-card/95 p-0">
             <SheetHeader className="p-4 pb-0">
                 <SheetTitle>Añadir Canciones a "{selectedSetlist?.name}"</SheetTitle>
                 <SheetDescription>
@@ -581,3 +581,5 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
 };
 
 export default SongList;
+
+    
