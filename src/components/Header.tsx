@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { Button } from './ui/button';
-import { Rewind, Play, Pause, Square, FastForward, Settings, RadioTower, Disc, Loader2, DownloadCloud, Timer } from 'lucide-react';
+import { Rewind, Play, Pause, Square, FastForward, Settings, RadioTower, Disc, Loader2, DownloadCloud, Timer, Volume2 } from 'lucide-react';
 import { Circle } from './icons';
 import PlaybackModeToggle from './PlaybackModeToggle';
 import type { PlaybackMode, ClickSound } from '@/app/page';
@@ -11,7 +11,6 @@ import { Progress } from './ui/progress';
 import { cn } from '@/lib/utils';
 import Timeline from './Timeline';
 import { SongStructure } from '@/ai/flows/song-structure';
-import { Slider } from './ui/slider';
 import SettingsDialog from './SettingsDialog';
 import { Input } from './ui/input';
 
@@ -86,44 +85,36 @@ const Header: React.FC<HeaderProps> = ({
     <header className="flex flex-col bg-card/50 border-b border-border p-2 gap-2 rounded-lg">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2 w-56">
-            <Slider 
-                defaultValue={[masterVolume]}
+            <div className="flex items-center gap-2 bg-secondary/30 rounded-md p-1">
+              <Volume2 className="w-5 h-5 text-muted-foreground ml-1" />
+              <Input 
+                type="number"
+                className="w-20 bg-transparent border-0 text-center font-mono text-lg text-foreground focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto"
+                value={masterVolume}
+                onChange={(e) => onMasterVolumeChange(parseInt(e.target.value, 10))}
                 max={100}
-                step={1}
-                onValueChange={(value) => onMasterVolumeChange(value[0])}
-            />
-            <Button variant="secondary" size="icon"><Disc className="w-5 h-5 text-destructive" /></Button>
-            <Button variant="secondary" size="icon"><RadioTower className="w-5 h-5" /></Button>
+                min={0}
+              />
+            </div>
         </div>
 
         <div className="flex items-center justify-center flex-grow gap-4">
             <div className="flex items-center gap-4 bg-background p-1 rounded-lg">
-                <div className="flex flex-col items-center gap-2 w-24">
+                <div className="flex items-center gap-2 bg-secondary/30 rounded-md p-1">
                     <Button 
                         variant={isClickEnabled ? 'default' : 'secondary'}
                         size="icon" 
-                        className="w-10 h-10"
+                        className="w-8 h-8"
                         onClick={onToggleClick}
                     >
                         <Timer className="w-5 h-5" />
                     </Button>
-                    <Slider
-                        defaultValue={[clickVolume]}
-                        max={100}
-                        step={1}
-                        onValueChange={(value) => onClickVolumeChange(value[0])}
-                        className="w-20"
-                    />
-                </div>
-
-                <div className="flex flex-col items-center justify-center bg-secondary/30 rounded-md w-24 h-16">
                      <Input
                         type="number"
-                        className="bg-transparent border-0 text-center text-3xl font-mono font-bold text-primary focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto"
+                        className="w-16 bg-transparent border-0 text-center text-lg font-mono font-bold text-primary focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto"
                         value={clickTempo}
                         onChange={(e) => onTempoChange(parseInt(e.target.value, 10))}
                     />
-                    <span className="text-xs text-muted-foreground -mt-1">BPM</span>
                 </div>
 
                 <div className="flex flex-col items-center justify-center bg-secondary/30 rounded-md w-24 h-16">
