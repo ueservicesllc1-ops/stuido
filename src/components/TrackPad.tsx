@@ -149,7 +149,7 @@ const TrackPad: React.FC<TrackPadProps> = ({
         </div>
        )}
 
-      <div className="flex gap-1.5 w-full mt-1">
+      <div className="flex gap-1.5 w-full mt-2">
         <Button
           onClick={onMuteToggle}
           variant={isMuted ? 'secondary' : 'ghost'}
@@ -180,5 +180,3 @@ const TrackPad: React.FC<TrackPadProps> = ({
 };
 
 export default TrackPad;
-
-    

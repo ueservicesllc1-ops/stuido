@@ -24,7 +24,7 @@ const Slider = React.forwardRef<
     <SliderPrimitive.Track className={cn(
         "relative grow overflow-hidden rounded-sm bg-input", // Less rounded, darker background
         orientation === 'horizontal' && 'h-1.5 w-full',
-        orientation === 'vertical' && 'h-full w-1'
+        orientation === 'vertical' && 'h-full w-1.5'
     )}>
       <SliderPrimitive.Range className={cn(
           "absolute bg-primary",
@@ -34,8 +34,8 @@ const Slider = React.forwardRef<
       )} />
     </SliderPrimitive.Track>
     <SliderPrimitive.Thumb className={cn(
-      "block h-5 w-3.5 rounded-sm border-2 border-border bg-accent ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 shadow-md",
-      "data-[orientation=horizontal]:h-3.5 data-[orientation=horizontal]:w-5",
+      "block h-6 w-4 rounded-sm border-2 border-border bg-accent ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 shadow-md",
+      "data-[orientation=horizontal]:h-4 data-[orientation=horizontal]:w-6",
       thumbClassName
       )} />
   </SliderPrimitive.Root>
