@@ -375,7 +375,7 @@ const DawPage = () => {
         const gainNode = context.createGain();
         const analyserNode = context.createAnalyser();
         analyserNode.fftSize = 256;
-        analyserNode.smoothingTimeConstant = 0.3; // Make it a bit smoother
+        analyserNode.smoothingTimeConstant = 0.1; // More responsive for peaks
         
         source.connect(pannerNode);
         pannerNode.connect(gainNode);
