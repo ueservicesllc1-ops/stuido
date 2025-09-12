@@ -52,6 +52,7 @@ const songFormSchema = z.object({
   tempo: z.coerce.number().min(40, { message: 'El tempo debe ser al menos 40 BPM.' }).max(300, { message: 'El tempo no puede ser mayor a 300 BPM.' }),
   key: z.string().min(1, { message: 'La tonalidad es requerida.' }),
   timeSignature: z.string().min(3, { message: 'El compás es requerido.' }),
+  albumImageUrl: z.string().url({ message: 'Por favor, introduce una URL válida.' }).optional().or(z.literal('')),
   tracks: z.array(trackSchema).min(1, { message: 'Debes subir al menos una pista.' }),
 });
 
@@ -79,6 +80,7 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
       tempo: 120,
       key: 'C',
       timeSignature: '4/4',
+      albumImageUrl: '',
       tracks: [],
     },
   });
@@ -95,6 +97,7 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
       tempo: 120,
       key: 'C',
       timeSignature: '4/4',
+      albumImageUrl: '',
       tracks: [],
     });
     setIsUploading(false);
@@ -218,6 +221,7 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
           tempo: data.tempo,
           key: data.key,
           timeSignature: data.timeSignature,
+          albumImageUrl: data.albumImageUrl,
           tracks: uploadedTracks,
         };
         
@@ -292,6 +296,9 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
                 )}/>
                 <FormField control={form.control} name="artist" render={({ field }) => (
                   <FormItem><FormLabel>Artista</FormLabel><FormControl><Input placeholder="Ej: Elevation Worship" {...field} /></FormControl><FormMessage /></FormItem>
+                )}/>
+                <FormField control={form.control} name="albumImageUrl" render={({ field }) => (
+                  <FormItem><FormLabel>URL de la carátula (opcional)</FormLabel><FormControl><Input placeholder="https://ejemplo.com/imagen.jpg" {...field} /></FormControl><FormMessage /></FormItem>
                 )}/>
                 <div className="grid grid-cols-3 gap-4">
                     <FormField control={form.control} name="tempo" render={({ field }) => (

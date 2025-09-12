@@ -1,8 +1,9 @@
 
 'use client';
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { Button } from './ui/button';
-import { AlignJustify, Library, MoreHorizontal, Music, Loader2, Calendar, X, PlusCircle, DownloadCloud, Trash2, Upload, Globe, ScanSearch } from 'lucide-react';
+import { AlignJustify, Library, MoreHorizontal, Music, Loader2, Calendar, X, PlusCircle, DownloadCloud, Trash2, Upload, Globe, ScanSearch, Music2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -396,31 +397,55 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
 
 
     return (
-        <div className="space-y-3">
-            {groupedSongs.map((songGroup) => (
-                <div 
-                    key={songGroup.songId} 
-                    className={cn(
-                        "flex items-center gap-3 p-2 rounded-md group cursor-pointer",
-                        activeSongId === songGroup.songId ? 'bg-primary/20' : 'hover:bg-accent'
-                    )}
-                    onClick={() => onSongSelected(songGroup.songId)}
-                >
-                    <Music className="w-5 h-5 text-muted-foreground" />
-                    <p className="font-semibold text-foreground flex-grow">{songGroup.songName}</p>
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="w-8 h-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
-                        onClick={(e) => {
-                            e.stopPropagation(); // Evita que se seleccione la canción al eliminarla
-                            handleRemoveSongFromSetlist(songGroup.songId, songGroup.songName)
-                        }}
+        <div className="space-y-1">
+            {groupedSongs.map((songGroup) => {
+                const fullSong = songs.find(s => s.id === songGroup.songId);
+
+                return (
+                    <div 
+                        key={songGroup.songId} 
+                        className={cn(
+                            "flex items-center gap-3 p-2 rounded-md group cursor-pointer",
+                            activeSongId === songGroup.songId ? 'bg-primary/20' : 'hover:bg-accent'
+                        )}
+                        onClick={() => onSongSelected(songGroup.songId)}
                     >
-                        <Trash2 className="w-4 h-4" />
-                    </Button>
-                </div>
-            ))}
+                        <div className="w-10 h-10 rounded-md bg-secondary flex items-center justify-center shrink-0">
+                            {fullSong?.albumImageUrl ? (
+                                <Image 
+                                    src={fullSong.albumImageUrl} 
+                                    alt={songGroup.songName} 
+                                    width={40} 
+                                    height={40} 
+                                    className="rounded-md object-cover w-10 h-10"
+                                />
+                            ) : (
+                                <Music2 className="w-5 h-5 text-muted-foreground" />
+                            )}
+                        </div>
+
+                        <div className="flex-grow min-w-0">
+                            <p className="font-semibold text-foreground truncate">{songGroup.songName}</p>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                <span>Key: {fullSong?.key ?? '-'}</span>
+                                <span>{fullSong?.tempo ?? '--'} BPM</span>
+                            </div>
+                        </div>
+
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="w-8 h-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive shrink-0"
+                            onClick={(e) => {
+                                e.stopPropagation(); // Evita que se seleccione la canción al eliminarla
+                                handleRemoveSongFromSetlist(songGroup.songId, songGroup.songName)
+                            }}
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </Button>
+                    </div>
+                )
+            })}
         </div>
     );
 };
@@ -581,5 +606,3 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
 };
 
 export default SongList;
-
-    
