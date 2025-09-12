@@ -26,13 +26,26 @@ interface TrackPadProps {
   isPanVisible: boolean;
 }
 
-const FaderTickMarks = React.memo(() => (
-    <div className="absolute top-0 left-1 h-full flex flex-col justify-between py-2 pointer-events-none">
-        {Array.from({ length: 11 }).map((_, i) => (
-            <div key={i} className="w-1.5 h-px bg-muted-foreground/40" />
-        ))}
-    </div>
-));
+const FaderTickMarks = React.memo(() => {
+    const marks = [
+        { value: 100, label: "+10" },
+        { value: 87.5, label: "0" },
+        { value: 75, label: "-10" },
+        { value: 62.5, label: "-20" },
+        { value: 50, label: "-30" },
+        { value: 0, label: "-∞" },
+    ];
+    return (
+        <div className="absolute top-0 left-0 h-full w-4 flex flex-col justify-between py-2 pointer-events-none text-[8px] text-muted-foreground/70">
+            {marks.map((mark) => (
+                <div key={mark.label} className="relative flex items-center">
+                    <span className="absolute -left-3.5 text-center w-3">{mark.label}</span>
+                    <div className="w-1.5 h-px bg-muted-foreground/50" />
+                </div>
+            ))}
+        </div>
+    );
+});
 FaderTickMarks.displayName = 'FaderTickMarks';
 
 
@@ -65,21 +78,13 @@ const TrackPad: React.FC<TrackPadProps> = React.memo(({
 
   const rangeColorClass = useMemo(() => {
     if (isSpecialTrack) return 'bg-destructive';
-    switch (playbackMode) {
-      case 'hybrid':
-        return 'bg-yellow-500';
-      case 'offline':
-        return 'bg-green-500';
-      case 'online':
-      default:
-        return 'bg-primary';
-    }
-  }, [isSpecialTrack, playbackMode]);
+    return 'bg-primary';
+  }, [isSpecialTrack]);
 
   return (
     <div className="flex flex-col items-center gap-2">
       {/* Fader channel */}
-      <div className="relative h-48 w-12 flex justify-center items-center">
+      <div className="relative h-48 w-12 flex justify-center items-center bg-input p-1 rounded-sm border border-black/50">
          {isDisabled && (
            <div className="absolute inset-0 flex justify-center items-center bg-card/80 z-20 rounded-lg">
               <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -87,7 +92,7 @@ const TrackPad: React.FC<TrackPadProps> = React.memo(({
          )}
          
         {/* Fader Slot */}
-        <div className="relative h-full w-4 rounded-full bg-input">
+        <div className="relative h-full w-full flex justify-center">
             <FaderTickMarks />
             <Slider
                 value={sliderValue}
@@ -97,19 +102,18 @@ const TrackPad: React.FC<TrackPadProps> = React.memo(({
                 onValueChange={(val) => onVolumeChange(val[0])}
                 disabled={isDisabled}
                 className={cn(
-                  'h-full w-full',
+                  'h-full w-4',
                   (isSolo || isMuted || isDisabled) && 'opacity-60'
                 )}
                 trackClassName="bg-transparent"
-                rangeClassName={cn(rangeColorClass, 'w-full rounded-full')}
+                rangeClassName={cn(rangeColorClass)}
                 thumbClassName={cn(
                     "w-full h-2 rounded-sm border-none bg-muted-foreground hover:bg-foreground transition-colors",
                     (isSolo || isMuted) && '!bg-muted-foreground/50'
                 )}
             />
+            {name.trim().toUpperCase() !== 'CLICK' && <VuMeter level={vuMeterLevel} />}
         </div>
-
-        {name.trim().toUpperCase() !== 'CLICK' && <VuMeter level={vuMeterLevel} />}
       </div>
 
        <div className="flex items-center justify-center w-full mt-1">
@@ -146,7 +150,7 @@ const TrackPad: React.FC<TrackPadProps> = React.memo(({
           variant="secondary"
           disabled={isDisabled}
           className={cn(
-            'w-full h-7 text-xs font-bold rounded-full',
+            'w-full h-7 text-xs font-bold rounded-sm',
              isMuted ? 'bg-primary text-primary-foreground' : 'bg-secondary',
              isDisabled && '!bg-secondary/30 !text-muted-foreground'
           )}
@@ -158,7 +162,7 @@ const TrackPad: React.FC<TrackPadProps> = React.memo(({
           variant="secondary"
           disabled={isDisabled || isSpecialTrack}
           className={cn(
-            'w-full h-7 text-xs font-bold rounded-full',
+            'w-full h-7 text-xs font-bold rounded-sm',
             isSolo ? 'bg-yellow-500 text-black' : 'bg-secondary',
              (isDisabled || isSpecialTrack) && '!bg-secondary/30 !text-muted-foreground'
           )}

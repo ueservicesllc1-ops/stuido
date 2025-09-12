@@ -20,7 +20,7 @@ const Slider = React.forwardRef<
     className={cn(
       "relative flex touch-none select-none items-center group",
       orientation === 'horizontal' && 'h-5 w-full',
-      orientation === 'vertical' && 'h-full w-full flex-col items-center justify-center',
+      orientation === 'vertical' && 'h-full w-full flex-col',
       className
     )}
     {...props}
@@ -32,7 +32,7 @@ const Slider = React.forwardRef<
         trackClassName
     )}>
       <SliderPrimitive.Range className={cn(
-          "absolute bg-primary",
+          "absolute",
           orientation === 'horizontal' && 'h-full',
           orientation === 'vertical' && 'w-full bottom-0',
           rangeClassName
@@ -40,7 +40,7 @@ const Slider = React.forwardRef<
     </SliderPrimitive.Track>
     <SliderPrimitive.Thumb 
         className={cn(
-            "block h-4 w-4 rounded-full border-2 border-primary bg-background shadow transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+            "block h-2 w-full rounded-sm border-none bg-muted-foreground shadow transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
             thumbClassName
         )}
     />
