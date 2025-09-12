@@ -27,18 +27,30 @@ export interface Song extends NewSong {
     structure?: SongStructure;
 }
 
+const toTitleCase = (str: string) => {
+  if (!str) return '';
+  return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+};
+
+
 export async function saveSong(data: NewSong) {
   try {
     const songsCollection = collection(db, 'songs');
+
+    const formattedData = {
+        ...data,
+        name: toTitleCase(data.name),
+        artist: toTitleCase(data.artist),
+    };
     
     const newDoc = await addDoc(songsCollection, {
-      ...data,
+      ...formattedData,
       createdAt: serverTimestamp(),
     });
 
     const songData: Song = {
       id: newDoc.id,
-      ...data
+      ...formattedData
     }
     
     // Disparar el análisis de estructura en segundo plano
