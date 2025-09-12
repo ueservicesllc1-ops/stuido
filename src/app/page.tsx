@@ -285,18 +285,20 @@ const DawPage = () => {
       const node = trackNodesRef.current[trackId];
       if (node && node.analyserNode) {
         const dataArray = new Uint8Array(node.analyserNode.frequencyBinCount);
-        node.analyserNode.getByteTimeDomainData(dataArray);
+        // Use getByteFrequencyData for a better peak detection for VU meters
+        node.analyserNode.getByteFrequencyData(dataArray);
         
         let peak = 0;
         for (let i = 0; i < dataArray.length; i++) {
-          const value = Math.abs(dataArray[i] - 128);
-          if (value > peak) {
-            peak = value;
+          if (dataArray[i] > peak) {
+            peak = dataArray[i];
           }
         }
         
-        const normalizedPeak = (peak / 128) * 100;
-        newVuData[trackId] = Math.min(100, normalizedPeak * 1.5);
+        // Normalize the peak (0-255) to a 0-100 scale.
+        // A non-linear scale can make it feel more responsive.
+        const normalizedPeak = (peak / 255) * 100;
+        newVuData[trackId] = Math.min(100, normalizedPeak * 1.2); 
       }
     });
     setVuData(newVuData);
@@ -373,6 +375,7 @@ const DawPage = () => {
         const gainNode = context.createGain();
         const analyserNode = context.createAnalyser();
         analyserNode.fftSize = 256;
+        analyserNode.smoothingTimeConstant = 0.3; // Make it a bit smoother
         
         source.connect(pannerNode);
         pannerNode.connect(gainNode);
@@ -618,5 +621,7 @@ const DawPage = () => {
 };
 
 export default DawPage;
+
+    
 
     
