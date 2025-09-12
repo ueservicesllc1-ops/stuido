@@ -32,7 +32,7 @@ const DawPage = () => {
     analyserNode: AnalyserNode;
   }>>({});
   const [vuData, setVuData] = useState<Record<string, number>>({});
-  const [audioBuffers, setAudioBuffers] = useState<Record<string, AudioBuffer>>({});
+  const audioBuffersRef = useRef<Record<string, AudioBuffer>>({});
   const [loadingTracks, setLoadingTracks] = useState<string[]>([]);
 
   // --- Metronome State ---
@@ -81,9 +81,9 @@ const DawPage = () => {
   // Set readiness to play
   useEffect(() => {
     const activeTracksForSong = tracks.filter(t => t.songId === activeSongId);
-    // All tracks loaded
-    const allTracksLoaded = loadingTracks.length === 0 && activeTracksForSong.length > 0;
-    setIsReadyToPlay(allTracksLoaded);
+    // All tracks for the current song are loaded if they are in the audioBuffersRef
+    const allTracksLoaded = activeTracksForSong.length > 0 && activeTracksForSong.every(t => audioBuffersRef.current[t.url]);
+    setIsReadyToPlay(allTracksLoaded && loadingTracks.length === 0);
   }, [loadingTracks, tracks, activeSongId]);
 
 
@@ -219,14 +219,23 @@ const DawPage = () => {
     setSongTempo(currentSong?.tempo || null);
     
     handleStop(true); // Stop without fade on song change
+    
     const tracksForSong = tracks.filter(t => t.songId === activeSongId);
-    setLoadingTracks(tracksForSong.map(t => t.id));
+    const tracksToLoad = tracksForSong.filter(t => !audioBuffersRef.current[t.url]);
+    
+    if (tracksToLoad.length === 0) {
+      // All tracks for this song are already in memory
+      const maxDuration = Math.max(0, ...tracksForSong.map(t => audioBuffersRef.current[t.url]?.duration || 0));
+      setDuration(maxDuration);
+      return;
+    }
+
+    setLoadingTracks(tracksToLoad.map(t => t.id));
 
     const loadAudioData = async () => {
-      const newAudioBuffers: Record<string, AudioBuffer> = {};
-      let maxDuration = 0;
-      
-      await Promise.all(tracksForSong.map(async (track) => {
+      let maxDuration = Math.max(0, ...tracksForSong.filter(t => audioBuffersRef.current[t.url]).map(t => audioBuffersRef.current[t.url].duration));
+
+      await Promise.all(tracksToLoad.map(async (track) => {
         try {
           let audioData: ArrayBuffer;
           let blob = await getCachedAudio(track.url);
@@ -237,13 +246,13 @@ const DawPage = () => {
             if (!response.ok) throw new Error(`Failed to fetch ${track.url}`);
             blob = await response.blob();
             if (playbackMode !== 'online') {
-              cacheAudio(track.url, blob);
+              await cacheAudio(track.url, blob);
             }
           }
           
           audioData = await blob.arrayBuffer();
           const audioBuffer = await audioContextRef.current!.decodeAudioData(audioData);
-          newAudioBuffers[track.id] = audioBuffer;
+          audioBuffersRef.current[track.url] = audioBuffer;
           if (audioBuffer.duration > maxDuration) {
             maxDuration = audioBuffer.duration;
           }
@@ -254,7 +263,6 @@ const DawPage = () => {
         }
       }));
       
-      setAudioBuffers(newAudioBuffers);
       setDuration(maxDuration);
     };
 
@@ -285,20 +293,16 @@ const DawPage = () => {
       const node = trackNodesRef.current[trackId];
       if (node && node.analyserNode) {
         const dataArray = new Uint8Array(node.analyserNode.frequencyBinCount);
-        // Use getByteFrequencyData for a better peak detection for VU meters
         node.analyserNode.getByteFrequencyData(dataArray);
         
         let peak = 0;
         for (let i = 0; i < dataArray.length; i++) {
-          if (dataArray[i] > peak) {
-            peak = dataArray[i];
-          }
+          peak = Math.max(peak, dataArray[i]);
         }
         
         // Normalize the peak (0-255) to a 0-100 scale.
-        // A non-linear scale can make it feel more responsive.
         const normalizedPeak = (peak / 255) * 100;
-        newVuData[trackId] = Math.min(100, normalizedPeak * 1.2); 
+        newVuData[trackId] = normalizedPeak; 
       }
     });
     setVuData(newVuData);
@@ -366,7 +370,7 @@ const DawPage = () => {
     playbackStartOffsetRef.current = playbackPosition;
 
     activeTracks.forEach(track => {
-      const buffer = audioBuffers[track.id];
+      const buffer = audioBuffersRef.current[track.url];
       if (buffer) {
         const source = context.createBufferSource();
         source.buffer = buffer;
@@ -375,7 +379,10 @@ const DawPage = () => {
         const gainNode = context.createGain();
         const analyserNode = context.createAnalyser();
         analyserNode.fftSize = 256;
-        analyserNode.smoothingTimeConstant = 0.1; // More responsive for peaks
+        // More responsive VU meter settings
+        analyserNode.minDecibels = -90;
+        analyserNode.maxDecibels = -10;
+        analyserNode.smoothingTimeConstant = 0;
         
         source.connect(pannerNode);
         pannerNode.connect(gainNode);
@@ -387,7 +394,7 @@ const DawPage = () => {
 
         pannerNode.pan.setValueAtTime(panValue, now);
         gainNode.gain.setValueAtTime(0, now); // Empezar en silencio
-        gainNode.gain.linearRampToValueAtTime(finalVolume, now + fadeOutDuration); // Fade in
+        gainNode.gain.linearRampToValueAtTime(finalVolume, now + 0.01); // Quick fade in
         
         source.start(now, playbackPosition);
 
@@ -400,7 +407,7 @@ const DawPage = () => {
     isPlayingRef.current = true;
     animationFrameRef.current = requestAnimationFrame(updateVuMeters);
 
-  }, [isReadyToPlay, isPlaying, activeTracks, audioBuffers, playbackPosition, fadeOutDuration, getGainValue, pans, updateVuMeters]);
+  }, [isReadyToPlay, isPlaying, activeTracks, playbackPosition, getGainValue, pans, updateVuMeters]);
 
   const handleFadeOutAndStop = useCallback((onStopComplete?: () => void) => {
     if (!audioContextRef.current || !isPlayingRef.current) {
@@ -481,10 +488,14 @@ const DawPage = () => {
   const handleSeek = (newPosition: number) => {
     if (!isReadyToPlay || newPosition < 0 || newPosition > duration) return;
   
+    const wasPlaying = isPlaying;
+    if (wasPlaying) {
+      handleStop(true);
+    }
+  
     setPlaybackPosition(newPosition);
   
-    if (isPlaying) {
-      handleStop(true);
+    if (wasPlaying) {
       // Use a timeout to ensure the state has updated before playing again
       setTimeout(() => {
         handlePlay();
@@ -537,7 +548,7 @@ const DawPage = () => {
   }
 
   // --- Render ---
-  const totalTracksForSong = activeTracks.length;
+  const totalTracksForSong = tracks.filter(t => t.songId === activeSongId).length;
   const loadedTracksCount = totalTracksForSong - loadingTracks.length;
   const loadingProgress = totalTracksForSong > 0 ? (loadedTracksCount / totalTracksForSong) * 100 : 0;
   const showLoadingBar = loadingTracks.length > 0 && totalTracksForSong > 0;
@@ -621,6 +632,8 @@ const DawPage = () => {
 };
 
 export default DawPage;
+
+    
 
     
 
