@@ -656,7 +656,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
             <div className="grid grid-cols-2 gap-6 p-6">
                  {/* Columna Izquierda: Detalles del Setlist */}
                 <div className="flex flex-col gap-4">
-                     <div className="aspect-square w-full rounded-lg bg-secondary overflow-hidden">
+                     <div className="aspect-square w-1/2 rounded-lg bg-secondary overflow-hidden">
                         <Image
                             src="https://picsum.photos/seed/setlist1/600/600"
                             width={600}
