@@ -141,10 +141,10 @@ const TrackPad: React.FC<TrackPadProps> = ({
                   onValueChange={handlePanChange}
                   disabled={isDisabled}
                   className={cn(
-                      '[&>span:first-child]:bg-secondary',
+                      'w-full h-4',
                       (isDisabled) && 'opacity-50'
                   )}
-                  thumbClassName="h-4 w-2 rounded-sm"
+                  thumbClassName="h-3.5 w-2"
               />
         </div>
        )}
