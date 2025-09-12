@@ -15,7 +15,7 @@ import { Separator } from './ui/separator';
 import { Label } from './ui/label';
 import { Slider } from './ui/slider';
 import { Switch } from './ui/switch';
-import { ChevronRight, X, ChevronLeft, Check } from 'lucide-react';
+import { ChevronRight, X, ChevronLeft, Check, Heart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ClickSound } from '@/app/page';
 
@@ -173,6 +173,27 @@ const SettingsDialog = ({
     }
   }
 
+  const renderAboutSettings = () => {
+    return (
+      <div className="max-w-md mx-auto text-center">
+        <h2 className="text-2xl font-bold text-primary">Multitrack Player</h2>
+        <p className="text-muted-foreground mb-6">Versión 1.0.0</p>
+        <Separator />
+        <div className="py-6">
+            <p className="text-foreground">
+                Esta aplicación es un reproductor de audio multipista diseñado para músicos y directores de alabanza que necesitan una solución flexible y potente para sus presentaciones en vivo.
+            </p>
+        </div>
+        <Separator />
+        <div className="py-6 flex flex-col items-center gap-2 text-muted-foreground">
+            <p>Desarrollado con</p>
+            <Heart className="w-5 h-5 text-destructive fill-destructive" />
+            <p className="font-semibold">por Freedom Labs</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Sheet onOpenChange={(isOpen) => {
         if (!isOpen) {
@@ -227,7 +248,12 @@ const SettingsDialog = ({
                        {renderGeneralSettings()}
                     </div>
                 )}
-                 {activeTab !== 'General' && (
+                {activeTab === 'About' && (
+                    <div className="flex items-center justify-center h-full">
+                        {renderAboutSettings()}
+                    </div>
+                )}
+                {activeTab !== 'General' && activeTab !== 'About' && (
                     <div className="flex items-center justify-center h-full">
                         <p className="text-muted-foreground text-2xl">Settings for {activeTab}</p>
                     </div>
@@ -240,5 +266,3 @@ const SettingsDialog = ({
 };
 
 export default SettingsDialog;
-
-    
