@@ -115,8 +115,8 @@ export async function getSongs() {
             const data = doc.data();
             return {
                 id: doc.id,
-                name: data.name,
-                artist: data.artist,
+                name: toTitleCase(data.name),
+                artist: toTitleCase(data.artist),
                 tempo: data.tempo,
                 key: data.key,
                 timeSignature: data.timeSignature,
