@@ -10,7 +10,7 @@ interface VuMeterProps {
 
 const NUM_DOTS = 16; // Número total de "LEDs" en el vúmetro
 
-const VuMeter: React.FC<VuMeterProps> = ({ level }) => {
+const VuMeter: React.FC<VuMeterProps> = React.memo(({ level }) => {
   // Calcula cuántos puntos deben estar encendidos
   const litDots = Math.ceil((level / 100) * NUM_DOTS);
 
@@ -43,6 +43,8 @@ const VuMeter: React.FC<VuMeterProps> = ({ level }) => {
       {dots}
     </div>
   );
-};
+});
+
+VuMeter.displayName = 'VuMeter';
 
 export default VuMeter;

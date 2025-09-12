@@ -26,7 +26,7 @@ interface TrackPadProps {
   isPanVisible: boolean;
 }
 
-const TrackPad: React.FC<TrackPadProps> = ({
+const TrackPad: React.FC<TrackPadProps> = React.memo(({
   track,
   isLoading,
   isMuted,
@@ -177,6 +177,8 @@ const TrackPad: React.FC<TrackPadProps> = ({
       </div>
     </div>
   );
-};
+});
+
+TrackPad.displayName = 'TrackPad';
 
 export default TrackPad;
