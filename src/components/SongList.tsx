@@ -427,14 +427,15 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
                         <div 
                             key={songGroup.songId} 
                             className={cn(
-                                "grid grid-cols-[30px_1fr_40px_50px_32px] items-center gap-x-3 rounded-md group cursor-pointer text-xs",
+                                "grid grid-cols-[30px_1fr_40px_50px_32px] items-center gap-x-3 rounded-md group cursor-pointer",
+                                "py-1 text-sm", // reduce vertical padding a bit
                                 activeSongId === songGroup.songId ? 'bg-primary/20' : 'hover:bg-accent'
                             )}
                             onClick={() => onSongSelected(songGroup.songId)}
                         >
                             <span className="justify-self-center text-muted-foreground">{index + 1}</span>
                             
-                            <div className="flex items-center gap-2 py-1 min-w-0">
+                            <div className="flex items-center gap-2 min-w-0">
                                 <div className="w-7 h-7 rounded bg-secondary flex items-center justify-center shrink-0">
                                     {fullSong?.albumImageUrl ? (
                                         <Image 
@@ -448,7 +449,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
                                         <Music2 className="w-3.5 h-3.5 text-muted-foreground" />
                                     )}
                                 </div>
-                                <span className="font-semibold text-foreground truncate text-sm">{songGroup.songName}</span>
+                                <span className="font-semibold text-foreground truncate">{songGroup.songName}</span>
                             </div>
 
                             <span className="justify-self-center text-foreground font-medium">{fullSong?.key ?? '-'}</span>
@@ -457,7 +458,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
                             <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className="w-8 h-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive shrink-0"
+                                className="w-8 h-8 text-muted-foreground hover:text-destructive shrink-0"
                                 onClick={(e) => {
                                     e.stopPropagation(); // Evita que se seleccione la canción al eliminarla
                                     setSongToRemoveFromSetlist({ songId: songGroup.songId, songName: songGroup.songName });
@@ -523,7 +524,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
                     {selectedSetlist ? 'Setlists' : 'Setlists'}
                 </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[300px] sm:w-[400px] bg-card/95">
+            <SheetContent side="right" className="w-[600px] sm:w-[700px] bg-card/95">
                 <SheetHeader>
                     <SheetTitle>Setlists</SheetTitle>
                     <SheetDescription>
@@ -646,5 +647,3 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
 };
 
 export default SongList;
-
-    
