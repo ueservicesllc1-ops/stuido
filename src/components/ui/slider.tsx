@@ -3,6 +3,7 @@
 
 import * as React from "react"
 import * as SliderPrimitive from "@radix-ui/react-slider"
+import Image from 'next/image';
 
 import { cn } from "@/lib/utils"
 
@@ -16,13 +17,13 @@ const Slider = React.forwardRef<
     className={cn(
       "relative flex touch-none select-none items-center group",
       orientation === 'horizontal' && 'h-5 w-full',
-      orientation === 'vertical' && 'h-full w-5 flex-col items-center', // Wider for retro feel
+      orientation === 'vertical' && 'h-full w-5 flex-col items-center',
       className
     )}
     {...props}
   >
     <SliderPrimitive.Track className={cn(
-        "relative grow overflow-hidden rounded-sm bg-input", // Less rounded, darker background
+        "relative grow overflow-hidden rounded-sm bg-input",
         orientation === 'horizontal' && 'h-1.5 w-full',
         orientation === 'vertical' && 'h-full w-1.5'
     )}>
@@ -33,15 +34,25 @@ const Slider = React.forwardRef<
           rangeClassName
       )} />
     </SliderPrimitive.Track>
-    <SliderPrimitive.Thumb className={cn(
-      "block h-7 w-5 rounded-sm border-2 border-border bg-accent ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 shadow-md",
-      "data-[orientation=horizontal]:h-5 data-[orientation=horizontal]:w-7",
-      thumbClassName
-      )} />
+    <SliderPrimitive.Thumb asChild>
+      <div className={cn(
+        "block ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+        "data-[orientation=horizontal]:h-5 data-[orientation=horizontal]:w-7",
+        "data-[orientation=vertical]:h-7 data-[orientation=vertical]:w-5",
+        "relative"
+      )}>
+        <Image 
+          src="/images/b1.png" 
+          alt="Slider Thumb" 
+          layout="fill" 
+          objectFit="contain"
+          className={cn(thumbClassName)}
+          unoptimized
+        />
+      </div>
+    </SliderPrimitive.Thumb>
   </SliderPrimitive.Root>
 ))
 Slider.displayName = SliderPrimitive.Root.displayName
 
 export { Slider }
-
-    
