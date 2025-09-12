@@ -119,7 +119,7 @@ const TrackPad: React.FC<TrackPadProps> = React.memo(({
             )}
             rangeClassName={rangeColorClass}
         />
-        <VuMeter level={vuMeterLevel} />
+        {!isSpecialTrack && <VuMeter level={vuMeterLevel} />}
       </div>
 
        <div className="flex items-center justify-center w-full mt-2">
