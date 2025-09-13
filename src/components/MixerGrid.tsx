@@ -41,7 +41,7 @@ const MixerGrid: React.FC<MixerGridProps> = ({
   const isSoloActive = soloTracks.length > 0;
 
   return (
-    <div className="grid grid-cols-6 gap-4 items-start">
+    <div className="grid grid-cols-7 gap-2 items-start">
       {tracks.map(track => {
         const isMuted = mutedTracks.includes(track.id);
         const isSolo = soloTracks.includes(track.id);
@@ -77,3 +77,4 @@ const MixerGrid: React.FC<MixerGridProps> = ({
 export default MixerGrid;
 
     
+
