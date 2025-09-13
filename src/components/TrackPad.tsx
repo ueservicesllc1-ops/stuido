@@ -27,18 +27,21 @@ interface TrackPadProps {
 }
 
 const FaderTickMarks = React.memo(() => {
+    // Escala más parecida a un fader real (aproximación)
     const marks = [
         { value: 100, label: "+10" },
+        { value: 93.75, label: "+5" },
         { value: 87.5, label: "0" },
+        { value: 81.25, label: "-5" },
         { value: 75, label: "-10" },
         { value: 62.5, label: "-20" },
         { value: 50, label: "-30" },
         { value: 0, label: "-∞" },
     ];
     return (
-        <div className="absolute top-0 left-0 h-full w-4 flex flex-col justify-between py-2 pointer-events-none text-[8px] text-muted-foreground/70">
+        <div className="absolute top-0 left-0 h-full w-4 py-2 pointer-events-none text-[8px] text-muted-foreground/70">
             {marks.map((mark) => (
-                <div key={mark.label} className="relative flex items-center" style={{top: `${100 - mark.value}%`}}>
+                <div key={mark.label} className="absolute w-full flex items-center" style={{bottom: `${mark.value}%`}}>
                     <span className="absolute -left-3.5 text-center w-3">{mark.label}</span>
                     <div className="w-1.5 h-px bg-muted-foreground/50" />
                 </div>
