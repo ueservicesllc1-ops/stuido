@@ -21,6 +21,7 @@ export interface NewSong {
   timeSignature: string;
   tracks: TrackFile[];
   albumImageUrl?: string;
+  lyrics?: string;
 }
 
 export interface Song extends NewSong {
@@ -124,6 +125,7 @@ export async function getSongs() {
                 tracks: data.tracks || [],
                 structure: data.structure,
                 albumImageUrl: data.albumImageUrl,
+                lyrics: data.lyrics,
             };
         });
 

@@ -29,6 +29,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { ScrollArea } from './ui/scroll-area';
 import { saveSong, NewSong, TrackFile } from '@/actions/songs';
 import { Progress } from './ui/progress';
+import { Textarea } from './ui/textarea';
 
 
 const ACCEPTED_AUDIO_TYPES = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio/x-m4a', 'audio/mp3'];
@@ -53,6 +54,7 @@ const songFormSchema = z.object({
   key: z.string().min(1, { message: 'La tonalidad es requerida.' }),
   timeSignature: z.string().min(3, { message: 'El compás es requerido.' }),
   albumImageUrl: z.string().url({ message: 'Por favor, introduce una URL válida.' }).optional().or(z.literal('')),
+  lyrics: z.string().optional(),
   tracks: z.array(trackSchema).min(1, { message: 'Debes subir al menos una pista.' }),
 });
 
@@ -81,6 +83,7 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
       key: 'C',
       timeSignature: '4/4',
       albumImageUrl: '',
+      lyrics: '',
       tracks: [],
     },
   });
@@ -98,6 +101,7 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
       key: 'C',
       timeSignature: '4/4',
       albumImageUrl: '',
+      lyrics: '',
       tracks: [],
     });
     setIsUploading(false);
@@ -222,6 +226,7 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
           key: data.key,
           timeSignature: data.timeSignature,
           albumImageUrl: data.albumImageUrl,
+          lyrics: data.lyrics,
           tracks: uploadedTracks,
         };
         
@@ -311,6 +316,10 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
                         <FormItem><FormLabel>Compás</FormLabel><FormControl><Input placeholder="4/4" {...field} /></FormControl><FormMessage /></FormItem>
                     )}/>
                 </div>
+                
+                 <FormField control={form.control} name="lyrics" render={({ field }) => (
+                  <FormItem><FormLabel>Letra de la canción (opcional)</FormLabel><FormControl><Textarea placeholder="[Intro]&#10;[Verso 1]&#10;..." {...field} rows={6} className="bg-input" /></FormControl><FormMessage /></FormItem>
+                )}/>
                 
                 <div className="space-y-2">
                    <FormLabel>Archivos de Pistas</FormLabel>

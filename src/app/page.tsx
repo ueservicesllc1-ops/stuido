@@ -9,6 +9,7 @@ import { getSetlists, Setlist, SetlistSong } from '@/actions/setlists';
 import { cacheAudio, getCachedAudio } from '@/lib/audiocache';
 import { Song } from '@/actions/songs';
 import { SongStructure } from '@/ai/flows/song-structure';
+import LyricsDisplay from '@/components/LyricsDisplay';
 
 export type PlaybackMode = 'online' | 'hybrid' | 'offline';
 export type ClickSound = 'beep' | 'click';
@@ -22,6 +23,8 @@ const DawPage = () => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [songStructure, setSongStructure] = useState<SongStructure | null>(null);
   const [songTempo, setSongTempo] = useState<number | null>(null);
+  const [songLyrics, setSongLyrics] = useState<string | null>(null);
+
 
   // --- Web Audio API State ---
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -132,12 +135,14 @@ const DawPage = () => {
         setActiveSongId(null);
         setSongStructure(null);
         setSongTempo(null);
+        setSongLyrics(null);
       }
     } else {
       setTracks([]);
       setActiveSongId(null);
       setSongStructure(null);
       setSongTempo(null);
+      setSongLyrics(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSetlist]);
@@ -228,7 +233,8 @@ const DawPage = () => {
     const currentSong = songs.find(s => s.id === activeSongId);
     setSongStructure(currentSong?.structure || null);
     setSongTempo(currentSong?.tempo || null);
-    
+    setSongLyrics(currentSong?.lyrics || null);
+
     handleStop(true); // Stop without fade on song change
     
     const tracksForSong = tracks.filter(t => t.songId === activeSongId);
@@ -579,7 +585,7 @@ const DawPage = () => {
   const showLoadingBar = loadingTracks.length > 0 && totalTracksForSong > 0;
   
   return (
-    <div className="grid grid-cols-[1fr_384px] grid-rows-[auto_1fr] h-screen w-screen p-4 gap-4">
+    <div className="grid grid-cols-[1fr_384px] grid-rows-[auto_auto_1fr] h-screen w-screen p-4 gap-4">
       <div className="col-span-2 row-start-1">
         <Header 
             isPlaying={isPlaying}
@@ -614,8 +620,12 @@ const DawPage = () => {
             onPanVisibilityChange={setIsPanVisible}
         />
       </div>
+
+      <div className="col-span-2 row-start-2 h-32">
+        <LyricsDisplay text={songLyrics || 'No hay letra disponible para esta canción.'} />
+      </div>
       
-      <main className="col-start-1 row-start-2 overflow-y-auto pr-2 no-scrollbar">
+      <main className="col-start-1 row-start-3 overflow-y-auto pr-2 no-scrollbar">
         {activeSongId ? (
             <MixerGrid
               tracks={activeTracks}
@@ -642,7 +652,7 @@ const DawPage = () => {
         )}
       </main>
 
-       <div className="col-start-2 row-start-2 flex flex-col gap-4">
+       <div className="col-start-2 row-start-3 flex flex-col gap-4">
         <SongList 
             initialSetlist={initialSetlist}
             activeSongId={activeSongId}
@@ -657,11 +667,3 @@ const DawPage = () => {
 };
 
 export default DawPage;
-
-    
-
-    
-
-    
-
-    
