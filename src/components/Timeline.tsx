@@ -64,7 +64,7 @@ const Timeline: React.FC<TimelineProps> = ({ duration, currentTime, onSeek, stru
         <div 
             ref={timelineRef}
             className={cn(
-                "relative flex-grow h-12 bg-secondary/30 rounded-lg cursor-pointer group",
+                "relative flex-grow h-12 bg-black/50 rounded-lg cursor-pointer group border border-amber-400/20",
                 !isReady && 'opacity-50 cursor-not-allowed'
             )}
             onMouseDown={handleMouseDown}
@@ -74,15 +74,15 @@ const Timeline: React.FC<TimelineProps> = ({ duration, currentTime, onSeek, stru
         >
             {/* Progress Bar */}
             <div 
-                className="absolute top-0 left-0 h-full bg-primary/30 rounded-lg"
+                className="absolute top-0 left-0 h-full bg-amber-400/70 rounded-lg shadow-[0_0_8px_1px_theme(colors.amber.400)]"
                 style={{ width: `${progressPercentage}%` }}
             />
             {/* Playhead */}
             <div 
-                className="absolute top-0 h-full w-0.5 bg-primary"
+                className="absolute top-0 h-full w-0.5 bg-amber-400"
                 style={{ left: `${progressPercentage}%` }}
             >
-                <div className="absolute -top-1 -translate-x-1/2 w-2 h-2 bg-primary rounded-full" />
+                <div className="absolute -top-1 -translate-x-1/2 w-2 h-2 bg-amber-400 rounded-full" />
             </div>
 
             {/* Cues / Markers */}
