@@ -77,6 +77,8 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
     return upperCaseName === 'CLICK' || upperCaseName === 'CUES';
   }, [name]);
 
+  const isPeaking = useMemo(() => volume >= 95, [volume]);
+
   const rangeColorClass = useMemo(() => {
     if (isSpecialTrack) return 'bg-destructive';
     return 'bg-primary';
@@ -99,8 +101,14 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
     <div className="flex flex-col items-center gap-2 bg-input p-1 rounded-sm border border-black/50">
       {/* LEDs */}
       <div className="flex gap-1.5 mt-1">
-        <div className="w-2 h-2 rounded-full bg-green-500/80 shadow-[0_0_2px_rgba(34,197,94,0.5)]" />
-        <div className="w-2 h-2 rounded-full bg-blue-500/80 shadow-[0_0_2px_rgba(59,130,246,0.5)]" />
+        <div className={cn(
+            "w-2 h-2 rounded-full transition-colors",
+            isAudible ? "bg-green-500/80 shadow-[0_0_2px_rgba(34,197,94,0.5)]" : "bg-green-900/50"
+        )} />
+        <div className={cn(
+            "w-2 h-2 rounded-full transition-colors",
+            isPeaking ? "bg-destructive shadow-[0_0_2px_rgba(239,68,68,0.5)]" : "bg-blue-900/50"
+        )} />
       </div>
 
       {/* Fader channel */}
@@ -195,3 +203,4 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
 TrackPad.displayName = 'TrackPad';
 
 export default TrackPad;
+
