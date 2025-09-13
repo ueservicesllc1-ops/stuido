@@ -33,22 +33,27 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, youtubeUrl, onOpenY
     if (!scrollViewport) return;
 
     const animateScroll = () => {
-      // La velocidad se traduce a píxeles por segundo (ej. speed 5 -> 25px/s)
+      // La velocidad se traduce a píxeles por fotograma.
       const pixelsPerFrame = (scrollSpeed * 5) / 60;
       scrollViewport.scrollTop += pixelsPerFrame;
+      
+      // Si el scroll no ha llegado al final, sigue animando
       if (scrollViewport.scrollTop < scrollViewport.scrollHeight - scrollViewport.clientHeight) {
         scrollAnimationRef.current = requestAnimationFrame(animateScroll);
       }
     };
 
     if (isPlaybackActive && showLyrics) {
-      scrollAnimationRef.current = requestAnimationFrame(animateScroll);
+        // Iniciar la animación
+        scrollAnimationRef.current = requestAnimationFrame(animateScroll);
     } else {
-      if (scrollAnimationRef.current) {
-        cancelAnimationFrame(scrollAnimationRef.current);
-      }
+        // Detener la animación
+        if (scrollAnimationRef.current) {
+            cancelAnimationFrame(scrollAnimationRef.current);
+        }
     }
 
+    // Función de limpieza para detener la animación si el componente se desmonta
     return () => {
       if (scrollAnimationRef.current) {
         cancelAnimationFrame(scrollAnimationRef.current);
@@ -56,13 +61,12 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, youtubeUrl, onOpenY
     };
   }, [isPlaybackActive, showLyrics, scrollSpeed]);
 
-  // Reset scroll on close or when playback stops
+  // Resetear el scroll al principio cuando se detiene la reproducción o se cierra la ventana.
   useEffect(() => {
-    if (!showLyrics || !isPlaybackActive) {
+    if (!isPlaybackActive || !showLyrics) {
       if (scrollViewportRef.current) {
-        // No reiniciamos al inicio, solo pausamos. 
-        // Si se quiere reiniciar al detener, se puede descomentar la siguiente línea:
-        // scrollViewportRef.current.scrollTop = 0;
+        // Reiniciamos al principio para la próxima vez.
+         scrollViewportRef.current.scrollTop = 0;
       }
     }
   }, [showLyrics, isPlaybackActive])
