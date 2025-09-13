@@ -13,6 +13,7 @@ import Timeline from './Timeline';
 import { SongStructure } from '@/ai/flows/song-structure';
 import SettingsDialog from './SettingsDialog';
 import { Input } from './ui/input';
+import { Slider } from './ui/slider';
 
 
 interface HeaderProps {
@@ -84,17 +85,21 @@ const Header: React.FC<HeaderProps> = ({
   return (
     <header className="flex flex-col bg-card/50 border-b border-border p-2 gap-2 rounded-lg">
       <div className="flex items-center justify-start gap-6">
-        <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 bg-secondary/30 rounded-md p-1">
-              <Volume2 className="w-5 h-5 text-muted-foreground ml-1" />
-              <Input 
-                type="number"
-                className="w-20 bg-transparent border-0 text-center font-mono text-lg text-foreground focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto"
-                value={masterVolume}
-                onChange={(e) => onMasterVolumeChange(parseInt(e.target.value, 10))}
+        <div className="flex items-center gap-2 w-52">
+            <Volume2 className="w-5 h-5 text-muted-foreground ml-1 flex-shrink-0" />
+            <Slider
+                value={[masterVolume]}
+                onValueChange={(vals) => onMasterVolumeChange(vals[0])}
                 max={100}
-                min={0}
-              />
+                step={1}
+                className="flex-grow"
+                rangeClassName="bg-amber-400"
+                thumbClassName="bg-amber-400 border-amber-600 h-5 w-5"
+            />
+            <div className="bg-black/80 border border-amber-400/20 rounded-md px-2 py-1 w-16 text-center">
+                <span className="font-mono text-lg text-amber-400 [text-shadow:0_0_8px_theme(colors.amber.400)]">
+                    {masterVolume}
+                </span>
             </div>
         </div>
 
@@ -199,5 +204,7 @@ const Header: React.FC<HeaderProps> = ({
 };
 
 export default Header;
+
+    
 
     
