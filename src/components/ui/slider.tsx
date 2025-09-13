@@ -31,6 +31,10 @@ const Slider = React.forwardRef<
         orientation === 'vertical' && 'h-full w-1.5',
         trackClassName
     )}>
+      {/* Headroom indicator for vertical sliders */}
+      {orientation === 'vertical' && (
+        <div className="absolute bottom-[75%] top-0 left-0 w-full bg-muted-foreground/30 rounded-t-full" />
+      )}
       <SliderPrimitive.Range className={cn(
           "absolute bg-primary",
           orientation === 'horizontal' && 'h-full',
