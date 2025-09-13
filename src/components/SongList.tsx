@@ -325,43 +325,43 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
             const isAnalyzing = analyzingSongId === song.id;
 
             return (
-                <div key={song.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent group">
-                <Music className="w-5 h-5 text-muted-foreground" />
-                <div className="flex-grow">
-                    <p className="font-semibold text-foreground">{song.name}</p>
-                    <p className="text-xs text-muted-foreground">{song.artist}</p>
-                </div>
-                
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {hasCuesTrack && !forGlobal && (
-                         <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="w-8 h-8 text-muted-foreground hover:text-primary"
-                            onClick={() => handleReanalyze(song)}
-                            disabled={isAnalyzing}
-                        >
-                            {isAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanSearch className="w-4 h-4" />}
-                        </Button>
-                    )}
+                <div key={song.id} className="flex items-center gap-3 p-2 rounded-md bg-black border border-amber-400/10 hover:border-amber-400/30 group">
+                    <Music2 className="w-5 h-5 text-amber-400/60" />
+                    <div className="flex-grow">
+                        <p className="font-mono font-semibold text-amber-400 [text-shadow:0_0_4px_theme(colors.amber.400)]">{song.name}</p>
+                        <p className="text-xs text-amber-400/60 font-mono">{song.artist}</p>
+                    </div>
+                    
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {hasCuesTrack && !forGlobal && (
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="w-8 h-8 text-muted-foreground hover:text-primary"
+                                onClick={() => handleReanalyze(song)}
+                                disabled={isAnalyzing}
+                            >
+                                {isAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanSearch className="w-4 h-4" />}
+                            </Button>
+                        )}
 
-                    {!forGlobal && (
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="w-8 h-8 text-muted-foreground hover:text-destructive"
-                            onClick={() => setSongToDelete(song)}
-                        >
-                            <Trash2 className="w-4 h-4" />
-                        </Button>
-                    )}
+                        {!forGlobal && (
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="w-8 h-8 text-muted-foreground hover:text-destructive"
+                                onClick={() => setSongToDelete(song)}
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </Button>
+                        )}
 
-                    {selectedSetlist && (
-                        <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => handleAddSongToSetlist(song)}>
-                            <PlusCircle className="w-5 h-5 text-primary" />
-                        </Button>
-                    )}
-                </div>
+                        {selectedSetlist && (
+                            <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => handleAddSongToSetlist(song)}>
+                                <PlusCircle className="w-5 h-5 text-primary" />
+                            </Button>
+                        )}
+                    </div>
                 </div>
             );
           })}
@@ -761,3 +761,5 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
 };
 
 export default SongList;
+
+    
