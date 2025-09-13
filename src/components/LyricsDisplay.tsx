@@ -7,69 +7,94 @@ import { Button } from './ui/button';
 import { X, Music4, Youtube, ZoomIn, ZoomOut } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { cn } from '@/lib/utils';
+import type { LyricsSyncOutput } from '@/ai/flows/lyrics-synchronization';
 
 interface LyricsDisplayProps {
-  text: string | null;
+  lyrics: string | null;
+  syncedLyrics: LyricsSyncOutput | null;
+  currentTime: number;
   isPlaying: boolean;
   youtubeUrl: string | null;
   onOpenYouTube: () => void;
 }
 
 const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ 
-    text, 
+    lyrics, 
+    syncedLyrics,
+    currentTime,
     isPlaying,
     youtubeUrl, 
     onOpenYouTube 
 }) => {
   const [showLyrics, setShowLyrics] = useState(false);
-  const [fontSize, setFontSize] = useState(24); // Controla el tamaño de la fuente
-  const scrollViewportRef = useRef<HTMLDivElement>(null);
-  const scrollAnimationRef = useRef<number>();
+  const [fontSize, setFontSize] = useState(24);
+  
+  const activeWordRef = useRef<HTMLSpanElement>(null);
+  const wordRefs = useRef<Map<number, HTMLSpanElement>>(new Map());
 
   const handleZoomIn = () => setFontSize(prev => Math.min(prev + 2, 48));
   const handleZoomOut = () => setFontSize(prev => Math.max(prev - 2, 12));
-  
-  // Efecto para controlar el teleprompter
+
+  // Determine current word and scroll into view
   useEffect(() => {
-    const scrollEl = scrollViewportRef.current;
-    if (!scrollEl) return;
+      if (!isPlaying || !syncedLyrics || !showLyrics) return;
 
-    const animateScroll = () => {
-      scrollEl.scrollTop += 0.5; // Velocidad de scroll constante
-      scrollAnimationRef.current = requestAnimationFrame(animateScroll);
-    };
+      const currentWordIndex = syncedLyrics.words.findIndex(
+          (word) => currentTime >= word.startTime && currentTime <= word.endTime
+      );
 
-    if (isPlaying && showLyrics) {
-      scrollAnimationRef.current = requestAnimationFrame(animateScroll);
-    } else {
-      if (scrollAnimationRef.current) {
-        cancelAnimationFrame(scrollAnimationRef.current);
+      if (currentWordIndex !== -1) {
+          const wordElement = wordRefs.current.get(currentWordIndex);
+          if (wordElement && wordElement !== activeWordRef.current) {
+              wordElement.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'center',
+              });
+              // @ts-ignore
+              activeWordRef.current = wordElement;
+          }
       }
-    }
-
-    return () => {
-      if (scrollAnimationRef.current) {
-        cancelAnimationFrame(scrollAnimationRef.current);
-      }
-    };
-  }, [isPlaying, showLyrics]);
-
-  // Efecto para reiniciar el scroll cuando se detiene o se cierra
-  useEffect(() => {
-    const scrollEl = scrollViewportRef.current;
-    if (scrollEl && (!isPlaying || !showLyrics)) {
-        // Reinicia el scroll a la parte superior
-        scrollEl.scrollTop = 0;
-    }
-  }, [isPlaying, showLyrics]);
+  }, [currentTime, isPlaying, showLyrics, syncedLyrics]);
 
   const renderLyrics = () => {
+    // Karaoke Mode
+    if (syncedLyrics && syncedLyrics.words.length > 0) {
+        wordRefs.current.clear();
+        const currentWordIndex = syncedLyrics.words.findIndex(word => currentTime >= word.startTime && currentTime < word.endTime);
+
+        return (
+            <p 
+                className="font-mono text-center whitespace-pre-wrap p-4 pt-16 transition-all"
+                style={{ fontSize: `${fontSize}px`, lineHeight: 1.5 }}
+            >
+                {syncedLyrics.words.map((word, index) => {
+                    const isActive = isPlaying && currentWordIndex === index;
+                    return (
+                        <span
+                            key={index}
+                            ref={(el) => {
+                                if (el) wordRefs.current.set(index, el);
+                            }}
+                            className={cn(
+                                'transition-colors duration-150',
+                                isActive ? 'text-amber-400' : 'text-muted-foreground/70'
+                            )}
+                        >
+                            {word.word}{' '}
+                        </span>
+                    );
+                })}
+            </p>
+        );
+    }
+    
+    // Static Text Mode
     return (
         <pre 
             className="font-mono text-amber-400 text-center whitespace-pre-wrap p-4 pt-16 transition-all"
             style={{ fontSize: `${fontSize}px`, lineHeight: 1.5 }}
         >
-            {text || 'No hay letra disponible para esta canción.'}
+            {lyrics || 'No hay letra disponible para esta canción.'}
         </pre>
     );
   }
@@ -90,7 +115,7 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({
             </Button>
           </div>
 
-          <ScrollArea className="h-full w-full rounded-lg" viewportRef={scrollViewportRef}>
+          <ScrollArea className="h-full w-full rounded-lg">
             {renderLyrics()}
           </ScrollArea>
         </div>
@@ -102,10 +127,10 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({
         <button 
             className={cn(
                 "relative rounded-lg overflow-hidden group h-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background",
-                !text && "opacity-50 cursor-not-allowed"
+                !lyrics && "opacity-50 cursor-not-allowed"
             )}
-            onClick={() => text && setShowLyrics(true)}
-            disabled={!text}
+            onClick={() => lyrics && setShowLyrics(true)}
+            disabled={!lyrics}
         >
             <Image
                 src="https://picsum.photos/seed/lyrics-btn/600/400"
