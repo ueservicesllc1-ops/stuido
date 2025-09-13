@@ -4,6 +4,8 @@
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, serverTimestamp, query, orderBy, doc, deleteDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { analyzeSongStructure, SongStructure, AnalyzeSongStructureInput } from '@/ai/flows/song-structure';
+import { synchronizeLyricsFlow, LyricsSyncInput, LyricsSyncOutput } from '@/ai/flows/lyrics-synchronization';
+
 
 // Represents a single track file within a song
 export interface TrackFile {
@@ -28,6 +30,7 @@ export interface NewSong {
 export interface Song extends NewSong {
     id: string;
     structure?: SongStructure;
+    syncedLyrics?: LyricsSyncOutput;
 }
 
 export interface SongUpdateData {
@@ -161,6 +164,7 @@ export async function getSongs() {
                 albumImageUrl: data.albumImageUrl,
                 lyrics: data.lyrics,
                 youtubeUrl: data.youtubeUrl,
+                syncedLyrics: data.syncedLyrics,
             };
         });
 
@@ -180,6 +184,30 @@ export async function deleteSong(song: Song) {
         return { success: true };
     } catch (error) {
         console.error("Error eliminando la canción de la biblioteca:", error);
+        return { success: false, error: (error as Error).message };
+    }
+}
+
+export async function synchronizeLyrics(songId: string, input: LyricsSyncInput): Promise<{ success: boolean; song?: Song, error?: string }> {
+    try {
+        console.log(`Iniciando sincronización de letra para la canción ${songId}...`);
+        const syncedLyrics = await synchronizeLyricsFlow(input);
+        
+        const songRef = doc(db, 'songs', songId);
+        await updateDoc(songRef, { syncedLyrics });
+        
+        const updatedDoc = await getDoc(songRef);
+        if (!updatedDoc.exists()) {
+            throw new Error('No se encontró la canción después de la sincronización.');
+        }
+
+        const updatedSong = { id: updatedDoc.id, ...updatedDoc.data() } as Song;
+        
+        console.log(`Letra sincronizada y guardada para la canción ${songId}.`);
+        return { success: true, song: updatedSong };
+        
+    } catch (error) {
+        console.error(`Error al sincronizar la letra de la canción ${songId}:`, error);
         return { success: false, error: (error as Error).message };
     }
 }

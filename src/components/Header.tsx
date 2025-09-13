@@ -159,6 +159,10 @@ const Header: React.FC<HeaderProps> = ({
         </div>
         
         <div className="flex items-center justify-end gap-2 ml-auto">
+            <div className="flex items-center gap-1.5 bg-destructive/20 border border-destructive/50 rounded-md px-2 py-1">
+                <div className="w-2 h-2 rounded-full bg-destructive shadow-[0_0_4px] shadow-destructive" />
+                <span className="text-destructive font-bold text-sm">IA</span>
+            </div>
              <Button variant="outline">D</Button>
             <PlaybackModeToggle value={playbackMode} onChange={onPlaybackModeChange} />
             <Button variant="ghost" className="gap-2">
@@ -204,7 +208,3 @@ const Header: React.FC<HeaderProps> = ({
 };
 
 export default Header;
-
-    
-
-    
