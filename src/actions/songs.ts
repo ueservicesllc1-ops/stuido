@@ -29,6 +29,7 @@ export interface NewSong {
 
 export interface Song extends NewSong {
     id: string;
+    createdAt?: string;
     structure?: SongStructure;
     syncedLyrics?: LyricsSyncOutput;
 }
@@ -154,6 +155,8 @@ export async function getSongs() {
         
         const songs: Song[] = songsSnapshot.docs.map(doc => {
             const data = doc.data();
+            const createdAt = data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString();
+
             return {
                 id: doc.id,
                 name: toTitleCase(data.name),
@@ -167,6 +170,7 @@ export async function getSongs() {
                 lyrics: data.lyrics,
                 youtubeUrl: data.youtubeUrl,
                 syncedLyrics: data.syncedLyrics,
+                createdAt: createdAt,
             };
         });
 
@@ -209,7 +213,22 @@ export async function synchronizeLyrics(songId: string, input: LyricsSyncInput):
             throw new Error('No se encontró la canción después de la sincronización.');
         }
 
-        const updatedSong = { id: updatedDoc.id, ...updatedDoc.data() } as Song;
+        const updatedSongData = updatedDoc.data();
+        const updatedSong: Song = {
+            id: updatedDoc.id,
+            name: updatedSongData.name,
+            artist: updatedSongData.artist,
+            tempo: updatedSongData.tempo,
+            key: updatedSongData.key,
+            timeSignature: updatedSongData.timeSignature,
+            tracks: updatedSongData.tracks,
+            // Asegurarnos de que las fechas también se serialicen aquí si existen
+            createdAt: updatedSongData.createdAt?.toDate ? updatedSongData.createdAt.toDate().toISOString() : undefined,
+            structure: updatedSongData.structure,
+            syncedLyrics: updatedSongData.syncedLyrics,
+            lyrics: updatedSongData.lyrics,
+            youtubeUrl: updatedSongData.youtubeUrl,
+        };
         
         console.log(`Letra sincronizada y guardada para la canción ${songId}.`);
         return { success: true, song: updatedSong };
