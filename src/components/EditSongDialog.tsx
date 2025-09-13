@@ -23,13 +23,14 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Loader2, Zap } from 'lucide-react';
+import { Loader2, Zap, CheckCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { ScrollArea } from './ui/scroll-area';
 import { updateSong, Song, SongUpdateData, synchronizeLyrics } from '@/actions/songs';
 import { Textarea } from './ui/textarea';
 import { blobToDataURI } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
+import { cn } from '@/lib/utils';
 
 const editSongFormSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -156,6 +157,7 @@ const EditSongDialog: React.FC<EditSongDialogProps> = ({ song, isOpen, onClose, 
     }
   };
 
+  const hasSyncedLyrics = song.syncedLyrics && song.syncedLyrics.words.length > 0;
 
   return (
     <>
@@ -207,6 +209,12 @@ const EditSongDialog: React.FC<EditSongDialogProps> = ({ song, isOpen, onClose, 
                                 Sincronizar con IA
                             </Button>
                         </div>
+                        {hasSyncedLyrics && (
+                             <div className="flex items-center gap-2 text-sm text-green-500">
+                                <CheckCircle className="w-4 h-4" />
+                                <span>Letra sincronizada con éxito.</span>
+                            </div>
+                        )}
                         <FormControl>
                             <Textarea placeholder="Deja este campo en blanco y sube un audio para que la IA transcriba la letra, o escribe la letra aquí para que la IA solo la sincronice." {...field} rows={15} className="bg-input" />
                         </FormControl>
