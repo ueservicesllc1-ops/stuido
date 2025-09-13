@@ -34,16 +34,17 @@ const TonicPad = () => {
   */
   
   const handleGroupSelect = (key: string) => {
-    setSelectedGroup(prev => prev === key ? null : key);
+    const newGroup = selectedGroup === key ? null : key;
+    setSelectedGroup(newGroup);
+    // Al cambiar de grupo, se deselecciona el pad activo del grupo anterior.
+    setActivePad(null);
   }
 
   const playSound = (key: string) => {
    if (selectedGroup) {
-       console.log(`Reproduciendo pad: Grupo ${selectedGroup}, Pad ${key}`);
-       // Activa el pad visualmente
-       setActivePad(key);
-       // Desactiva el pad después de un corto tiempo para el efecto "flash"
-       setTimeout(() => setActivePad(null), 200);
+       console.log(`Activando pad: Grupo ${selectedGroup}, Pad ${key}`);
+       // Activa o desactiva el pad
+       setActivePad(prev => prev === key ? null : key);
    } else {
        console.log("Ningún grupo seleccionado. Selecciona A-F primero.");
    }
@@ -76,7 +77,7 @@ const TonicPad = () => {
                 key={key} 
                 variant="secondary"
                 className={cn(
-                    "w-full h-full text-base font-bold",
+                    "w-full h-full text-base font-bold transition-colors",
                     !selectedGroup && "opacity-50 cursor-not-allowed",
                     activePad === key
                         ? "bg-yellow-500 text-black hover:bg-yellow-500/90"
