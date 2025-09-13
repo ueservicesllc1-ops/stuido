@@ -7,61 +7,78 @@ import { Button } from './ui/button';
 import { X, Music4, Youtube, ZoomIn, ZoomOut } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { cn } from '@/lib/utils';
+import type { LyricsSyncOutput } from '@/ai/flows/lyrics-synchronization';
 
 interface LyricsDisplayProps {
   text: string | null;
+  syncedLyrics: LyricsSyncOutput | null;
+  currentTime: number;
+  isPlaybackActive: boolean;
   youtubeUrl: string | null;
   onOpenYouTube: () => void;
-  isPlaybackActive: boolean;
 }
 
-const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, youtubeUrl, onOpenYouTube, isPlaybackActive }) => {
+const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ 
+    text, 
+    syncedLyrics,
+    currentTime,
+    isPlaybackActive,
+    youtubeUrl, 
+    onOpenYouTube 
+}) => {
   const [showLyrics, setShowLyrics] = useState(false);
-  const [fontSize, setFontSize] = useState(20);
+  const [fontSize, setFontSize] = useState(24);
+  const activeWordRef = useRef<HTMLSpanElement>(null);
   
-  const scrollViewportRef = useRef<HTMLDivElement>(null);
-  const scrollAnimationRef = useRef<number>();
-
   const handleZoomIn = () => setFontSize(prev => Math.min(prev + 2, 48));
   const handleZoomOut = () => setFontSize(prev => Math.max(prev - 2, 12));
-
+  
+  // Scroll to active word
   useEffect(() => {
-    const scrollViewport = scrollViewportRef.current;
-    if (!scrollViewport) return;
-
-    const animateScroll = () => {
-      // Velocidad de scroll fija. Ajusta este valor si es necesario.
-      const pixelsPerFrame = 0.5;
-      scrollViewport.scrollTop += pixelsPerFrame;
-      
-      // Si el scroll no ha llegado al final, sigue animando
-      if (scrollViewport.scrollTop < scrollViewport.scrollHeight - scrollViewport.clientHeight) {
-        scrollAnimationRef.current = requestAnimationFrame(animateScroll);
-      }
-    };
-
-    if (isPlaybackActive && showLyrics) {
-      // Iniciar la animación
-      scrollAnimationRef.current = requestAnimationFrame(animateScroll);
-    } 
-
-    // Función de limpieza para detener la animación si el componente se desmonta
-    return () => {
-      if (scrollAnimationRef.current) {
-        cancelAnimationFrame(scrollAnimationRef.current);
-      }
-    };
-  }, [isPlaybackActive, showLyrics]);
-
-  // Resetear el scroll al principio cuando se detiene la reproducción o se cierra la ventana.
-  useEffect(() => {
-    if (!isPlaybackActive || !showLyrics) {
-      if (scrollViewportRef.current) {
-        // Reiniciamos al principio para la próxima vez.
-         scrollViewportRef.current.scrollTop = 0;
-      }
+    if (isPlaybackActive && activeWordRef.current) {
+      activeWordRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
     }
-  }, [showLyrics, isPlaybackActive])
+  }, [currentTime, isPlaybackActive]);
+
+
+  const renderSyncedLyrics = () => {
+    if (!syncedLyrics || !syncedLyrics.words) {
+      return <pre className="font-mono text-amber-400 text-center whitespace-pre-wrap p-4 pt-16">{text || 'No hay letra disponible para esta canción.'}</pre>;
+    }
+    
+    let activeWordIndex = -1;
+    if (isPlaybackActive) {
+        activeWordIndex = syncedLyrics.words.findIndex(
+            (word) => currentTime >= word.startTime && currentTime <= word.endTime
+        );
+    }
+    
+    return (
+      <p 
+          className="font-mono text-center [text-shadow:0_0_8px_theme(colors.amber.400)] p-4 pt-16 transition-all leading-relaxed"
+          style={{ fontSize: `${fontSize}px` }}
+      >
+        {syncedLyrics.words.map((word, index) => {
+            const isActive = index === activeWordIndex;
+            return (
+                <span 
+                    key={index} 
+                    ref={isActive ? activeWordRef : null}
+                    className={cn(
+                        "transition-colors duration-150",
+                        isActive ? 'text-cyan-400 [text-shadow:0_0_8px_theme(colors.cyan.400)]' : 'text-amber-400/70'
+                    )}
+                >
+                    {word.word}{' '}
+                </span>
+            )
+        })}
+      </p>
+    );
+  }
 
   if (showLyrics) {
     return (
@@ -79,13 +96,8 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, youtubeUrl, onOpenY
             </Button>
           </div>
 
-          <ScrollArea className="h-full w-full rounded-lg" viewportRef={scrollViewportRef}>
-            <pre 
-                className="font-mono text-amber-400 text-center whitespace-pre-wrap [text-shadow:0_0_8px_theme(colors.amber.400)] p-4 pt-16 transition-all"
-                style={{ fontSize: `${fontSize}px` }}
-            >
-                {text || 'No hay letra disponible para esta canción.'}
-            </pre>
+          <ScrollArea className="h-full w-full rounded-lg">
+            {renderSyncedLyrics()}
           </ScrollArea>
         </div>
     );

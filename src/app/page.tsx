@@ -11,6 +11,7 @@ import { Song } from '@/actions/songs';
 import { SongStructure } from '@/ai/flows/song-structure';
 import LyricsDisplay from '@/components/LyricsDisplay';
 import YouTubePlayerDialog from '@/components/YouTubePlayerDialog';
+import type { LyricsSyncOutput } from '@/ai/flows/lyrics-synchronization';
 
 export type PlaybackMode = 'online' | 'hybrid' | 'offline';
 export type ClickSound = 'beep' | 'click';
@@ -25,6 +26,7 @@ const DawPage = () => {
   const [songStructure, setSongStructure] = useState<SongStructure | null>(null);
   const [songTempo, setSongTempo] = useState<number | null>(null);
   const [songLyrics, setSongLyrics] = useState<string | null>(null);
+  const [songSyncedLyrics, setSongSyncedLyrics] = useState<LyricsSyncOutput | null>(null);
   const [songYoutubeUrl, setSongYoutubeUrl] = useState<string | null>(null);
 
 
@@ -142,6 +144,7 @@ const DawPage = () => {
         setSongStructure(null);
         setSongTempo(null);
         setSongLyrics(null);
+        setSongSyncedLyrics(null);
         setSongYoutubeUrl(null);
       }
     } else {
@@ -150,6 +153,7 @@ const DawPage = () => {
       setSongStructure(null);
       setSongTempo(null);
       setSongLyrics(null);
+      setSongSyncedLyrics(null);
       setSongYoutubeUrl(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -242,6 +246,7 @@ const DawPage = () => {
     setSongStructure(currentSong?.structure || null);
     setSongTempo(currentSong?.tempo || null);
     setSongLyrics(currentSong?.lyrics || null);
+    setSongSyncedLyrics(currentSong?.syncedLyrics || null);
     setSongYoutubeUrl(currentSong?.youtubeUrl || null);
 
     handleStop(true); // Stop without fade on song change
@@ -304,6 +309,7 @@ const DawPage = () => {
         setSongStructure(currentSong?.structure || null);
         setSongTempo(currentSong?.tempo || null);
         setSongLyrics(currentSong?.lyrics || null);
+        setSongSyncedLyrics(currentSong?.syncedLyrics || null);
         setSongYoutubeUrl(currentSong?.youtubeUrl || null);
     }
   }, [activeSongId, songs]);
@@ -646,9 +652,11 @@ const DawPage = () => {
       <div className="col-span-2 row-start-2 h-32">
         <LyricsDisplay 
             text={songLyrics} 
+            syncedLyrics={songSyncedLyrics}
+            currentTime={playbackPosition}
+            isPlaybackActive={isPlaying}
             youtubeUrl={songYoutubeUrl}
             onOpenYouTube={() => setIsYouTubePlayerOpen(true)}
-            isPlaybackActive={isPlaying}
         />
       </div>
       
