@@ -22,6 +22,7 @@ export interface NewSong {
   tracks: TrackFile[];
   albumImageUrl?: string;
   lyrics?: string;
+  youtubeUrl?: string;
 }
 
 export interface Song extends NewSong {
@@ -126,6 +127,7 @@ export async function getSongs() {
                 structure: data.structure,
                 albumImageUrl: data.albumImageUrl,
                 lyrics: data.lyrics,
+                youtubeUrl: data.youtubeUrl,
             };
         });
 

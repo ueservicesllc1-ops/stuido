@@ -10,6 +10,7 @@ import { cacheAudio, getCachedAudio } from '@/lib/audiocache';
 import { Song } from '@/actions/songs';
 import { SongStructure } from '@/ai/flows/song-structure';
 import LyricsDisplay from '@/components/LyricsDisplay';
+import YouTubePlayerDialog from '@/components/YouTubePlayerDialog';
 
 export type PlaybackMode = 'online' | 'hybrid' | 'offline';
 export type ClickSound = 'beep' | 'click';
@@ -24,6 +25,7 @@ const DawPage = () => {
   const [songStructure, setSongStructure] = useState<SongStructure | null>(null);
   const [songTempo, setSongTempo] = useState<number | null>(null);
   const [songLyrics, setSongLyrics] = useState<string | null>(null);
+  const [songYoutubeUrl, setSongYoutubeUrl] = useState<string | null>(null);
 
 
   // --- Web Audio API State ---
@@ -68,6 +70,10 @@ const DawPage = () => {
   // --- Settings State ---
   const [fadeOutDuration, setFadeOutDuration] = useState(0.5); // Duración en segundos
   const [isPanVisible, setIsPanVisible] = useState(true);
+  
+  // --- YouTube Modal State ---
+  const [isYouTubePlayerOpen, setIsYouTubePlayerOpen] = useState(false);
+
 
   // Initialize AudioContext
   useEffect(() => {
@@ -136,6 +142,7 @@ const DawPage = () => {
         setSongStructure(null);
         setSongTempo(null);
         setSongLyrics(null);
+        setSongYoutubeUrl(null);
       }
     } else {
       setTracks([]);
@@ -143,6 +150,7 @@ const DawPage = () => {
       setSongStructure(null);
       setSongTempo(null);
       setSongLyrics(null);
+      setSongYoutubeUrl(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSetlist]);
@@ -234,6 +242,7 @@ const DawPage = () => {
     setSongStructure(currentSong?.structure || null);
     setSongTempo(currentSong?.tempo || null);
     setSongLyrics(currentSong?.lyrics || null);
+    setSongYoutubeUrl(currentSong?.youtubeUrl || null);
 
     handleStop(true); // Stop without fade on song change
     
@@ -624,7 +633,12 @@ const DawPage = () => {
       </div>
 
       <div className="col-span-2 row-start-2 h-32">
-        <LyricsDisplay text={songLyrics} songTitle={activeSong?.name || null} />
+        <LyricsDisplay 
+            text={songLyrics} 
+            songTitle={activeSong?.name || null} 
+            youtubeUrl={songYoutubeUrl}
+            onOpenYouTube={() => setIsYouTubePlayerOpen(true)}
+        />
       </div>
       
       <main className="col-start-1 row-start-3 overflow-y-auto pr-2 no-scrollbar">
@@ -664,6 +678,13 @@ const DawPage = () => {
         />
         <TonicPad />
       </div>
+
+      <YouTubePlayerDialog
+        isOpen={isYouTubePlayerOpen}
+        onClose={() => setIsYouTubePlayerOpen(false)}
+        videoUrl={songYoutubeUrl}
+        songTitle={activeSong?.name || 'Video de YouTube'}
+       />
     </div>
   );
 };

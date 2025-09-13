@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -5,13 +6,17 @@ import Image from 'next/image';
 import { Button } from './ui/button';
 import { X, Music4, Youtube } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
+import { cn } from '@/lib/utils';
+
 
 interface LyricsDisplayProps {
   text: string | null;
   songTitle: string | null;
+  youtubeUrl: string | null;
+  onOpenYouTube: () => void;
 }
 
-const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, songTitle }) => {
+const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, songTitle, youtubeUrl, onOpenYouTube }) => {
   const [showLyrics, setShowLyrics] = useState(false);
 
   if (showLyrics) {
@@ -35,8 +40,12 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, songTitle }) => {
   return (
     <div className="grid grid-cols-4 gap-4 h-full">
         <button 
-            className="relative rounded-lg overflow-hidden group h-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
-            onClick={() => setShowLyrics(true)}
+            className={cn(
+                "relative rounded-lg overflow-hidden group h-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background",
+                !text && "opacity-50 cursor-not-allowed"
+            )}
+            onClick={() => text && setShowLyrics(true)}
+            disabled={!text}
         >
             <Image
                 src="https://picsum.photos/seed/lyrics-btn/600/400"
@@ -52,7 +61,14 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, songTitle }) => {
                 </span>
             </div>
         </button>
-       <div className="relative rounded-lg overflow-hidden group h-full">
+       <button 
+          className={cn(
+            "relative rounded-lg overflow-hidden group h-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background",
+            !youtubeUrl && "opacity-50 cursor-not-allowed"
+          )}
+          onClick={() => youtubeUrl && onOpenYouTube()}
+          disabled={!youtubeUrl}
+        >
         <Image
           src="https://picsum.photos/seed/youtube-btn/600/400"
           alt="YouTube"
@@ -66,7 +82,7 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, songTitle }) => {
                 YouTube
              </span>
          </div>
-      </div>
+      </button>
       <div className="relative rounded-lg overflow-hidden group h-full">
         <Image
           src="https://picsum.photos/seed/lights/600/400"

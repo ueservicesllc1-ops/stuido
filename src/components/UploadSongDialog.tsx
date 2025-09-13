@@ -55,6 +55,7 @@ const songFormSchema = z.object({
   timeSignature: z.string().min(3, { message: 'El compás es requerido.' }),
   albumImageUrl: z.string().url({ message: 'Por favor, introduce una URL válida.' }).optional().or(z.literal('')),
   lyrics: z.string().optional(),
+  youtubeUrl: z.string().url({ message: 'Por favor, introduce una URL de YouTube válida.' }).optional().or(z.literal('')),
   tracks: z.array(trackSchema).min(1, { message: 'Debes subir al menos una pista.' }),
 });
 
@@ -84,6 +85,7 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
       timeSignature: '4/4',
       albumImageUrl: '',
       lyrics: '',
+      youtubeUrl: '',
       tracks: [],
     },
   });
@@ -102,6 +104,7 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
       timeSignature: '4/4',
       albumImageUrl: '',
       lyrics: '',
+      youtubeUrl: '',
       tracks: [],
     });
     setIsUploading(false);
@@ -227,6 +230,7 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
           timeSignature: data.timeSignature,
           albumImageUrl: data.albumImageUrl,
           lyrics: data.lyrics,
+          youtubeUrl: data.youtubeUrl,
           tracks: uploadedTracks,
         };
         
@@ -319,6 +323,10 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
                 
                  <FormField control={form.control} name="lyrics" render={({ field }) => (
                   <FormItem><FormLabel>Letra de la canción (opcional)</FormLabel><FormControl><Textarea placeholder="[Intro]&#10;[Verso 1]&#10;..." {...field} rows={6} className="bg-input" /></FormControl><FormMessage /></FormItem>
+                )}/>
+
+                <FormField control={form.control} name="youtubeUrl" render={({ field }) => (
+                  <FormItem><FormLabel>URL de YouTube (opcional)</FormLabel><FormControl><Input placeholder="https://www.youtube.com/watch?v=..." {...field} /></FormControl><FormMessage /></FormItem>
                 )}/>
                 
                 <div className="space-y-2">
