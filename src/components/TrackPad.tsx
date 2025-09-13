@@ -112,7 +112,7 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
       </div>
 
       {/* Fader channel */}
-      <div className="relative h-40 w-12 flex justify-center items-center">
+      <div className="relative h-32 w-12 flex justify-center items-center">
          {isDisabled && (
            <div className="absolute inset-0 flex justify-center items-center bg-card/80 z-20 rounded-lg">
               <Loader2 className="w-8 h-8 text-primary animate-spin" />
