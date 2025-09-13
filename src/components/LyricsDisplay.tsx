@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { Button } from './ui/button';
-import { X, Music4 } from 'lucide-react';
+import { X, Music4, Youtube } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 
 interface LyricsDisplayProps {
@@ -54,14 +54,17 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, songTitle }) => {
         </button>
        <div className="relative rounded-lg overflow-hidden group h-full">
         <Image
-          src="https://picsum.photos/seed/pads/600/400"
-          alt="Pads"
+          src="https://picsum.photos/seed/youtube-btn/600/400"
+          alt="YouTube"
           fill
           className="object-cover transition-transform duration-300 group-hover:scale-105"
-          data-ai-hint="sound board"
+          data-ai-hint="video play button"
         />
          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-             <span className="font-bold text-xl text-white drop-shadow-lg">Pads</span>
+             <span className="font-bold text-xl text-white drop-shadow-lg flex items-center gap-2">
+                <Youtube />
+                YouTube
+             </span>
          </div>
       </div>
       <div className="relative rounded-lg overflow-hidden group h-full">
