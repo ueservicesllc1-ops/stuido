@@ -7,8 +7,6 @@ import { Button } from './ui/button';
 import { X, Music4, Youtube, ZoomIn, ZoomOut } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Slider } from './ui/slider';
-
 
 interface LyricsDisplayProps {
   text: string | null;
@@ -43,8 +41,8 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, youtubeUrl, onOpenY
     };
 
     if (isPlaybackActive && showLyrics) {
-        // Iniciar la animación
-        scrollAnimationRef.current = requestAnimationFrame(animateScroll);
+      // Iniciar la animación
+      scrollAnimationRef.current = requestAnimationFrame(animateScroll);
     } 
 
     // Función de limpieza para detener la animación si el componente se desmonta
