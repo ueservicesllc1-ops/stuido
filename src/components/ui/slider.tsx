@@ -28,9 +28,9 @@ const Slider = React.forwardRef<
     {...props}
   >
     <SliderPrimitive.Track className={cn(
-        "relative grow overflow-hidden rounded-full bg-transparent",
-        orientation === 'horizontal' && 'h-1.5 w-full',
-        orientation === 'vertical' && 'h-full w-1.5',
+        "relative grow overflow-hidden rounded-full",
+        orientation === 'horizontal' && 'h-1 w-full bg-muted-foreground/30',
+        orientation === 'vertical' && 'h-full w-1.5 bg-transparent',
         trackClassName
     )}>
       {orientation === 'vertical' && (
@@ -45,7 +45,7 @@ const Slider = React.forwardRef<
           )} />
       )}
        {!renderRange && orientation === 'horizontal' && (
-        <div className="absolute left-1/2 top-1/2 h-3 w-px -translate-x-1/2 -translate-y-1/2 bg-muted-foreground" />
+        <div className="absolute left-1/2 top-1/2 h-full w-px -translate-x-1/2 -translate-y-1/2 bg-background/80" />
       )}
     </SliderPrimitive.Track>
     <SliderPrimitive.Thumb 

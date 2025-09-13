@@ -162,11 +162,10 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
                   onValueChange={(val) => onPanChange(val[0])}
                   disabled={isDisabled}
                   className={cn(
-                      'w-full h-4',
+                      'w-full',
                       (isDisabled) && 'opacity-50'
                   )}
-                  trackClassName="h-0.5 bg-input/70"
-                  thumbClassName="h-3 w-3 rounded-full border-none bg-muted-foreground"
+                  thumbClassName="h-3 w-3 bg-card rounded-full border-2 border-foreground"
               />
         </div>
        )}
