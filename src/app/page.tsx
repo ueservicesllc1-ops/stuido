@@ -584,6 +584,8 @@ const DawPage = () => {
   const loadingProgress = totalTracksForSong > 0 ? (loadedTracksCount / totalTracksForSong) * 100 : 0;
   const showLoadingBar = loadingTracks.length > 0 && totalTracksForSong > 0;
   
+  const activeSong = songs.find(s => s.id === activeSongId);
+  
   return (
     <div className="grid grid-cols-[1fr_384px] grid-rows-[auto_auto_1fr] h-screen w-screen p-4 gap-4">
       <div className="col-span-2 row-start-1">
@@ -622,7 +624,7 @@ const DawPage = () => {
       </div>
 
       <div className="col-span-2 row-start-2 h-32">
-        <LyricsDisplay text={songLyrics || 'No hay letra disponible para esta canción.'} />
+        <LyricsDisplay text={songLyrics} songTitle={activeSong?.name || null} />
       </div>
       
       <main className="col-start-1 row-start-3 overflow-y-auto pr-2 no-scrollbar">
