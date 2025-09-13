@@ -542,17 +542,23 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
                     <div className="flex-grow space-y-2">
                     {isLoadingSetlists ? (
                         <div className="flex justify-center items-center h-full">
-                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                          <Loader2 className="w-8 h-8 animate-spin text-primary" />
                         </div>
                     ) : setlistsError ? (
                         <div className="text-destructive text-center">{setlistsError}</div>
                     ) : setlists.length > 0 ? (
                         setlists.map((setlist) => (
-                        <div key={setlist.id} className="flex flex-col p-2 rounded-md hover:bg-accent gap-1 cursor-pointer" onClick={() => handleSetlistSelect(setlist)}>
-                            <p className="font-semibold text-foreground flex-grow">{setlist.name}</p>
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                            <Calendar className="w-4 h-4" />
-                            <p className="text-xs">{format(setlist.date, 'dd/MM/yyyy')}</p>
+                        <div 
+                          key={setlist.id} 
+                          className="flex flex-col p-3 rounded-md bg-black border border-amber-400/20 gap-1 cursor-pointer hover:bg-gray-900/50" 
+                          onClick={() => handleSetlistSelect(setlist)}
+                        >
+                            <p className="font-mono font-bold text-lg text-amber-400 flex-grow [text-shadow:0_0_5px_theme(colors.amber.400)]">
+                              {setlist.name}
+                            </p>
+                            <div className="flex items-center gap-2 text-amber-400/60">
+                              <Calendar className="w-4 h-4" />
+                              <p className="text-xs font-mono">{format(setlist.date, 'dd/MM/yyyy')}</p>
                             </div>
                         </div>
                         ))
