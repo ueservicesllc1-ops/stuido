@@ -21,13 +21,11 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, songTitle, youtubeU
 
   if (showLyrics) {
     return (
-       <div className="bg-black/80 border border-amber-400/20 rounded-lg p-3 h-full flex flex-col">
-          <div className="flex justify-end items-center mb-2 flex-shrink-0">
-            <Button variant="ghost" size="icon" className="w-8 h-8 text-amber-400/70 hover:text-amber-400" onClick={() => setShowLyrics(false)}>
+       <div className="relative bg-black/80 border border-amber-400/20 rounded-lg h-full flex flex-col">
+          <Button variant="ghost" size="icon" className="absolute top-2 right-2 z-10 w-8 h-8 text-amber-400/70 hover:text-amber-400" onClick={() => setShowLyrics(false)}>
               <X className="w-5 h-5" />
-            </Button>
-          </div>
-          <ScrollArea className="h-full w-full flex items-center justify-center">
+          </Button>
+          <ScrollArea className="h-full w-full flex items-center justify-center rounded-lg">
             <pre className="font-mono text-amber-400 text-xl text-center whitespace-pre-wrap [text-shadow:0_0_8px_theme(colors.amber.400)] p-4">
                 {text || 'No hay letra disponible para esta canción.'}
             </pre>
