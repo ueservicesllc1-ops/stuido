@@ -4,7 +4,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from './ui/button';
-import { X, Music4, Youtube, ZoomIn, ZoomOut, Play, Pause } from 'lucide-react';
+import { X, Music4, Youtube, ZoomIn, ZoomOut } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Slider } from './ui/slider';
@@ -38,8 +38,6 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, youtubeUrl, onOpenY
       scrollViewport.scrollTop += pixelsPerFrame;
       if (scrollViewport.scrollTop < scrollViewport.scrollHeight - scrollViewport.clientHeight) {
         scrollAnimationRef.current = requestAnimationFrame(animateScroll);
-      } else {
-        // Opcional: Detener cuando llega al final, o reiniciar. Por ahora se detiene.
       }
     };
 
