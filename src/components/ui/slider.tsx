@@ -13,8 +13,9 @@ const Slider = React.forwardRef<
     thumbClassName?: string,
     trackClassName?: string,
     ledClassName?: string,
+    renderRange?: boolean,
   }
->(({ className, orientation = 'horizontal', rangeClassName, thumbClassName, trackClassName, ledClassName, ...props }, ref) => (
+>(({ className, orientation = 'horizontal', rangeClassName, thumbClassName, trackClassName, ledClassName, renderRange = true, ...props }, ref) => (
   <SliderPrimitive.Root
     ref={ref}
     orientation={orientation}
@@ -32,16 +33,17 @@ const Slider = React.forwardRef<
         orientation === 'vertical' && 'h-full w-1.5',
         trackClassName
     )}>
-      {/* Headroom indicator for vertical sliders */}
       {orientation === 'vertical' && (
         <div className="absolute bottom-[75%] top-0 left-0 w-full bg-muted-foreground/30 rounded-t-full" />
       )}
-      <SliderPrimitive.Range className={cn(
-          "absolute bg-primary",
-          orientation === 'horizontal' && 'h-full',
-          orientation === 'vertical' && 'w-full bottom-0',
-          rangeClassName
-      )} />
+      {renderRange && (
+          <SliderPrimitive.Range className={cn(
+              "absolute bg-primary",
+              orientation === 'horizontal' && 'h-full',
+              orientation === 'vertical' && 'w-full bottom-0',
+              rangeClassName
+          )} />
+      )}
     </SliderPrimitive.Track>
     <SliderPrimitive.Thumb 
         className={cn(
@@ -50,13 +52,11 @@ const Slider = React.forwardRef<
             thumbClassName
         )}
     >
-      {/* Grey texture lines */}
       <div className="flex flex-col w-8 h-full justify-center items-center gap-y-1">
         <div className="w-full h-px bg-muted-foreground/30" />
         <div className="w-full h-px bg-muted-foreground/30" />
         <div className="w-full h-px bg-muted-foreground/30" />
       </div>
-      {/* LED line */}
       <div className={cn(
           "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-px w-8 rounded-full",
           ledClassName || "bg-amber-400 shadow-[0_0_3px_1px] shadow-amber-400/50"

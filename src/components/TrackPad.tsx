@@ -28,6 +28,7 @@ interface TrackPadProps {
 
 const FaderTickMarks = React.memo(() => {
     const marks = [
+        { value: 95, label: "+5" },
         { value: 75, label: "0" },
         { value: 55, label: "-5" },
         { value: 40, label: "-10" },
@@ -86,12 +87,12 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
   const ledColorClass = useMemo(() => {
     switch (playbackMode) {
       case 'online':
-        return 'bg-blue-500 shadow-[0_0_3px_1px] shadow-blue-500/50';
+        return 'bg-blue-500 shadow-[0_0_5px_1px] shadow-blue-500/70';
       case 'offline':
-        return 'bg-green-500 shadow-[0_0_3px_1px] shadow-green-500/50';
+        return 'bg-green-500 shadow-[0_0_5px_1px] shadow-green-500/70';
       case 'hybrid':
       default:
-        return 'bg-amber-400 shadow-[0_0_3px_1px] shadow-amber-400/50';
+        return 'bg-amber-400 shadow-[0_0_5px_1px] shadow-amber-400/70';
     }
   }, [playbackMode]);
 
@@ -157,13 +158,14 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
                   max={1}
                   min={-1}
                   step={0.05}
+                  renderRange={false}
                   onValueChange={(val) => onPanChange(val[0])}
                   disabled={isDisabled}
                   className={cn(
                       'w-full h-4',
                       (isDisabled) && 'opacity-50'
                   )}
-                  trackClassName="h-0.5"
+                  trackClassName="h-0.5 bg-input/70"
                   thumbClassName="h-3 w-3 rounded-full border-none bg-muted-foreground"
               />
         </div>
