@@ -12,15 +12,14 @@ import { Slider } from './ui/slider';
 
 interface LyricsDisplayProps {
   text: string | null;
-  songTitle: string | null;
   youtubeUrl: string | null;
   onOpenYouTube: () => void;
+  isPlaybackActive: boolean;
 }
 
-const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, songTitle, youtubeUrl, onOpenYouTube }) => {
+const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, youtubeUrl, onOpenYouTube, isPlaybackActive }) => {
   const [showLyrics, setShowLyrics] = useState(false);
   const [fontSize, setFontSize] = useState(20);
-  const [isScrolling, setIsScrolling] = useState(false);
   const [scrollSpeed, setScrollSpeed] = useState(5); // Valor inicial de velocidad (ej. 1 a 10)
   
   const scrollViewportRef = useRef<HTMLDivElement>(null);
@@ -28,10 +27,6 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, songTitle, youtubeU
 
   const handleZoomIn = () => setFontSize(prev => Math.min(prev + 2, 48));
   const handleZoomOut = () => setFontSize(prev => Math.max(prev - 2, 12));
-
-  const toggleScroll = () => {
-    setIsScrolling(prev => !prev);
-  }
 
   useEffect(() => {
     const scrollViewport = scrollViewportRef.current;
@@ -44,11 +39,11 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, songTitle, youtubeU
       if (scrollViewport.scrollTop < scrollViewport.scrollHeight - scrollViewport.clientHeight) {
         scrollAnimationRef.current = requestAnimationFrame(animateScroll);
       } else {
-        setIsScrolling(false); // Detener cuando llega al final
+        // Opcional: Detener cuando llega al final, o reiniciar. Por ahora se detiene.
       }
     };
 
-    if (isScrolling) {
+    if (isPlaybackActive && showLyrics) {
       scrollAnimationRef.current = requestAnimationFrame(animateScroll);
     } else {
       if (scrollAnimationRef.current) {
@@ -61,17 +56,18 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, songTitle, youtubeU
         cancelAnimationFrame(scrollAnimationRef.current);
       }
     };
-  }, [isScrolling, scrollSpeed]);
+  }, [isPlaybackActive, showLyrics, scrollSpeed]);
 
-  // Reset scroll on close
+  // Reset scroll on close or when playback stops
   useEffect(() => {
-    if (!showLyrics) {
-      setIsScrolling(false);
+    if (!showLyrics || !isPlaybackActive) {
       if (scrollViewportRef.current) {
-        scrollViewportRef.current.scrollTop = 0;
+        // No reiniciamos al inicio, solo pausamos. 
+        // Si se quiere reiniciar al detener, se puede descomentar la siguiente línea:
+        // scrollViewportRef.current.scrollTop = 0;
       }
     }
-  }, [showLyrics])
+  }, [showLyrics, isPlaybackActive])
 
   if (showLyrics) {
     return (
@@ -88,9 +84,6 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, songTitle, youtubeU
                 <ZoomOut className="w-5 h-5" />
             </Button>
             <div className="w-px h-6 bg-amber-400/20 mx-1"></div>
-            <Button variant="ghost" size="icon" className="w-8 h-8 text-amber-400/70 hover:text-amber-400" onClick={toggleScroll}>
-                {isScrolling ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-            </Button>
             <Slider
                 value={[scrollSpeed]}
                 onValueChange={(val) => setScrollSpeed(val[0])}
