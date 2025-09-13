@@ -165,7 +165,8 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
                       'w-full',
                       (isDisabled) && 'opacity-50'
                   )}
-                  thumbClassName="h-3 w-3 bg-card rounded-full border-2 border-foreground"
+                  thumbClassName="h-3 w-3 bg-foreground rounded-full"
+                  trackClassName="bg-muted-foreground/30"
               />
         </div>
        )}
