@@ -28,13 +28,12 @@ interface TrackPadProps {
 
 const FaderTickMarks = React.memo(() => {
     const marks = [
-        { value: 100, label: "+10" },
-        { value: 87.5, label: "+5" },
+        { value: 95, label: "+5" },
         { value: 75, label: "0" },
-        { value: 68, label: "-5" },
-        { value: 60, label: "-10" },
-        { value: 45, label: "-20" },
-        { value: 35, label: "-30" },
+        { value: 60, label: "-5" },
+        { value: 50, label: "-10" },
+        { value: 35, label: "-20" },
+        { value: 25, label: "-30" },
         { value: 0, label: "-∞" },
     ];
     return (
