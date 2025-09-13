@@ -30,50 +30,59 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({
 }) => {
   const [showLyrics, setShowLyrics] = useState(false);
   const [fontSize, setFontSize] = useState(24);
+  const [activeWordIndex, setActiveWordIndex] = useState(-1);
   
-  const activeWordRef = useRef<HTMLSpanElement>(null);
+  const activeWordRef = useRef<HTMLSpanElement | null>(null);
   const wordRefs = useRef<Map<number, HTMLSpanElement>>(new Map());
 
   const handleZoomIn = () => setFontSize(prev => Math.min(prev + 2, 48));
   const handleZoomOut = () => setFontSize(prev => Math.max(prev - 2, 12));
 
-  // Determine current word and scroll into view
+  // Determine current word
   useEffect(() => {
-      if (!isPlaying || !syncedLyrics || !showLyrics) return;
+    if (!isPlaying || !syncedLyrics || !showLyrics) {
+      if(isPlaying) setActiveWordIndex(-1); // Reset if playing but no lyrics shown
+      return;
+    }
 
-      const adjustedCurrentTime = currentTime - syncOffset;
+    const adjustedCurrentTime = currentTime - syncOffset;
 
-      const currentWordIndex = syncedLyrics.words.findIndex(
-          (word) => adjustedCurrentTime >= word.startTime && adjustedCurrentTime <= word.endTime
-      );
+    // Use findLastIndex to get the last word that has started
+    const currentWordIndex = syncedLyrics.words.findLastIndex(
+      (word) => adjustedCurrentTime >= word.startTime
+    );
+    
+    setActiveWordIndex(currentWordIndex);
 
-      if (currentWordIndex !== -1) {
-          const wordElement = wordRefs.current.get(currentWordIndex);
-          if (wordElement && wordElement !== activeWordRef.current) {
-              wordElement.scrollIntoView({
-                  behavior: 'smooth',
-                  block: 'center',
-              });
-              // @ts-ignore
-              activeWordRef.current = wordElement;
-          }
-      }
   }, [currentTime, isPlaying, showLyrics, syncedLyrics, syncOffset]);
 
+
+  // Scroll into view when active word changes
+  useEffect(() => {
+    if (activeWordIndex !== -1 && isPlaying) {
+      const wordElement = wordRefs.current.get(activeWordIndex);
+      if (wordElement && wordElement !== activeWordRef.current) {
+        wordElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        activeWordRef.current = wordElement;
+      }
+    }
+  }, [activeWordIndex, isPlaying]);
+
+
   const renderLyrics = () => {
-    const adjustedCurrentTime = currentTime - syncOffset;
     // Karaoke Mode
     if (syncedLyrics && syncedLyrics.words.length > 0) {
         wordRefs.current.clear();
-        const currentWordIndex = syncedLyrics.words.findIndex(word => adjustedCurrentTime >= word.startTime && adjustedCurrentTime < word.endTime);
-
         return (
             <p 
                 className="font-mono text-center whitespace-pre-wrap p-4 pt-16 transition-all"
                 style={{ fontSize: `${fontSize}px`, lineHeight: 1.5 }}
             >
                 {syncedLyrics.words.map((word, index) => {
-                    const isActive = isPlaying && currentWordIndex === index;
+                    const isActive = isPlaying && activeWordIndex === index;
                     return (
                         <span
                             key={index}
