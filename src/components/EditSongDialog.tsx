@@ -18,6 +18,7 @@ import { z } from 'zod';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -226,15 +227,17 @@ const EditSongDialog: React.FC<EditSongDialogProps> = ({ song, isOpen, onClose, 
                   )}/>
                    <FormField control={form.control} name="syncOffset" render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Ajuste de Sincronización (segundos)</FormLabel>
+                        <FormLabel>Desplazamiento de la letra (en segundos)</FormLabel>
                         <FormControl>
                             <Input 
                                 type="number" 
-                                step="0.1" 
-                                placeholder="Ej: 0.5 o -1.2" 
+                                placeholder="Ej: 2, o -3" 
                                 {...field} 
                             />
                         </FormControl>
+                        <FormDescription>
+                          Usa números positivos para que la letra aparezca ANTES (ej: 2) o negativos para que aparezca DESPUÉS (ej: -3).
+                        </FormDescription>
                         <FormMessage />
                     </FormItem>
                   )}/>
@@ -278,3 +281,5 @@ const EditSongDialog: React.FC<EditSongDialogProps> = ({ song, isOpen, onClose, 
 };
 
 export default EditSongDialog;
+
+    
