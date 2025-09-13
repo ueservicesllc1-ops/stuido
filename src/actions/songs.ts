@@ -5,6 +5,7 @@ import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, serverTimestamp, query, orderBy, doc, deleteDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { analyzeSongStructure, SongStructure, AnalyzeSongStructureInput } from '@/ai/flows/song-structure';
 import { synchronizeLyricsFlow, LyricsSyncInput, LyricsSyncOutput } from '@/ai/flows/lyrics-synchronization';
+import { transcribeLyricsFlow, TranscribeLyricsInput } from '@/ai/flows/transcribe-lyrics';
 
 
 // Represents a single track file within a song
@@ -204,19 +205,43 @@ export async function deleteSong(song: Song) {
     }
 }
 
+export async function transcribeLyrics(songId: string, input: TranscribeLyricsInput): Promise<{ success: boolean; song?: Song, error?: string }> {
+    try {
+        console.log(`Iniciando transcripción de letra para la canción ${songId}...`);
+        const { lyrics } = await transcribeLyricsFlow(input);
+        
+        const songRef = doc(db, 'songs', songId);
+        await updateDoc(songRef, { lyrics });
+
+        const updatedDoc = await getDoc(songRef);
+        if (!updatedDoc.exists()) {
+            throw new Error('No se encontró la canción después de la transcripción.');
+        }
+
+        const updatedSongData = updatedDoc.data();
+        const updatedSong: Song = {
+            id: updatedDoc.id,
+            ...updatedSongData,
+            createdAt: updatedSongData.createdAt?.toDate ? updatedSongData.createdAt.toDate().toISOString() : new Date().toISOString(),
+        } as Song;
+        
+        console.log(`Letra transcrita y guardada para la canción ${songId}.`);
+        return { success: true, song: updatedSong };
+        
+    } catch (error) {
+        console.error(`Error al transcribir la letra de la canción ${songId}:`, error);
+        return { success: false, error: (error as Error).message };
+    }
+}
+
+
 export async function synchronizeLyrics(songId: string, input: LyricsSyncInput): Promise<{ success: boolean; song?: Song, error?: string }> {
     try {
         console.log(`Iniciando sincronización de letra para la canción ${songId}...`);
         const syncedLyrics = await synchronizeLyricsFlow(input);
         
-        // Si no había letra, la IA la ha generado. Vamos a reconstruir el string de la letra.
-        const updatePayload: { syncedLyrics: LyricsSyncOutput, lyrics?: string } = { syncedLyrics };
-        if (!input.lyrics && syncedLyrics.words.length > 0) {
-            updatePayload.lyrics = syncedLyrics.words.map(w => w.word).join(' ');
-        }
-        
         const songRef = doc(db, 'songs', songId);
-        await updateDoc(songRef, updatePayload);
+        await updateDoc(songRef, { syncedLyrics });
         
         const updatedDoc = await getDoc(songRef);
         if (!updatedDoc.exists()) {

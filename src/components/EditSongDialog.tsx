@@ -24,10 +24,10 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Loader2, Zap, CheckCircle } from 'lucide-react';
+import { Loader2, Zap, CheckCircle, Mic } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { ScrollArea } from './ui/scroll-area';
-import { updateSong, Song, SongUpdateData, synchronizeLyrics } from '@/actions/songs';
+import { updateSong, Song, SongUpdateData, synchronizeLyrics, transcribeLyrics } from '@/actions/songs';
 import { Textarea } from './ui/textarea';
 import { blobToDataURI } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
@@ -49,10 +49,12 @@ interface EditSongDialogProps {
   onSongUpdated: (updatedSong: Song) => void;
 }
 
+type AIOperation = 'transcribe' | 'sync';
+
 const EditSongDialog: React.FC<EditSongDialogProps> = ({ song, isOpen, onClose, onSongUpdated }) => {
   const [isSaving, setIsSaving] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncAlertOpen, setSyncAlertOpen] = useState(false);
+  const [isProcessingAI, setIsProcessingAI] = useState<AIOperation | null>(null);
+  const [alertInfo, setAlertInfo] = useState<{ open: boolean, operation: AIOperation | null, title: string, description: string, actionText: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -114,54 +116,70 @@ const EditSongDialog: React.FC<EditSongDialogProps> = ({ song, isOpen, onClose, 
     }
   }
 
-  const handleSyncClick = () => {
-    setSyncAlertOpen(true);
+  const handleAIOperationClick = (operation: AIOperation) => {
+    const dialogs = {
+      transcribe: {
+        title: 'Transcribir letra con IA',
+        description: `Para transcribir, necesitas subir el archivo de audio (MP3, WAV, etc.) de la canción completa. La IA generará la letra y la pondrá en el campo de texto.\n\n<span class="font-bold text-foreground">Importante:</span> El audio no se guardará, solo se usará para el análisis.`,
+        actionText: 'Seleccionar Archivo para Transcribir'
+      },
+      sync: {
+        title: 'Sincronizar tiempos con IA',
+        description: `La IA analizará la letra en el campo de texto y la sincronizará con el audio que subas. Esto creará los tiempos para el modo karaoke.\n\n<span class="font-bold text-foreground">Importante:</span> El audio no se guardará, solo se usará para el análisis.`,
+        actionText: 'Seleccionar Archivo para Sincronizar'
+      }
+    };
+    setAlertInfo({ open: true, operation, ...dialogs[operation] });
   }
 
-  const handleFileSelectedForSync = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelectedForAI = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || !alertInfo?.operation) return;
 
     if (!file.type.startsWith('audio/')) {
         toast({ variant: 'destructive', title: 'Archivo no válido', description: 'Por favor, selecciona un archivo de audio (MP3, WAV, etc.).' });
         return;
     }
 
-    setIsSyncing(true);
-    const toastMessage = form.getValues('lyrics')?.trim() 
-      ? 'La IA está sincronizando la letra. Esto puede tardar un momento.'
-      : 'La IA está transcribiendo y sincronizando la canción. Esto puede tardar varios minutos.';
-    toast({ title: 'Procesando...', description: toastMessage });
-
+    const operation = alertInfo.operation;
+    setIsProcessingAI(operation);
+    toast({ title: 'Procesando...', description: operation === 'transcribe' ? 'La IA está transcribiendo la canción. Esto puede tardar unos minutos.' : 'La IA está sincronizando la letra. Esto puede tardar un momento.' });
 
     try {
         const audioDataUri = await blobToDataURI(file);
-        const lyrics = form.getValues('lyrics');
-
-        const result = await synchronizeLyrics(song.id, { audioDataUri, lyrics });
+        
+        let result;
+        if (operation === 'transcribe') {
+          result = await transcribeLyrics(song.id, { audioDataUri });
+        } else { // sync
+          const lyrics = form.getValues('lyrics');
+          if (!lyrics) throw new Error('No hay letra en el campo de texto para sincronizar.');
+          result = await synchronizeLyrics(song.id, { audioDataUri, lyrics });
+        }
 
         if (result.success && result.song) {
             toast({
-                title: '¡Sincronización completa!',
-                description: `La letra de "${result.song.name}" ha sido procesada.`,
+                title: `¡${operation === 'transcribe' ? 'Transcripción' : 'Sincronización'} completa!`,
+                description: `La operación ha finalizado para "${result.song.name}".`,
             });
             onSongUpdated(result.song);
         } else {
-            throw new Error(result.error || 'Ocurrió un error desconocido durante la sincronización.');
+            throw new Error(result.error || `Ocurrió un error desconocido durante la operación.`);
         }
 
     } catch (error) {
         toast({
             variant: 'destructive',
-            title: 'Error de sincronización',
+            title: `Error de ${operation === 'transcribe' ? 'transcripción' : 'sincronización'}`,
             description: (error as Error).message,
         });
     } finally {
-        setIsSyncing(false);
+        setIsProcessingAI(null);
     }
   };
-
-  const hasSyncedLyrics = song.syncedLyrics && song.syncedLyrics.words.length > 0;
+  
+  const hasLyrics = !!form.watch('lyrics')?.trim();
+  const hasSyncedLyrics = !!song.syncedLyrics && song.syncedLyrics.words.length > 0;
 
   return (
     <>
@@ -190,37 +208,48 @@ const EditSongDialog: React.FC<EditSongDialogProps> = ({ song, isOpen, onClose, 
                     <FormItem>
                         <div className="flex justify-between items-center">
                             <FormLabel>Letra de la canción</FormLabel>
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                onChange={handleFileSelectedForSync}
-                                className="hidden"
-                                accept="audio/*"
-                            />
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={handleSyncClick}
-                                disabled={isSyncing}
-                                className="gap-2"
-                            >
-                                {isSyncing ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                    <Zap className="w-4 h-4" />
+                            <div className="flex gap-2">
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleFileSelectedForAI}
+                                    className="hidden"
+                                    accept="audio/*"
+                                />
+                                {!hasLyrics && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleAIOperationClick('transcribe')}
+                                        disabled={!!isProcessingAI}
+                                        className="gap-2"
+                                    >
+                                        {isProcessingAI === 'transcribe' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
+                                        Transcribir
+                                    </Button>
                                 )}
-                                Sincronizar con IA
-                            </Button>
+                                 <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleAIOperationClick('sync')}
+                                    disabled={!hasLyrics || !!isProcessingAI}
+                                    className="gap-2"
+                                >
+                                    {isProcessingAI === 'sync' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                                    Sincronizar
+                                </Button>
+                            </div>
                         </div>
                         {hasSyncedLyrics && (
                              <div className="flex items-center gap-2 text-sm text-green-500 mt-2">
                                 <CheckCircle className="w-4 h-4" />
-                                <span>Letra sincronizada con éxito.</span>
+                                <span>Tiempos de karaoke sincronizados.</span>
                             </div>
                         )}
                         <FormControl>
-                            <Textarea placeholder="Deja este campo en blanco y sube un audio para que la IA transcriba la letra, o escribe la letra aquí para que la IA solo la sincronice." {...field} rows={10} className="bg-input" />
+                            <Textarea placeholder="Puedes pegar la letra aquí, o usar la IA para transcribirla desde un archivo de audio." {...field} rows={10} className="bg-input" />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -245,33 +274,25 @@ const EditSongDialog: React.FC<EditSongDialogProps> = ({ song, isOpen, onClose, 
               </ScrollArea>
               <DialogFooter>
                 <Button type="button" variant="ghost" onClick={onClose} disabled={isSaving}>Cancelar</Button>
-                <Button type="submit" disabled={isSaving || isSyncing}>
-                  {(isSaving || isSyncing) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {isSaving ? 'Guardando...' : (isSyncing ? 'Sincronizando...' : 'Guardar Cambios')}
+                <Button type="submit" disabled={isSaving || !!isProcessingAI}>
+                  {(isSaving || isProcessingAI) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isSaving ? 'Guardando...' : (isProcessingAI ? 'Procesando IA...' : 'Guardar Cambios')}
                 </Button>
               </DialogFooter>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
-      <AlertDialog open={syncAlertOpen} onOpenChange={setSyncAlertOpen}>
+      <AlertDialog open={alertInfo?.open ?? false} onOpenChange={(isOpen) => setAlertInfo(prev => prev ? {...prev, open: isOpen} : null)}>
         <AlertDialogContent>
             <AlertDialogHeader>
-                <AlertDialogTitle>Subir audio para sincronización</AlertDialogTitle>
-                <AlertDialogDescription>
-                    Para sincronizar la letra, necesitas subir el archivo de audio (MP3, WAV, etc.) de la canción completa. 
-                    <br/><br/>
-                    • Si has escrito la letra, la IA la sincronizará.
-                    <br/>
-                    • Si el campo de letra está vacío, la IA la transcribirá por ti.
-                    <br/><br/>
-                    <span className="font-bold text-foreground">Importante:</span> El audio no se guardará, solo se usará para el análisis.
-                </AlertDialogDescription>
+                <AlertDialogTitle>{alertInfo?.title}</AlertDialogTitle>
+                <AlertDialogDescription dangerouslySetInnerHTML={{ __html: alertInfo?.description || '' }} />
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
                 <AlertDialogAction onClick={() => fileInputRef.current?.click()}>
-                    Seleccionar Archivo de Audio
+                    {alertInfo?.actionText}
                 </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
@@ -281,5 +302,3 @@ const EditSongDialog: React.FC<EditSongDialogProps> = ({ song, isOpen, onClose, 
 };
 
 export default EditSongDialog;
-
-    

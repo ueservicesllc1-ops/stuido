@@ -1,7 +1,7 @@
 
 'use server';
 /**
- * @fileOverview Un agente de IA que sincroniza la letra de una canción con un archivo de audio. Si no se proporciona letra, la transcribe primero.
+ * @fileOverview Un agente de IA que sincroniza la letra de una canción con un archivo de audio.
  *
  * - synchronizeLyricsFlow - Una función que maneja el proceso de sincronización de letras.
  * - LyricsSyncInput - El tipo de entrada para la función synchronizeLyricsFlow.
@@ -17,7 +17,7 @@ const LyricsSyncInputSchema = z.object({
     .describe(
       "El archivo de audio de la canción completa, como un data URI que debe incluir un tipo MIME y usar codificación Base64. Formato esperado: 'data:<mimetype>;base64,<encoded_data>'."
     ),
-  lyrics: z.string().optional().describe('La letra completa de la canción como un único string. Si se omite, la IA transcribirá la letra del audio.'),
+  lyrics: z.string().describe('La letra completa de la canción como un único string. Este campo es obligatorio.'),
 });
 export type LyricsSyncInput = z.infer<typeof LyricsSyncInputSchema>;
 
@@ -38,23 +38,19 @@ export async function synchronizeLyricsFlow(input: LyricsSyncInput): Promise<Lyr
     name: 'lyricsSyncPrompt',
     input: {schema: LyricsSyncInputSchema},
     output: {schema: LyricsSyncOutputSchema},
-    prompt: `You are an expert audio analyst specializing in lyrics transcription and synchronization, like a karaoke machine. Your task is to analyze an audio file and provide precise start and end times for each word.
+    prompt: `You are an expert audio analyst specializing in lyrics synchronization, like a karaoke machine. Your task is to analyze an audio file and provide precise start and end times for each word from the given lyrics.
 
-    - You will be given an audio file of a full song.
-    - {{#if lyrics}}
-        You will also be given the complete lyrics. Your task is to listen to the audio and identify when each word from the provided lyrics is sung.
-        The provided lyrics are the single source of truth. Do not deviate from them.
-        Lyrics:
-        ---
-        {{{lyrics}}}
-        ---
-      {{else}}
-        The lyrics are not provided. Your first task is to accurately transcribe the entire song from the audio.
-        After transcribing, your second task is to provide the start and end time for each transcribed word.
-      {{/if}}
+    - You will be given an audio file of a full song and the complete lyrics.
+    - Your task is to listen to the audio and identify when each word from the provided lyrics is sung.
+    - The provided lyrics are the single source of truth. Do not deviate from them.
     - Your output must be an array of objects, where each object contains a single 'word', its 'startTime' in seconds, and its 'endTime' in seconds.
-    - The order of the words in the output array must match the order they are sung in the song.
+    - The order of the words in the output array must match the order they appear in the provided lyrics.
     - Be as precise as possible with the timestamps.
+    
+    Lyrics:
+    ---
+    {{{lyrics}}}
+    ---
     
     Analyze the following audio file:
     Audio: {{media url=audioDataUri}}
