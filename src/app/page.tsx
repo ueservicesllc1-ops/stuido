@@ -184,7 +184,7 @@ const DawPage = () => {
   useEffect(() => {
     isClickEnabledRef.current = isClickEnabled;
 
-    if (isClickEnabled) {
+    const startScheduler = () => {
         if (audioContextRef.current) {
             const context = audioContextRef.current;
             if (context.state === 'suspended') {
@@ -197,16 +197,16 @@ const DawPage = () => {
             }
             clickScheduler();
         }
-    } else {
-        if (clickSchedulerRef.current) {
-            clearTimeout(clickSchedulerRef.current);
-            clickSchedulerRef.current = null;
-        }
+    };
+
+    if (isClickEnabled) {
+        startScheduler();
     }
 
     return () => {
         if (clickSchedulerRef.current) {
             clearTimeout(clickSchedulerRef.current);
+            clickSchedulerRef.current = null;
         }
     };
   }, [isClickEnabled, clickScheduler]);
@@ -300,20 +300,35 @@ const DawPage = () => {
     if (!isPlayingRef.current || !audioContextRef.current) return;
 
     const newVuData: Record<string, number> = {};
+    const analyserBuffers: Record<string, Float32Array> = {};
+
+    // First, create all the data arrays to avoid re-allocation in loop
+    Object.keys(trackNodesRef.current).forEach(trackId => {
+        const node = trackNodesRef.current[trackId];
+        if (node && node.analyserNode) {
+            analyserBuffers[trackId] = new Float32Array(node.analyserNode.fftSize);
+        }
+    });
+
     Object.keys(trackNodesRef.current).forEach(trackId => {
       const node = trackNodesRef.current[trackId];
       if (node && node.analyserNode) {
-        const dataArray = new Uint8Array(node.analyserNode.frequencyBinCount);
-        node.analyserNode.getByteFrequencyData(dataArray);
+        const dataArray = analyserBuffers[trackId];
+        node.analyserNode.getFloatTimeDomainData(dataArray);
         
         let peak = 0;
         for (let i = 0; i < dataArray.length; i++) {
-          peak = Math.max(peak, dataArray[i]);
+            peak = Math.max(peak, Math.abs(dataArray[i]));
         }
-        
-        // Normalize the peak (0-255) to a 0-100 scale.
-        const normalizedPeak = (peak / 255) * 100;
-        newVuData[trackId] = normalizedPeak; 
+
+        // Convert linear amplitude (0.0 to 1.0) to dBFS
+        // -60dB is a common floor for digital meters
+        const dbfs = peak > 0 ? 20 * Math.log10(peak) : -60;
+
+        // Map dBFS range (-60dB to 0dB) to a 0-100 scale for the VU meter component
+        // Values over 0dB will be "peaking" (over 100)
+        const meterScale = (dbfs + 60) / 60 * 100;
+        newVuData[trackId] = Math.max(0, meterScale); // Ensure it doesn't go below 0
       }
     });
     setVuData(newVuData);
@@ -389,11 +404,10 @@ const DawPage = () => {
         const pannerNode = context.createStereoPanner();
         const gainNode = context.createGain();
         const analyserNode = context.createAnalyser();
+        
+        // For time domain data, fftSize is the buffer size. A smaller size is more responsive.
         analyserNode.fftSize = 256;
-        // More responsive VU meter settings
-        analyserNode.minDecibels = -90;
-        analyserNode.maxDecibels = -10;
-        analyserNode.smoothingTimeConstant = 0;
+        analyserNode.smoothingTimeConstant = 0.2; // A little smoothing
         
         source.connect(pannerNode);
         pannerNode.connect(gainNode);
