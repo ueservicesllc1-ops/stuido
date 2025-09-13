@@ -177,7 +177,7 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
           variant="secondary"
           disabled={isDisabled}
           className={cn(
-            'w-full h-7 text-xs font-bold rounded-sm',
+            'w-full h-5 text-xs font-bold rounded-sm',
              isMuted ? 'bg-primary text-primary-foreground' : 'bg-secondary',
              isDisabled && '!bg-secondary/30 !text-muted-foreground'
           )}
@@ -189,7 +189,7 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
           variant="secondary"
           disabled={isDisabled || isSpecialTrack}
           className={cn(
-            'w-full h-7 text-xs font-bold rounded-sm',
+            'w-full h-5 text-xs font-bold rounded-sm',
             isSolo ? 'bg-yellow-500 text-black' : 'bg-secondary',
              (isDisabled || isSpecialTrack) && '!bg-secondary/30 !text-muted-foreground'
           )}
