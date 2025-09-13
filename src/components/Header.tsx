@@ -83,8 +83,8 @@ const Header: React.FC<HeaderProps> = ({
   
   return (
     <header className="flex flex-col bg-card/50 border-b border-border p-2 gap-2 rounded-lg">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2 w-56">
+      <div className="flex items-center justify-start gap-6">
+        <div className="flex items-center gap-2">
             <div className="flex items-center gap-2 bg-secondary/30 rounded-md p-1">
               <Volume2 className="w-5 h-5 text-muted-foreground ml-1" />
               <Input 
@@ -98,7 +98,7 @@ const Header: React.FC<HeaderProps> = ({
             </div>
         </div>
 
-        <div className="flex items-center justify-center flex-grow gap-4">
+        <div className="flex items-center justify-center gap-4">
             <div className="flex items-center gap-4 bg-background p-1 rounded-lg">
                 <div className="flex items-center gap-2 bg-secondary/30 rounded-md p-1">
                     <Button 
@@ -153,7 +153,7 @@ const Header: React.FC<HeaderProps> = ({
             </div>
         </div>
         
-        <div className="flex items-center justify-end gap-2 w-56">
+        <div className="flex items-center justify-end gap-2 ml-auto">
              <Button variant="outline">D</Button>
             <PlaybackModeToggle value={playbackMode} onChange={onPlaybackModeChange} />
             <Button variant="ghost" className="gap-2">
