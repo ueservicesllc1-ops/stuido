@@ -652,9 +652,7 @@ const DawPage = () => {
       <div className="col-span-2 row-start-2 h-32">
         <LyricsDisplay 
             text={songLyrics} 
-            syncedLyrics={songSyncedLyrics}
-            currentTime={playbackPosition}
-            isPlaybackActive={isPlaying}
+            isPlaying={isPlaying}
             youtubeUrl={songYoutubeUrl}
             onOpenYouTube={() => setIsYouTubePlayerOpen(true)}
         />

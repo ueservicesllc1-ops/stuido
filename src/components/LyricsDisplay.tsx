@@ -7,76 +7,70 @@ import { Button } from './ui/button';
 import { X, Music4, Youtube, ZoomIn, ZoomOut } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { cn } from '@/lib/utils';
-import type { LyricsSyncOutput } from '@/ai/flows/lyrics-synchronization';
 
 interface LyricsDisplayProps {
   text: string | null;
-  syncedLyrics: LyricsSyncOutput | null;
-  currentTime: number;
-  isPlaybackActive: boolean;
+  isPlaying: boolean;
   youtubeUrl: string | null;
   onOpenYouTube: () => void;
 }
 
 const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ 
     text, 
-    syncedLyrics,
-    currentTime,
-    isPlaybackActive,
+    isPlaying,
     youtubeUrl, 
     onOpenYouTube 
 }) => {
   const [showLyrics, setShowLyrics] = useState(false);
-  const [fontSize, setFontSize] = useState(24);
-  const activeWordRef = useRef<HTMLSpanElement>(null);
-  
+  const [fontSize, setFontSize] = useState(24); // Controla el tamaño de la fuente
+  const scrollViewportRef = useRef<HTMLDivElement>(null);
+  const scrollAnimationRef = useRef<number>();
+
   const handleZoomIn = () => setFontSize(prev => Math.min(prev + 2, 48));
   const handleZoomOut = () => setFontSize(prev => Math.max(prev - 2, 12));
   
-  // Scroll to active word
+  // Efecto para controlar el teleprompter
   useEffect(() => {
-    if (isPlaybackActive && activeWordRef.current) {
-      activeWordRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      });
-    }
-  }, [currentTime, isPlaybackActive]);
+    const scrollEl = scrollViewportRef.current;
+    if (!scrollEl) return;
 
+    const animateScroll = () => {
+      scrollEl.scrollTop += 0.5; // Velocidad de scroll constante
+      scrollAnimationRef.current = requestAnimationFrame(animateScroll);
+    };
 
-  const renderSyncedLyrics = () => {
-    if (!syncedLyrics || !syncedLyrics.words) {
-      return <pre className="font-mono text-amber-400 text-center whitespace-pre-wrap p-4 pt-16">{text || 'No hay letra disponible para esta canción.'}</pre>;
+    if (isPlaying && showLyrics) {
+      scrollAnimationRef.current = requestAnimationFrame(animateScroll);
+    } else {
+      if (scrollAnimationRef.current) {
+        cancelAnimationFrame(scrollAnimationRef.current);
+      }
     }
-    
-    let activeWordIndex = -1;
-    if (isPlaybackActive) {
-        activeWordIndex = syncedLyrics.words.findIndex(
-            (word) => currentTime >= word.startTime && currentTime <= word.endTime
-        );
+
+    return () => {
+      if (scrollAnimationRef.current) {
+        cancelAnimationFrame(scrollAnimationRef.current);
+      }
+    };
+  }, [isPlaying, showLyrics]);
+
+  // Efecto para reiniciar el scroll cuando se detiene o se cierra
+  useEffect(() => {
+    const scrollEl = scrollViewportRef.current;
+    if (scrollEl && (!isPlaying || !showLyrics)) {
+        // Reinicia el scroll a la parte superior
+        scrollEl.scrollTop = 0;
     }
-    
+  }, [isPlaying, showLyrics]);
+
+  const renderLyrics = () => {
     return (
-      <p 
-          className="font-mono text-center [text-shadow:0_0_8px_theme(colors.amber.400)] p-4 pt-16 transition-all leading-relaxed"
-          style={{ fontSize: `${fontSize}px` }}
-      >
-        {syncedLyrics.words.map((word, index) => {
-            const isActive = index === activeWordIndex;
-            return (
-                <span 
-                    key={index} 
-                    ref={isActive ? activeWordRef : null}
-                    className={cn(
-                        "transition-colors duration-150",
-                        isActive ? 'text-cyan-400 [text-shadow:0_0_8px_theme(colors.cyan.400)]' : 'text-amber-400/70'
-                    )}
-                >
-                    {word.word}{' '}
-                </span>
-            )
-        })}
-      </p>
+        <pre 
+            className="font-mono text-amber-400 text-center whitespace-pre-wrap p-4 pt-16 transition-all"
+            style={{ fontSize: `${fontSize}px`, lineHeight: 1.5 }}
+        >
+            {text || 'No hay letra disponible para esta canción.'}
+        </pre>
     );
   }
 
@@ -96,8 +90,8 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({
             </Button>
           </div>
 
-          <ScrollArea className="h-full w-full rounded-lg">
-            {renderSyncedLyrics()}
+          <ScrollArea className="h-full w-full rounded-lg" viewportRef={scrollViewportRef}>
+            {renderLyrics()}
           </ScrollArea>
         </div>
     );
