@@ -64,7 +64,7 @@ const Timeline: React.FC<TimelineProps> = ({ duration, currentTime, onSeek, stru
         <div 
             ref={timelineRef}
             className={cn(
-                "relative flex-grow h-12 bg-black/50 rounded-lg cursor-pointer group border border-amber-400/20",
+                "relative flex-grow h-6 bg-black/50 rounded-lg cursor-pointer group border border-amber-400/20",
                 !isReady && 'opacity-50 cursor-not-allowed'
             )}
             onMouseDown={handleMouseDown}
