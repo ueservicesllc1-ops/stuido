@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from './ui/button';
-import { AlignJustify, Library, MoreHorizontal, Music, Loader2, Calendar, X, PlusCircle, DownloadCloud, Trash2, Upload, Globe, ScanSearch, Music2, Hash, Zap, Clock2 } from 'lucide-react';
+import { AlignJustify, Library, MoreHorizontal, Music, Loader2, Calendar, X, PlusCircle, DownloadCloud, Trash2, Upload, Globe, ScanSearch, Music2, Hash, Zap, Clock2, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { cacheAudio, getCachedAudio } from '@/lib/audiocache';
+import EditSongDialog from './EditSongDialog';
 
 
 interface SongListProps {
@@ -63,6 +64,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
   const [isLibrarySheetForEditingOpen, setIsLibrarySheetForEditingOpen] = useState(false);
   const [isEditingSetlist, setIsEditingSetlist] = useState(false);
   const [showLibraryInEdit, setShowLibraryInEdit] = useState(false);
+  const [songToEdit, setSongToEdit] = useState<Song | null>(null);
   const [songToDelete, setSongToDelete] = useState<Song | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [analyzingSongId, setAnalyzingSongId] = useState<string | null>(null);
@@ -129,6 +131,13 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
   const clearSelectedSetlist = () => {
     onSetlistSelected(null);
   }
+
+  const handleSongUpdated = (updatedSong: Song) => {
+    const updatedSongs = songs.map(s => s.id === updatedSong.id ? updatedSong : s);
+    setSongs(updatedSongs);
+    onSongsFetched(updatedSongs);
+    setSongToEdit(null); // Cierra el diálogo de edición
+  };
 
   const handleAddSongToSetlist = async (song: Song) => {
     if (!selectedSetlist) return;
@@ -333,6 +342,16 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
                     </div>
                     
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {!forGlobal && (
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="w-8 h-8 text-muted-foreground hover:text-primary"
+                                onClick={() => setSongToEdit(song)}
+                            >
+                                <Pencil className="w-4 h-4" />
+                            </Button>
+                        )}
                         {hasCuesTrack && !forGlobal && (
                             <Button 
                                 variant="ghost" 
@@ -484,6 +503,14 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
 
   return (
     <>
+    {songToEdit && (
+        <EditSongDialog
+            song={songToEdit}
+            isOpen={!!songToEdit}
+            onClose={() => setSongToEdit(null)}
+            onSongUpdated={handleSongUpdated}
+        />
+    )}
     <AlertDialog open={!!songToDelete} onOpenChange={() => setSongToDelete(null)}>
         <AlertDialogContent>
             <AlertDialogHeader>
@@ -761,5 +788,3 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
 };
 
 export default SongList;
-
-    

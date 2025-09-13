@@ -30,6 +30,13 @@ export interface Song extends NewSong {
     structure?: SongStructure;
 }
 
+export interface SongUpdateData {
+  name?: string;
+  artist?: string;
+  lyrics?: string;
+}
+
+
 const toTitleCase = (str: string) => {
   if (!str) return '';
   return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
@@ -62,6 +69,32 @@ export async function saveSong(data: NewSong) {
     return { success: true, song: songData };
   } catch (error) {
     console.error('Error guardando en Firestore:', error);
+    return { success: false, error: (error as Error).message };
+  }
+}
+
+export async function updateSong(songId: string, data: SongUpdateData) {
+  try {
+    const songRef = doc(db, 'songs', songId);
+
+    const formattedData: SongUpdateData = {};
+    if (data.name !== undefined) formattedData.name = toTitleCase(data.name);
+    if (data.artist !== undefined) formattedData.artist = toTitleCase(data.artist);
+    if (data.lyrics !== undefined) formattedData.lyrics = data.lyrics;
+
+    await updateDoc(songRef, formattedData);
+
+    // Fetch the updated document to return it
+    const updatedDoc = await getDoc(songRef);
+    if (!updatedDoc.exists()) {
+        throw new Error('Could not find song after update.');
+    }
+    const updatedSong = { id: updatedDoc.id, ...updatedDoc.data() } as Song;
+
+
+    return { success: true, song: updatedSong };
+  } catch (error) {
+    console.error(`Error actualizando la canción ${songId}:`, error);
     return { success: false, error: (error as Error).message };
   }
 }
