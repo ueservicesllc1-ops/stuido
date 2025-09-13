@@ -25,6 +25,7 @@ export interface NewSong {
   albumImageUrl?: string;
   lyrics?: string;
   youtubeUrl?: string;
+  syncOffset?: number;
 }
 
 export interface Song extends NewSong {
@@ -39,6 +40,7 @@ export interface SongUpdateData {
   artist?: string;
   lyrics?: string;
   youtubeUrl?: string;
+  syncOffset?: number;
 }
 
 
@@ -56,6 +58,7 @@ export async function saveSong(data: NewSong) {
         ...data,
         name: toTitleCase(data.name),
         artist: toTitleCase(data.artist),
+        syncOffset: data.syncOffset || 0,
     };
     
     const newDoc = await addDoc(songsCollection, {
@@ -87,6 +90,7 @@ export async function updateSong(songId: string, data: SongUpdateData) {
     if (data.artist !== undefined) formattedData.artist = toTitleCase(data.artist);
     if (data.lyrics !== undefined) formattedData.lyrics = data.lyrics;
     if (data.youtubeUrl !== undefined) formattedData.youtubeUrl = data.youtubeUrl;
+    if (data.syncOffset !== undefined) formattedData.syncOffset = data.syncOffset;
 
     await updateDoc(songRef, formattedData);
 
@@ -99,7 +103,7 @@ export async function updateSong(songId: string, data: SongUpdateData) {
     const updatedSong: Song = {
         id: updatedDoc.id,
         ...updatedSongData,
-        createdAt: updatedSongData.createdAt?.toDate ? updatedSongData.createdAt.toDate().toISOString() : undefined,
+        createdAt: updatedSongData.createdAt?.toDate ? updatedSongData.createdAt.toDate().toISOString() : new Date().toISOString(),
     } as Song;
 
 
@@ -175,6 +179,7 @@ export async function getSongs() {
                 lyrics: data.lyrics,
                 youtubeUrl: data.youtubeUrl,
                 syncedLyrics: data.syncedLyrics,
+                syncOffset: data.syncOffset || 0,
                 createdAt: createdAt,
             };
         });
@@ -222,7 +227,7 @@ export async function synchronizeLyrics(songId: string, input: LyricsSyncInput):
         const updatedSong: Song = {
             id: updatedDoc.id,
             ...updatedSongData,
-            createdAt: updatedSongData.createdAt?.toDate ? updatedSongData.createdAt.toDate().toISOString() : undefined,
+            createdAt: updatedSongData.createdAt?.toDate ? updatedSongData.createdAt.toDate().toISOString() : new Date().toISOString(),
         } as Song;
         
         console.log(`Letra sincronizada y guardada para la canción ${songId}.`);

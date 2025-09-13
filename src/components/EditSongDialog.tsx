@@ -36,6 +36,7 @@ const editSongFormSchema = z.object({
   artist: z.string().min(2, { message: 'El artista debe tener al menos 2 caracteres.' }),
   lyrics: z.string().optional(),
   youtubeUrl: z.string().url({ message: 'Por favor, introduce una URL de YouTube válida.' }).optional().or(z.literal('')),
+  syncOffset: z.coerce.number().optional(),
 });
 
 type EditSongFormValues = z.infer<typeof editSongFormSchema>;
@@ -61,6 +62,7 @@ const EditSongDialog: React.FC<EditSongDialogProps> = ({ song, isOpen, onClose, 
       artist: song.artist,
       lyrics: song.lyrics || '',
       youtubeUrl: song.youtubeUrl || '',
+      syncOffset: song.syncOffset || 0,
     },
   });
 
@@ -71,6 +73,7 @@ const EditSongDialog: React.FC<EditSongDialogProps> = ({ song, isOpen, onClose, 
             artist: song.artist,
             lyrics: song.lyrics || '',
             youtubeUrl: song.youtubeUrl || '',
+            syncOffset: song.syncOffset || 0,
         });
     }
   }, [song, form]);
@@ -84,6 +87,7 @@ const EditSongDialog: React.FC<EditSongDialogProps> = ({ song, isOpen, onClose, 
         artist: data.artist,
         lyrics: data.lyrics,
         youtubeUrl: data.youtubeUrl,
+        syncOffset: data.syncOffset,
       };
       
       const result = await updateSong(song.id, updateData);
@@ -215,7 +219,21 @@ const EditSongDialog: React.FC<EditSongDialogProps> = ({ song, isOpen, onClose, 
                             </div>
                         )}
                         <FormControl>
-                            <Textarea placeholder="Deja este campo en blanco y sube un audio para que la IA transcriba la letra, o escribe la letra aquí para que la IA solo la sincronice." {...field} rows={15} className="bg-input" />
+                            <Textarea placeholder="Deja este campo en blanco y sube un audio para que la IA transcriba la letra, o escribe la letra aquí para que la IA solo la sincronice." {...field} rows={10} className="bg-input" />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                  )}/>
+                   <FormField control={form.control} name="syncOffset" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Ajuste de Sincronización (segundos)</FormLabel>
+                        <FormControl>
+                            <Input 
+                                type="number" 
+                                step="0.1" 
+                                placeholder="Ej: 0.5 o -1.2" 
+                                {...field} 
+                            />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -260,5 +278,3 @@ const EditSongDialog: React.FC<EditSongDialogProps> = ({ song, isOpen, onClose, 
 };
 
 export default EditSongDialog;
-
-    

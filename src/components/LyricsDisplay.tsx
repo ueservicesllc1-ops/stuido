@@ -16,6 +16,7 @@ interface LyricsDisplayProps {
   isPlaying: boolean;
   youtubeUrl: string | null;
   onOpenYouTube: () => void;
+  syncOffset: number;
 }
 
 const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ 
@@ -24,7 +25,8 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({
     currentTime,
     isPlaying,
     youtubeUrl, 
-    onOpenYouTube 
+    onOpenYouTube,
+    syncOffset = 0
 }) => {
   const [showLyrics, setShowLyrics] = useState(false);
   const [fontSize, setFontSize] = useState(24);
@@ -39,8 +41,10 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({
   useEffect(() => {
       if (!isPlaying || !syncedLyrics || !showLyrics) return;
 
+      const adjustedCurrentTime = currentTime - syncOffset;
+
       const currentWordIndex = syncedLyrics.words.findIndex(
-          (word) => currentTime >= word.startTime && currentTime <= word.endTime
+          (word) => adjustedCurrentTime >= word.startTime && adjustedCurrentTime <= word.endTime
       );
 
       if (currentWordIndex !== -1) {
@@ -54,13 +58,14 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({
               activeWordRef.current = wordElement;
           }
       }
-  }, [currentTime, isPlaying, showLyrics, syncedLyrics]);
+  }, [currentTime, isPlaying, showLyrics, syncedLyrics, syncOffset]);
 
   const renderLyrics = () => {
+    const adjustedCurrentTime = currentTime - syncOffset;
     // Karaoke Mode
     if (syncedLyrics && syncedLyrics.words.length > 0) {
         wordRefs.current.clear();
-        const currentWordIndex = syncedLyrics.words.findIndex(word => currentTime >= word.startTime && currentTime < word.endTime);
+        const currentWordIndex = syncedLyrics.words.findIndex(word => adjustedCurrentTime >= word.startTime && adjustedCurrentTime < word.endTime);
 
         return (
             <p 
