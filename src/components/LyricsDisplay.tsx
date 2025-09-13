@@ -1,12 +1,13 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from './ui/button';
-import { X, Music4, Youtube, ZoomIn, ZoomOut } from 'lucide-react';
+import { X, Music4, Youtube, ZoomIn, ZoomOut, Play, Pause } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { Slider } from './ui/slider';
 
 
 interface LyricsDisplayProps {
@@ -18,10 +19,59 @@ interface LyricsDisplayProps {
 
 const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, songTitle, youtubeUrl, onOpenYouTube }) => {
   const [showLyrics, setShowLyrics] = useState(false);
-  const [fontSize, setFontSize] = useState(20); // Tamaño inicial en píxeles (similar a text-xl)
+  const [fontSize, setFontSize] = useState(20);
+  const [isScrolling, setIsScrolling] = useState(false);
+  const [scrollSpeed, setScrollSpeed] = useState(5); // Valor inicial de velocidad (ej. 1 a 10)
+  
+  const scrollViewportRef = useRef<HTMLDivElement>(null);
+  const scrollAnimationRef = useRef<number>();
 
-  const handleZoomIn = () => setFontSize(prev => Math.min(prev + 2, 48)); // Max 48px
-  const handleZoomOut = () => setFontSize(prev => Math.max(prev - 2, 12)); // Min 12px
+  const handleZoomIn = () => setFontSize(prev => Math.min(prev + 2, 48));
+  const handleZoomOut = () => setFontSize(prev => Math.max(prev - 2, 12));
+
+  const toggleScroll = () => {
+    setIsScrolling(prev => !prev);
+  }
+
+  useEffect(() => {
+    const scrollViewport = scrollViewportRef.current;
+    if (!scrollViewport) return;
+
+    const animateScroll = () => {
+      // La velocidad se traduce a píxeles por segundo (ej. speed 5 -> 25px/s)
+      const pixelsPerFrame = (scrollSpeed * 5) / 60;
+      scrollViewport.scrollTop += pixelsPerFrame;
+      if (scrollViewport.scrollTop < scrollViewport.scrollHeight - scrollViewport.clientHeight) {
+        scrollAnimationRef.current = requestAnimationFrame(animateScroll);
+      } else {
+        setIsScrolling(false); // Detener cuando llega al final
+      }
+    };
+
+    if (isScrolling) {
+      scrollAnimationRef.current = requestAnimationFrame(animateScroll);
+    } else {
+      if (scrollAnimationRef.current) {
+        cancelAnimationFrame(scrollAnimationRef.current);
+      }
+    }
+
+    return () => {
+      if (scrollAnimationRef.current) {
+        cancelAnimationFrame(scrollAnimationRef.current);
+      }
+    };
+  }, [isScrolling, scrollSpeed]);
+
+  // Reset scroll on close
+  useEffect(() => {
+    if (!showLyrics) {
+      setIsScrolling(false);
+      if (scrollViewportRef.current) {
+        scrollViewportRef.current.scrollTop = 0;
+      }
+    }
+  }, [showLyrics])
 
   if (showLyrics) {
     return (
@@ -30,18 +80,30 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, songTitle, youtubeU
               <X className="w-5 h-5" />
           </Button>
 
-          <div className="absolute top-2 left-2 z-20 flex gap-2">
+          <div className="absolute top-2 left-2 z-20 flex gap-2 items-center bg-black/50 p-1 rounded-lg">
             <Button variant="ghost" size="icon" className="w-8 h-8 text-amber-400/70 hover:text-amber-400" onClick={handleZoomIn}>
                 <ZoomIn className="w-5 h-5" />
             </Button>
              <Button variant="ghost" size="icon" className="w-8 h-8 text-amber-400/70 hover:text-amber-400" onClick={handleZoomOut}>
                 <ZoomOut className="w-5 h-5" />
             </Button>
+            <div className="w-px h-6 bg-amber-400/20 mx-1"></div>
+            <Button variant="ghost" size="icon" className="w-8 h-8 text-amber-400/70 hover:text-amber-400" onClick={toggleScroll}>
+                {isScrolling ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+            </Button>
+            <Slider
+                value={[scrollSpeed]}
+                onValueChange={(val) => setScrollSpeed(val[0])}
+                min={1}
+                max={20}
+                step={1}
+                className="w-24"
+             />
           </div>
 
-          <ScrollArea className="h-full w-full flex items-center justify-center rounded-lg">
+          <ScrollArea className="h-full w-full rounded-lg" viewportRef={scrollViewportRef}>
             <pre 
-                className="font-mono text-amber-400 text-center whitespace-pre-wrap [text-shadow:0_0_8px_theme(colors.amber.400)] p-4 pt-12 transition-all"
+                className="font-mono text-amber-400 text-center whitespace-pre-wrap [text-shadow:0_0_8px_theme(colors.amber.400)] p-4 pt-16 transition-all"
                 style={{ fontSize: `${fontSize}px` }}
             >
                 {text || 'No hay letra disponible para esta canción.'}
