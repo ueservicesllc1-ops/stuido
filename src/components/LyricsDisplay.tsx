@@ -45,12 +45,7 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, youtubeUrl, onOpenY
     if (isPlaybackActive && showLyrics) {
         // Iniciar la animación
         scrollAnimationRef.current = requestAnimationFrame(animateScroll);
-    } else {
-        // Detener la animación
-        if (scrollAnimationRef.current) {
-            cancelAnimationFrame(scrollAnimationRef.current);
-        }
-    }
+    } 
 
     // Función de limpieza para detener la animación si el componente se desmonta
     return () => {
