@@ -38,7 +38,7 @@ const FaderTickMarks = React.memo(() => {
         { value: 0, label: "-∞" },
     ];
     return (
-        <div className="absolute h-[90%] w-4 pointer-events-none text-[8px] text-muted-foreground/70 py-2 bottom-0 left-0">
+        <div className="absolute h-full w-4 pointer-events-none text-[8px] text-muted-foreground/70 bottom-0 left-0">
             {marks.map((mark) => (
                 <div key={mark.label} className="absolute w-full flex items-center" style={{bottom: `${mark.value}%`}}>
                     <span className="absolute -left-3.5 text-center w-3">{mark.label}</span>
