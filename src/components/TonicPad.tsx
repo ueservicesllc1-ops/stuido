@@ -15,7 +15,7 @@ const TonicPad = () => {
   const [volume, setVolume] = useState(75);
   const [isMuted, setIsMuted] = useState(false);
   const [isSolo, setIsSolo] = useState(false);
-  // const audioRefs = useRef<{ [key: string]: HTMLAudioElement | null }>({});
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
 
   /*
   useEffect(() => {
@@ -31,6 +31,10 @@ const TonicPad = () => {
       })
   }, [volume, isMuted])
   */
+  
+  const handleGroupSelect = (key: string) => {
+    setSelectedGroup(prev => prev === key ? null : key);
+  }
 
   const playSound = (key: string) => {
    /*
@@ -40,7 +44,11 @@ const TonicPad = () => {
       audio.play().catch(e => console.error("Error al reproducir sonido:", e));
     }
     */
-   console.log(`Reproduciendo pad: ${key}`);
+   if (selectedGroup) {
+       console.log(`Reproduciendo pad: Grupo ${selectedGroup}, Pad ${key}`);
+   } else {
+       console.log("Ningún grupo seleccionado. Selecciona A-F primero.");
+   }
   };
 
   const handleVolumeChange = (value: number[]) => {
@@ -53,9 +61,14 @@ const TonicPad = () => {
         {topRowKeys.map((key) => (
             <Button 
                 key={key} 
-                variant="secondary"
-                className="w-full h-full text-base font-bold bg-secondary hover:bg-accent"
-                onClick={() => playSound(key)}
+                variant={selectedGroup === key ? 'default' : 'secondary'}
+                className={cn(
+                    "w-full h-full text-base font-bold",
+                    selectedGroup === key 
+                        ? "bg-primary text-primary-foreground" 
+                        : "bg-secondary hover:bg-accent"
+                )}
+                onClick={() => handleGroupSelect(key)}
             >
                 {key}
             </Button>
@@ -64,8 +77,12 @@ const TonicPad = () => {
             <Button 
                 key={key} 
                 variant="secondary"
-                className="w-full h-full text-base font-bold bg-secondary hover:bg-accent"
+                className={cn(
+                    "w-full h-full text-base font-bold bg-secondary hover:bg-accent",
+                    !selectedGroup && "opacity-50 cursor-not-allowed"
+                )}
                 onClick={() => playSound(key)}
+                disabled={!selectedGroup}
             >
                 {key}
             </Button>
