@@ -22,8 +22,7 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, songTitle, youtubeU
   if (showLyrics) {
     return (
        <div className="bg-black/80 border border-amber-400/20 rounded-lg p-3 h-full flex flex-col">
-          <div className="flex justify-between items-center mb-2 flex-shrink-0">
-            <h3 className="font-mono text-amber-400 font-semibold">{songTitle || 'Letra'}</h3>
+          <div className="flex justify-end items-center mb-2 flex-shrink-0">
             <Button variant="ghost" size="icon" className="w-8 h-8 text-amber-400/70 hover:text-amber-400" onClick={() => setShowLyrics(false)}>
               <X className="w-5 h-5" />
             </Button>
