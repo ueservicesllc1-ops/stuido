@@ -579,7 +579,7 @@ const DawPage = () => {
   const showLoadingBar = loadingTracks.length > 0 && totalTracksForSong > 0;
   
   return (
-    <div className="grid grid-cols-[1fr_480px] grid-rows-[auto_1fr] h-screen w-screen p-4 gap-4">
+    <div className="grid grid-cols-[1fr_384px] grid-rows-[auto_1fr] h-screen w-screen p-4 gap-4">
       <div className="col-span-2 row-start-1">
         <Header 
             isPlaying={isPlaying}
@@ -657,6 +657,8 @@ const DawPage = () => {
 };
 
 export default DawPage;
+
+    
 
     
 
