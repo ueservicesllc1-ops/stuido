@@ -28,7 +28,6 @@ interface TrackPadProps {
 
 const FaderTickMarks = React.memo(() => {
     const marks = [
-        { value: 95, label: "+5" },
         { value: 75, label: "0" },
         { value: 55, label: "-5" },
         { value: 40, label: "-10" },
@@ -103,11 +102,11 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
       <div className="flex gap-1.5 mt-1">
         <div className={cn(
             "w-2 h-2 rounded-full transition-colors",
-            isAudible ? "bg-green-500/80 shadow-[0_0_5px_1px] shadow-green-500/70" : "bg-green-900/50"
+            isAudible ? "bg-blue-500/80 shadow-[0_0_5px_1px] shadow-blue-500/70" : "bg-blue-900/50"
         )} />
         <div className={cn(
             "w-2 h-2 rounded-full transition-colors",
-            isPeaking ? "bg-destructive shadow-[0_0_5px_1px] shadow-destructive/70" : "bg-blue-900/50"
+            isPeaking ? "bg-destructive shadow-[0_0_5px_1px] shadow-destructive/70" : "bg-red-900/50"
         )} />
       </div>
 
