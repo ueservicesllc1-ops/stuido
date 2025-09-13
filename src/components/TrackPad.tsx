@@ -27,7 +27,7 @@ interface TrackPadProps {
 }
 
 const FaderTickMarks = React.memo(() => {
-    // Escala logarítmica más precisa para un fader
+    // Escala logarítmica precisa para un fader
     const marks = [
         { value: 100, label: "+10" },
         { value: 87.5, label: "+5" },
@@ -39,7 +39,7 @@ const FaderTickMarks = React.memo(() => {
         { value: 0, label: "-∞" },
     ];
     return (
-        <div className="absolute bottom-0 left-0 h-full w-4 py-2 pointer-events-none text-[8px] text-muted-foreground/70">
+        <div className="absolute h-[90%] w-4 pointer-events-none text-[8px] text-muted-foreground/70">
             {marks.map((mark) => (
                 <div key={mark.label} className="absolute w-full flex items-center" style={{bottom: `${mark.value}%`}}>
                     <span className="absolute -left-3.5 text-center w-3">{mark.label}</span>
