@@ -54,6 +54,7 @@ export default {
         copper: '#B87333',
         amber: {
           '400': '#FBBF24',
+          '600': '#D97706',
         },
         yellow: {
           '400': '#FBBF24', // For text/icon
