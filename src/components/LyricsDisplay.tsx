@@ -20,7 +20,6 @@ interface LyricsDisplayProps {
 const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, youtubeUrl, onOpenYouTube, isPlaybackActive }) => {
   const [showLyrics, setShowLyrics] = useState(false);
   const [fontSize, setFontSize] = useState(20);
-  const [scrollSpeed, setScrollSpeed] = useState(5); // Valor inicial de velocidad (ej. 1 a 10)
   
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const scrollAnimationRef = useRef<number>();
@@ -33,8 +32,8 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, youtubeUrl, onOpenY
     if (!scrollViewport) return;
 
     const animateScroll = () => {
-      // La velocidad se traduce a píxeles por fotograma.
-      const pixelsPerFrame = (scrollSpeed * 5) / 60;
+      // Velocidad de scroll fija. Ajusta este valor si es necesario.
+      const pixelsPerFrame = 0.5;
       scrollViewport.scrollTop += pixelsPerFrame;
       
       // Si el scroll no ha llegado al final, sigue animando
@@ -59,7 +58,7 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, youtubeUrl, onOpenY
         cancelAnimationFrame(scrollAnimationRef.current);
       }
     };
-  }, [isPlaybackActive, showLyrics, scrollSpeed]);
+  }, [isPlaybackActive, showLyrics]);
 
   // Resetear el scroll al principio cuando se detiene la reproducción o se cierra la ventana.
   useEffect(() => {
@@ -85,15 +84,6 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, youtubeUrl, onOpenY
              <Button variant="ghost" size="icon" className="w-8 h-8 text-amber-400/70 hover:text-amber-400" onClick={handleZoomOut}>
                 <ZoomOut className="w-5 h-5" />
             </Button>
-            <div className="w-px h-6 bg-amber-400/20 mx-1"></div>
-            <Slider
-                value={[scrollSpeed]}
-                onValueChange={(val) => setScrollSpeed(val[0])}
-                min={1}
-                max={20}
-                step={1}
-                className="w-24"
-             />
           </div>
 
           <ScrollArea className="h-full w-full rounded-lg" viewportRef={scrollViewportRef}>
