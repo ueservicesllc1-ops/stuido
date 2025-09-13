@@ -16,6 +16,7 @@ const TonicPad = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [isSolo, setIsSolo] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+  const [activePad, setActivePad] = useState<string | null>(null);
 
   /*
   useEffect(() => {
@@ -37,15 +38,12 @@ const TonicPad = () => {
   }
 
   const playSound = (key: string) => {
-   /*
-    const audio = audioRefs.current[key];
-    if (audio) {
-      audio.currentTime = 0;
-      audio.play().catch(e => console.error("Error al reproducir sonido:", e));
-    }
-    */
    if (selectedGroup) {
        console.log(`Reproduciendo pad: Grupo ${selectedGroup}, Pad ${key}`);
+       // Activa el pad visualmente
+       setActivePad(key);
+       // Desactiva el pad después de un corto tiempo para el efecto "flash"
+       setTimeout(() => setActivePad(null), 200);
    } else {
        console.log("Ningún grupo seleccionado. Selecciona A-F primero.");
    }
@@ -78,8 +76,11 @@ const TonicPad = () => {
                 key={key} 
                 variant="secondary"
                 className={cn(
-                    "w-full h-full text-base font-bold bg-secondary hover:bg-accent",
-                    !selectedGroup && "opacity-50 cursor-not-allowed"
+                    "w-full h-full text-base font-bold",
+                    !selectedGroup && "opacity-50 cursor-not-allowed",
+                    activePad === key
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary hover:bg-accent"
                 )}
                 onClick={() => playSound(key)}
                 disabled={!selectedGroup}
