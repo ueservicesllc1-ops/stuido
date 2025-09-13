@@ -27,15 +27,15 @@ interface TrackPadProps {
 }
 
 const FaderTickMarks = React.memo(() => {
-    // Escala más parecida a un fader real (aproximación)
+    // Escala logarítmica más precisa para un fader
     const marks = [
         { value: 100, label: "+10" },
-        { value: 93.75, label: "+5" },
-        { value: 87.5, label: "0" },
-        { value: 81.25, label: "-5" },
-        { value: 75, label: "-10" },
-        { value: 62.5, label: "-20" },
-        { value: 50, label: "-30" },
+        { value: 87.5, label: "+5" },
+        { value: 75, label: "0" },
+        { value: 65, label: "-5" },
+        { value: 58, label: "-10" },
+        { value: 45, label: "-20" },
+        { value: 35, label: "-30" },
         { value: 0, label: "-∞" },
     ];
     return (
