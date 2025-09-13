@@ -95,7 +95,12 @@ export async function updateSong(songId: string, data: SongUpdateData) {
     if (!updatedDoc.exists()) {
         throw new Error('Could not find song after update.');
     }
-    const updatedSong = { id: updatedDoc.id, ...updatedDoc.data() } as Song;
+    const updatedSongData = updatedDoc.data();
+    const updatedSong: Song = {
+        id: updatedDoc.id,
+        ...updatedSongData,
+        createdAt: updatedSongData.createdAt?.toDate ? updatedSongData.createdAt.toDate().toISOString() : undefined,
+    } as Song;
 
 
     return { success: true, song: updatedSong };
@@ -216,19 +221,9 @@ export async function synchronizeLyrics(songId: string, input: LyricsSyncInput):
         const updatedSongData = updatedDoc.data();
         const updatedSong: Song = {
             id: updatedDoc.id,
-            name: updatedSongData.name,
-            artist: updatedSongData.artist,
-            tempo: updatedSongData.tempo,
-            key: updatedSongData.key,
-            timeSignature: updatedSongData.timeSignature,
-            tracks: updatedSongData.tracks,
-            // Asegurarnos de que las fechas también se serialicen aquí si existen
+            ...updatedSongData,
             createdAt: updatedSongData.createdAt?.toDate ? updatedSongData.createdAt.toDate().toISOString() : undefined,
-            structure: updatedSongData.structure,
-            syncedLyrics: updatedSongData.syncedLyrics,
-            lyrics: updatedSongData.lyrics,
-            youtubeUrl: updatedSongData.youtubeUrl,
-        };
+        } as Song;
         
         console.log(`Letra sincronizada y guardada para la canción ${songId}.`);
         return { success: true, song: updatedSong };
