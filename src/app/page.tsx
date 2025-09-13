@@ -295,6 +295,17 @@ const DawPage = () => {
     loadAudioData();
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSongId, tracks]); // Only re-run when song or available tracks change
+
+  // This effect updates song metadata without triggering audio reloading
+  useEffect(() => {
+    if (activeSongId) {
+        const currentSong = songs.find(s => s.id === activeSongId);
+        setSongStructure(currentSong?.structure || null);
+        setSongTempo(currentSong?.tempo || null);
+        setSongLyrics(currentSong?.lyrics || null);
+        setSongYoutubeUrl(currentSong?.youtubeUrl || null);
+    }
   }, [activeSongId, songs]);
 
   // Inicializa volúmenes y paneos
