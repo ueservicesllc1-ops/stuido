@@ -35,6 +35,7 @@ const editSongFormSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
   artist: z.string().min(2, { message: 'El artista debe tener al menos 2 caracteres.' }),
   lyrics: z.string().optional(),
+  youtubeUrl: z.string().url({ message: 'Por favor, introduce una URL de YouTube válida.' }).optional().or(z.literal('')),
 });
 
 type EditSongFormValues = z.infer<typeof editSongFormSchema>;
@@ -59,6 +60,7 @@ const EditSongDialog: React.FC<EditSongDialogProps> = ({ song, isOpen, onClose, 
       name: song.name,
       artist: song.artist,
       lyrics: song.lyrics || '',
+      youtubeUrl: song.youtubeUrl || '',
     },
   });
 
@@ -68,6 +70,7 @@ const EditSongDialog: React.FC<EditSongDialogProps> = ({ song, isOpen, onClose, 
             name: song.name,
             artist: song.artist,
             lyrics: song.lyrics || '',
+            youtubeUrl: song.youtubeUrl || '',
         });
     }
   }, [song, form]);
@@ -80,6 +83,7 @@ const EditSongDialog: React.FC<EditSongDialogProps> = ({ song, isOpen, onClose, 
         name: data.name,
         artist: data.artist,
         lyrics: data.lyrics,
+        youtubeUrl: data.youtubeUrl,
       };
       
       const result = await updateSong(song.id, updateData);
@@ -106,15 +110,6 @@ const EditSongDialog: React.FC<EditSongDialogProps> = ({ song, isOpen, onClose, 
   }
 
   const handleSyncClick = () => {
-    const lyrics = form.getValues('lyrics');
-    if (!lyrics?.trim()) {
-        toast({
-            variant: 'destructive',
-            title: 'Falta la letra',
-            description: 'Por favor, añade la letra de la canción antes de sincronizar.',
-        });
-        return;
-    }
     setSyncAlertOpen(true);
   }
 
@@ -128,18 +123,22 @@ const EditSongDialog: React.FC<EditSongDialogProps> = ({ song, isOpen, onClose, 
     }
 
     setIsSyncing(true);
-    toast({ title: 'Procesando...', description: 'La IA está sincronizando la letra. Esto puede tardar un momento.'});
+    const toastMessage = form.getValues('lyrics')?.trim() 
+      ? 'La IA está sincronizando la letra. Esto puede tardar un momento.'
+      : 'La IA está transcribiendo y sincronizando la canción. Esto puede tardar varios minutos.';
+    toast({ title: 'Procesando...', description: toastMessage });
+
 
     try {
         const audioDataUri = await blobToDataURI(file);
-        const lyrics = form.getValues('lyrics')!;
+        const lyrics = form.getValues('lyrics');
 
         const result = await synchronizeLyrics(song.id, { audioDataUri, lyrics });
 
         if (result.success && result.song) {
             toast({
                 title: '¡Sincronización completa!',
-                description: `La letra de "${result.song.name}" ha sido sincronizada.`,
+                description: `La letra de "${result.song.name}" ha sido procesada.`,
             });
             onSongUpdated(result.song);
         } else {
@@ -178,6 +177,9 @@ const EditSongDialog: React.FC<EditSongDialogProps> = ({ song, isOpen, onClose, 
                   <FormField control={form.control} name="artist" render={({ field }) => (
                     <FormItem><FormLabel>Artista</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                   )}/>
+                   <FormField control={form.control} name="youtubeUrl" render={({ field }) => (
+                    <FormItem><FormLabel>URL de YouTube (opcional)</FormLabel><FormControl><Input placeholder="https://www.youtube.com/watch?v=..." {...field} /></FormControl><FormMessage /></FormItem>
+                  )}/>
                   <FormField control={form.control} name="lyrics" render={({ field }) => (
                     <FormItem>
                         <div className="flex justify-between items-center">
@@ -202,11 +204,11 @@ const EditSongDialog: React.FC<EditSongDialogProps> = ({ song, isOpen, onClose, 
                                 ) : (
                                     <Zap className="w-4 h-4" />
                                 )}
-                                Sincronizar Letra con IA
+                                Sincronizar con IA
                             </Button>
                         </div>
                         <FormControl>
-                            <Textarea placeholder="[Intro]&#10;[Verso 1]&#10;..." {...field} rows={15} className="bg-input" />
+                            <Textarea placeholder="Deja este campo en blanco y sube un audio para que la IA transcriba la letra, o escribe la letra aquí para que la IA solo la sincronice." {...field} rows={15} className="bg-input" />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -215,9 +217,9 @@ const EditSongDialog: React.FC<EditSongDialogProps> = ({ song, isOpen, onClose, 
               </ScrollArea>
               <DialogFooter>
                 <Button type="button" variant="ghost" onClick={onClose} disabled={isSaving}>Cancelar</Button>
-                <Button type="submit" disabled={isSaving}>
-                  {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+                <Button type="submit" disabled={isSaving || isSyncing}>
+                  {(isSaving || isSyncing) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isSaving ? 'Guardando...' : (isSyncing ? 'Sincronizando...' : 'Guardar Cambios')}
                 </Button>
               </DialogFooter>
             </form>
@@ -229,7 +231,11 @@ const EditSongDialog: React.FC<EditSongDialogProps> = ({ song, isOpen, onClose, 
             <AlertDialogHeader>
                 <AlertDialogTitle>Subir audio para sincronización</AlertDialogTitle>
                 <AlertDialogDescription>
-                    Para sincronizar la letra, necesitas subir el archivo de audio (MP3, WAV, etc.) de la canción completa. La IA lo analizará para encontrar los tiempos exactos de cada palabra.
+                    Para sincronizar la letra, necesitas subir el archivo de audio (MP3, WAV, etc.) de la canción completa. 
+                    <br/><br/>
+                    • Si has escrito la letra, la IA la sincronizará.
+                    <br/>
+                    • Si el campo de letra está vacío, la IA la transcribirá por ti.
                     <br/><br/>
                     <span className="font-bold text-foreground">Importante:</span> El audio no se guardará, solo se usará para el análisis.
                 </AlertDialogDescription>

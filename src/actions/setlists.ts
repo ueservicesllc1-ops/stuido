@@ -3,6 +3,7 @@
 
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import type { Song } from './songs';
 
 export interface NewSetlist {
   name: string;
@@ -28,6 +29,7 @@ export interface Setlist {
     date: string; // Cambiado a string para serialización
     userId: string;
     songs: SetlistSong[]; 
+    songDetails?: Song[];
 }
 
 

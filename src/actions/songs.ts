@@ -37,6 +37,7 @@ export interface SongUpdateData {
   name?: string;
   artist?: string;
   lyrics?: string;
+  youtubeUrl?: string;
 }
 
 
@@ -84,6 +85,7 @@ export async function updateSong(songId: string, data: SongUpdateData) {
     if (data.name !== undefined) formattedData.name = toTitleCase(data.name);
     if (data.artist !== undefined) formattedData.artist = toTitleCase(data.artist);
     if (data.lyrics !== undefined) formattedData.lyrics = data.lyrics;
+    if (data.youtubeUrl !== undefined) formattedData.youtubeUrl = data.youtubeUrl;
 
     await updateDoc(songRef, formattedData);
 
@@ -193,8 +195,14 @@ export async function synchronizeLyrics(songId: string, input: LyricsSyncInput):
         console.log(`Iniciando sincronización de letra para la canción ${songId}...`);
         const syncedLyrics = await synchronizeLyricsFlow(input);
         
+        // Si no había letra, la IA la ha generado. Vamos a reconstruir el string de la letra.
+        const updatePayload: { syncedLyrics: LyricsSyncOutput, lyrics?: string } = { syncedLyrics };
+        if (!input.lyrics && syncedLyrics.words.length > 0) {
+            updatePayload.lyrics = syncedLyrics.words.map(w => w.word).join(' ');
+        }
+        
         const songRef = doc(db, 'songs', songId);
-        await updateDoc(songRef, { syncedLyrics });
+        await updateDoc(songRef, updatePayload);
         
         const updatedDoc = await getDoc(songRef);
         if (!updatedDoc.exists()) {
