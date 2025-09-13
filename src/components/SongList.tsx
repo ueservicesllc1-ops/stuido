@@ -678,8 +678,15 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
                             data-ai-hint="abstract music"
                         />
                     </div>
-                    <h3 className="text-2xl font-bold">{selectedSetlist?.name}</h3>
-                    <p className="text-muted-foreground">{format(selectedSetlist?.date ?? new Date(), 'PPP')}</p>
+                    <div className="rounded-md bg-black border border-amber-400/20 p-4 flex-grow">
+                        <p className="font-mono font-bold text-2xl text-amber-400 flex-grow [text-shadow:0_0_8px_theme(colors.amber.400)]">
+                            {selectedSetlist?.name}
+                        </p>
+                        <div className="flex items-center gap-2 text-amber-400/60 mt-2">
+                            <Calendar className="w-4 h-4" />
+                            <p className="text-sm font-mono">{format(selectedSetlist?.date ?? new Date(), 'PPP')}</p>
+                        </div>
+                    </div>
                 </div>
 
                  {/* Columna Central: Canciones del Setlist */}
@@ -754,3 +761,5 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
 };
 
 export default SongList;
+
+    
