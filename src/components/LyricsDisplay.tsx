@@ -28,8 +28,8 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ text, songTitle, youtubeU
               <X className="w-5 h-5" />
             </Button>
           </div>
-          <ScrollArea className="h-full w-full">
-            <pre className="font-mono text-amber-400 text-sm whitespace-pre-wrap [text-shadow:0_0_8px_theme(colors.amber.400)]">
+          <ScrollArea className="h-full w-full flex items-center justify-center">
+            <pre className="font-mono text-amber-400 text-xl text-center whitespace-pre-wrap [text-shadow:0_0_8px_theme(colors.amber.400)] p-4">
                 {text || 'No hay letra disponible para esta canción.'}
             </pre>
           </ScrollArea>
