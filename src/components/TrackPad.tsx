@@ -103,11 +103,11 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
       <div className="flex gap-1.5 mt-1">
         <div className={cn(
             "w-2 h-2 rounded-full transition-colors",
-            isAudible ? "bg-green-500/80 shadow-[0_0_2px_rgba(34,197,94,0.5)]" : "bg-green-900/50"
+            isAudible ? "bg-green-500/80 shadow-[0_0_5px_1px] shadow-green-500/70" : "bg-green-900/50"
         )} />
         <div className={cn(
             "w-2 h-2 rounded-full transition-colors",
-            isPeaking ? "bg-destructive shadow-[0_0_2px_rgba(239,68,68,0.5)]" : "bg-blue-900/50"
+            isPeaking ? "bg-destructive shadow-[0_0_5px_1px] shadow-destructive/70" : "bg-blue-900/50"
         )} />
       </div>
 
