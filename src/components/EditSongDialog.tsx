@@ -30,7 +30,6 @@ import { updateSong, Song, SongUpdateData, synchronizeLyrics } from '@/actions/s
 import { Textarea } from './ui/textarea';
 import { blobToDataURI } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
-import { cn } from '@/lib/utils';
 
 const editSongFormSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -210,7 +209,7 @@ const EditSongDialog: React.FC<EditSongDialogProps> = ({ song, isOpen, onClose, 
                             </Button>
                         </div>
                         {hasSyncedLyrics && (
-                             <div className="flex items-center gap-2 text-sm text-green-500">
+                             <div className="flex items-center gap-2 text-sm text-green-500 mt-2">
                                 <CheckCircle className="w-4 h-4" />
                                 <span>Letra sincronizada con éxito.</span>
                             </div>
@@ -261,3 +260,5 @@ const EditSongDialog: React.FC<EditSongDialogProps> = ({ song, isOpen, onClose, 
 };
 
 export default EditSongDialog;
+
+    

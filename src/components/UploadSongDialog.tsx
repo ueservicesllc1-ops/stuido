@@ -150,19 +150,23 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
       };
       
       xhr.onload = () => {
+        let response = null;
+        try {
+          response = JSON.parse(xhr.responseText);
+        } catch (e) {
+          // Si la respuesta no es un JSON válido
+          resolve({ success: false, error: `Respuesta del servidor inválida: ${xhr.responseText}` });
+          return;
+        }
+
         if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const result = JSON.parse(xhr.responseText);
-            if (result.success) {
-              resolve({ success: true, track: result.track });
+            if (response.success) {
+              resolve({ success: true, track: response.track });
             } else {
-              resolve({ success: false, error: result.error || `Error del servidor al subir.` });
+              resolve({ success: false, error: response.error || `Error del servidor al subir.` });
             }
-          } catch(e) {
-             resolve({ success: false, error: 'Respuesta del servidor inválida.'});
-          }
         } else {
-           resolve({ success: false, error: `Error del servidor: ${xhr.statusText}` });
+           resolve({ success: false, error: response.error || `Error del servidor: ${xhr.statusText}` });
         }
       };
 
@@ -416,3 +420,5 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
 };
 
 export default UploadSongDialog;
+
+    
