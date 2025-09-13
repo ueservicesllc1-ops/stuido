@@ -30,10 +30,10 @@ const FaderTickMarks = React.memo(() => {
     const marks = [
         { value: 95, label: "+5" },
         { value: 75, label: "0" },
-        { value: 60, label: "-5" },
-        { value: 50, label: "-10" },
-        { value: 35, label: "-20" },
-        { value: 25, label: "-30" },
+        { value: 55, label: "-5" },
+        { value: 40, label: "-10" },
+        { value: 25, label: "-20" },
+        { value: 15, label: "-30" },
         { value: 0, label: "-∞" },
     ];
     return (
