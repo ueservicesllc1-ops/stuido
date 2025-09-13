@@ -242,13 +242,6 @@ const DawPage = () => {
       return;
     }
 
-    const currentSong = songs.find(s => s.id === activeSongId);
-    setSongStructure(currentSong?.structure || null);
-    setSongTempo(currentSong?.tempo || null);
-    setSongLyrics(currentSong?.lyrics || null);
-    setSongSyncedLyrics(currentSong?.syncedLyrics || null);
-    setSongYoutubeUrl(currentSong?.youtubeUrl || null);
-
     handleStop(true); // Stop without fade on song change
     
     const tracksForSong = tracks.filter(t => t.songId === activeSongId);
