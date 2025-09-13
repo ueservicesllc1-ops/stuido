@@ -700,11 +700,11 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
                     </div>
                     <div className="space-y-2 overflow-y-auto pr-2 no-scrollbar">
                         {groupedSongs.length > 0 ? groupedSongs.map((songGroup, index) => (
-                             <div key={songGroup.songId} className="flex items-center gap-3 p-2 rounded-md bg-secondary/50">
-                                <span className="text-sm text-muted-foreground">{index + 1}</span>
+                             <div key={songGroup.songId} className="flex items-center gap-3 p-2 rounded-md bg-black border border-amber-400/10">
+                                <span className="font-mono text-sm text-amber-400/50">{index + 1}</span>
                                 <div className="flex-grow">
-                                    <p className="font-semibold text-foreground">{songGroup.songName}</p>
-                                    <p className="text-xs text-muted-foreground">{songs.find(s => s.id === songGroup.songId)?.artist}</p>
+                                    <p className="font-mono font-semibold text-amber-400 [text-shadow:0_0_4px_theme(colors.amber.400)]">{songGroup.songName}</p>
+                                    <p className="text-xs text-amber-400/60 font-mono">{songs.find(s => s.id === songGroup.songId)?.artist}</p>
                                 </div>
                                 <Button 
                                     variant="ghost" 
@@ -761,5 +761,3 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
 };
 
 export default SongList;
-
-    
