@@ -27,7 +27,6 @@ interface TrackPadProps {
 }
 
 const FaderTickMarks = React.memo(() => {
-    // Escala logarítmica precisa para un fader
     const marks = [
         { value: 100, label: "+10" },
         { value: 87.5, label: "+5" },
@@ -39,7 +38,7 @@ const FaderTickMarks = React.memo(() => {
         { value: 0, label: "-∞" },
     ];
     return (
-        <div className="absolute h-[90%] w-4 pointer-events-none text-[8px] text-muted-foreground/70">
+        <div className="absolute h-[90%] w-4 pointer-events-none text-[8px] text-muted-foreground/70 py-2 bottom-0 left-0">
             {marks.map((mark) => (
                 <div key={mark.label} className="absolute w-full flex items-center" style={{bottom: `${mark.value}%`}}>
                     <span className="absolute -left-3.5 text-center w-3">{mark.label}</span>
@@ -86,6 +85,12 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
 
   return (
     <div className="flex flex-col items-center gap-2 bg-input p-1 rounded-sm border border-black/50">
+      {/* LEDs */}
+      <div className="flex gap-1.5 mt-1">
+        <div className="w-2 h-2 rounded-full bg-green-500/80 shadow-[0_0_2px_rgba(34,197,94,0.5)]" />
+        <div className="w-2 h-2 rounded-full bg-blue-500/80 shadow-[0_0_2px_rgba(59,130,246,0.5)]" />
+      </div>
+
       {/* Fader channel */}
       <div className="relative h-48 w-12 flex justify-center items-center">
          {isDisabled && (

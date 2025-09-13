@@ -1,3 +1,4 @@
+
 import type {Config} from 'tailwindcss';
 
 export default {
@@ -61,7 +62,10 @@ export default {
         green: {
           '400': '#22C55E', // For text/icon
           '500': '#16A34A', // For slider
-        }
+        },
+        blue: {
+          '500': '#3b82f6',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',
