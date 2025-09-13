@@ -79,7 +79,7 @@ const TonicPad = () => {
                     "w-full h-full text-base font-bold",
                     !selectedGroup && "opacity-50 cursor-not-allowed",
                     activePad === key
-                        ? "bg-yellow-500 text-black"
+                        ? "bg-yellow-500 text-black hover:bg-yellow-500/90"
                         : "bg-secondary hover:bg-accent"
                 )}
                 onClick={() => playSound(key)}
