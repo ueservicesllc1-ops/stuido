@@ -585,7 +585,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
                             </p>
                             <div className="flex items-center gap-2 text-amber-400/60">
                               <Calendar className="w-4 h-4" />
-                              <p className="text-xs font-mono">{format(setlist.date, 'dd/MM/yyyy')}</p>
+                              <p className="text-xs font-mono">{format(new Date(setlist.date), 'dd/MM/yyyy')}</p>
                             </div>
                         </div>
                         ))
@@ -711,7 +711,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
                         </p>
                         <div className="flex items-center gap-2 text-amber-400/60 mt-2">
                             <Calendar className="w-4 h-4" />
-                            <p className="text-sm font-mono">{format(selectedSetlist?.date ?? new Date(), 'PPP')}</p>
+                            <p className="text-sm font-mono">{selectedSetlist ? format(new Date(selectedSetlist.date), 'PPP') : ''}</p>
                         </div>
                     </div>
                 </div>

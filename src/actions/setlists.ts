@@ -22,8 +22,11 @@ export interface SetlistSong {
   songName?: string;
 }
 
-export interface Setlist extends NewSetlist {
+export interface Setlist {
     id: string;
+    name: string;
+    date: string; // Cambiado a string para serialización
+    userId: string;
     songs: SetlistSong[]; 
 }
 
@@ -38,9 +41,11 @@ export async function saveSetlist(data: NewSetlist) {
       songs: [], // Inicialmente el setlist no tiene canciones
     });
 
-    const setlistData = {
+    const setlistData: Setlist = {
       id: newDoc.id,
-      ...data,
+      name: data.name,
+      date: data.date.toISOString(), // Convertir a string
+      userId: data.userId,
       songs: []
     }
 
@@ -60,10 +65,12 @@ export async function getSetlists(userId: string) {
         
         const setlists = setlistsSnapshot.docs.map(doc => {
             const data = doc.data();
+            // El objeto `date` de Firestore tiene un método `toDate()`
+            const date = data.date.toDate();
             return {
                 id: doc.id,
                 name: data.name,
-                date: data.date.toDate(), // Convertir Timestamp a Date
+                date: date.toISOString(), // Convertir a string ISO
                 userId: data.userId,
                 songs: data.songs || [],
             } as Setlist;

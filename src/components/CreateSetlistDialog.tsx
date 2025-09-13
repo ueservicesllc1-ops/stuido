@@ -60,6 +60,7 @@ const CreateSetlistDialog: React.FC<CreateSetlistDialogProps> = ({ onSetlistCrea
     resolver: zodResolver(setlistFormSchema),
     defaultValues: {
       name: '',
+      date: new Date(),
     },
   });
 
@@ -76,7 +77,7 @@ const CreateSetlistDialog: React.FC<CreateSetlistDialogProps> = ({ onSetlistCrea
           description: 'El setlist ha sido guardado.',
         });
         setOpen(false);
-        form.reset();
+        form.reset({ name: '', date: new Date() });
         onSetlistCreated(); // Llama a la función para refrescar la lista
       } else {
         throw new Error(result.error || 'Error desconocido al guardar.');
