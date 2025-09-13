@@ -12,8 +12,9 @@ const Slider = React.forwardRef<
     rangeClassName?: string, 
     thumbClassName?: string,
     trackClassName?: string,
+    ledClassName?: string,
   }
->(({ className, orientation = 'horizontal', rangeClassName, thumbClassName, trackClassName, ...props }, ref) => (
+>(({ className, orientation = 'horizontal', rangeClassName, thumbClassName, trackClassName, ledClassName, ...props }, ref) => (
   <SliderPrimitive.Root
     ref={ref}
     orientation={orientation}
@@ -55,8 +56,12 @@ const Slider = React.forwardRef<
         <div className="w-full h-px bg-muted-foreground/30" />
         <div className="w-full h-px bg-muted-foreground/30" />
       </div>
-      {/* Golden LED line */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-px w-8 bg-amber-400 shadow-[0_0_3px_1px] shadow-amber-400/50 rounded-full" />
+      {/* LED line */}
+      <div className={cn(
+          "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-px w-8 rounded-full",
+          ledClassName || "bg-amber-400 shadow-[0_0_3px_1px] shadow-amber-400/50"
+        )} 
+      />
     </SliderPrimitive.Thumb>
   </SliderPrimitive.Root>
 ))

@@ -82,6 +82,19 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
     return 'bg-primary';
   }, [isSpecialTrack]);
 
+  const ledColorClass = useMemo(() => {
+    switch (playbackMode) {
+      case 'online':
+        return 'bg-blue-500 shadow-[0_0_3px_1px] shadow-blue-500/50';
+      case 'offline':
+        return 'bg-green-500 shadow-[0_0_3px_1px] shadow-green-500/50';
+      case 'hybrid':
+      default:
+        return 'bg-amber-400 shadow-[0_0_3px_1px] shadow-amber-400/50';
+    }
+  }, [playbackMode]);
+
+
   return (
     <div className="flex flex-col items-center gap-2 bg-input p-1 rounded-sm border border-black/50">
       {/* LEDs */}
@@ -115,6 +128,7 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
                 trackClassName="bg-transparent"
                 rangeClassName={cn(rangeColorClass)}
                 thumbClassName={cn((isSolo || isMuted) && 'opacity-50')}
+                ledClassName={ledColorClass}
             />
             {name.trim().toUpperCase() !== 'CLICK' && <VuMeter level={vuMeterLevel} />}
         </div>
