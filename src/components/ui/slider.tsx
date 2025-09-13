@@ -44,6 +44,9 @@ const Slider = React.forwardRef<
               rangeClassName
           )} />
       )}
+       {!renderRange && orientation === 'horizontal' && (
+        <div className="absolute left-1/2 top-1/2 h-3 w-px -translate-x-1/2 -translate-y-1/2 bg-muted-foreground" />
+      )}
     </SliderPrimitive.Track>
     <SliderPrimitive.Thumb 
         className={cn(
