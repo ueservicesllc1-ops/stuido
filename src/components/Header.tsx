@@ -7,7 +7,7 @@ import { Circle } from './icons';
 import PlaybackModeToggle from './PlaybackModeToggle';
 import type { PlaybackMode } from '@/app/page';
 import { Progress } from './ui/progress';
-import { cn } from '@/lib/utils';
+import { cn, transposeNote } from '@/lib/utils';
 import Timeline from './Timeline';
 import { SongStructure } from '@/ai/flows/song-structure';
 import SettingsDialog from './SettingsDialog';
@@ -114,6 +114,8 @@ const Header: React.FC<HeaderProps> = ({
     }
   }
 
+  const displayNote = activeSong?.key ? transposeNote(activeSong.key, pitch) : '-';
+
   return (
     <header className="flex flex-col bg-card/50 border-b border-border p-2 gap-2 rounded-lg">
       <div className="flex items-center justify-between gap-6">
@@ -174,7 +176,7 @@ const Header: React.FC<HeaderProps> = ({
                 </div>
                 <div className="bg-black/80 border border-amber-400/20 rounded-md px-2 py-1 w-20 text-center ml-2">
                     <span className="font-mono text-lg text-amber-400 [text-shadow:0_0_8px_theme(colors.amber.400)]">
-                        {pitch > 0 ? '+' : ''}{pitch.toFixed(0)} st
+                        {displayNote}
                     </span>
                 </div>
                  <Button variant="ghost" size="icon" className="w-10 h-10 text-amber-400/70" onClick={() => onPitchChange(0)}>
