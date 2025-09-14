@@ -15,11 +15,11 @@ const bandFrequencies = ['60', '250', '1k', '4k', '8k'];
 const EqTickMarks = React.memo(() => {
     const marks = [
         { gain: 3, label: "+3" },
-        { gain: 2, label: "+2" },
-        { gain: 1, label: "+1" },
+        { gain: 2, label: "" },
+        { gain: 1, label: "" },
         { gain: 0, label: "0" },
-        { gain: -1, label: "-1" },
-        { gain: -2, label: "-2" },
+        { gain: -1, label: "" },
+        { gain: -2, label: "" },
         { gain: -3, label: "-3" },
     ];
     const MAX_GAIN = 12;
@@ -27,7 +27,6 @@ const EqTickMarks = React.memo(() => {
     return (
         <div className="absolute h-full w-full pointer-events-none text-[8px] text-muted-foreground/70 inset-0 py-2">
             {marks.map((mark) => {
-                // Convert gain value (-12 to +12) to slider value (0 to 100)
                 const sliderValue = ((mark.gain + MAX_GAIN) / (MAX_GAIN * 2)) * 100;
                 const isZero = mark.gain === 0;
 
@@ -35,7 +34,7 @@ const EqTickMarks = React.memo(() => {
                     <div key={mark.gain} className="absolute w-full flex items-center" style={{bottom: `calc(${sliderValue}% - 4px)`}}>
                          <span className={cn(
                             "absolute text-center",
-                            isZero ? "-left-4" : "-left-3.5",
+                             isZero ? "-left-4" : "-left-3.5",
                          )}>
                             {mark.label}
                         </span>
