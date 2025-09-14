@@ -1,7 +1,8 @@
 
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -24,10 +25,11 @@ interface TeleprompterDialogProps {
 type Speed = 'slow' | 'medium' | 'fast';
 
 const speedValues: Record<Speed, number> = {
-  slow: 1.5,
+  slow: 0.75,
   medium: 2.5,
   fast: 4,
 };
+
 
 const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   isOpen,
@@ -38,7 +40,6 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   const [fontSize, setFontSize] = useState(48);
   const [isAutoScrolling, setIsAutoScrolling] = useState(false);
   const [speed, setSpeed] = useState<Speed>('medium');
-
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number>();
   const isManuallyScrolling = useRef(false);
@@ -55,28 +56,27 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       onClose();
-      setIsAutoScrolling(false);
+      setIsAutoScrolling(false); // Detener scroll al cerrar
     }
   };
-
+  
   const animateScroll = useCallback(() => {
-    if (isManuallyScrolling.current || !scrollViewportRef.current) {
-        animationFrameRef.current = requestAnimationFrame(animateScroll);
-        return;
-    };
-    
-    scrollViewportRef.current.scrollTop += speedValues[speedRef.current];
+    if (!isManuallyScrolling.current && scrollViewportRef.current) {
+        scrollViewportRef.current.scrollTop += speedValues[speedRef.current];
+    }
     animationFrameRef.current = requestAnimationFrame(animateScroll);
   }, []);
 
   useEffect(() => {
     if (isAutoScrolling) {
+      isManuallyScrolling.current = false;
       animationFrameRef.current = requestAnimationFrame(animateScroll);
     } else {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
     }
+
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
