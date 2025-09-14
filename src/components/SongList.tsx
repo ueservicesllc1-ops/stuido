@@ -23,7 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { cacheAudio, getCachedAudio } from '@/lib/audiocache';
+import { blobToDataURI } from '@/lib/utils';
 import EditSongDialog from './EditSongDialog';
 
 
@@ -34,15 +34,6 @@ interface SongListProps {
   onSongSelected: (songId: string) => void;
   onSongsFetched: (songs: Song[]) => void;
 }
-
-const blobToDataURI = (blob: Blob): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = () => reject(reader.error);
-        reader.readAsDataURL(blob);
-    });
-};
 
 type SongToRemove = {
     songId: string;
@@ -272,16 +263,15 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
     }
 
     setAnalyzingSongId(song.id);
-    try {
-        let audioBlob = await getCachedAudio(cuesTrack.url);
+    toast({ title: 'Iniciando análisis...', description: 'Descargando pista de Cues para el análisis.' });
 
-        if (!audioBlob) {
-            toast({ title: 'Descargando audio', description: 'La pista de Cues no está en caché, se descargará ahora.' });
-            const response = await fetch(`/api/download?url=${encodeURIComponent(cuesTrack.url)}`);
-            if (!response.ok) throw new Error('Failed to download Cues track for analysis.');
-            audioBlob = await response.blob();
-            await cacheAudio(cuesTrack.url, audioBlob);
-        }
+    try {
+        // Since the audio cache now stores AudioBuffers, and we need a Blob to create a Data URI,
+        // it's simpler and more reliable to just fetch the file directly for analysis.
+        // Cues tracks are small, so this should be fast.
+        const response = await fetch(`/api/download?url=${encodeURIComponent(cuesTrack.url)}`);
+        if (!response.ok) throw new Error('Failed to download Cues track for analysis.');
+        const audioBlob = await response.blob();
         
         const audioDataUri = await blobToDataURI(audioBlob);
 
@@ -788,3 +778,5 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
 };
 
 export default SongList;
+
+    

@@ -1,10 +1,10 @@
 
 'use client';
 
-let isConfigured = false;
-
 // We don't import localforage at the top level anymore.
 // Instead, we'll import it dynamically inside the functions.
+
+let isConfigured = false;
 
 const getLocalforage = async () => {
     // Dynamically import localforage
@@ -15,8 +15,8 @@ const getLocalforage = async () => {
             driver: localforage.INDEXEDDB,
             name: 'multitrackPlayerCache',
             version: 1.0,
-            storeName: 'audio_tracks',
-            description: 'Cache for audio tracks',
+            storeName: 'audio_buffers', // Changed store name to reflect what we store
+            description: 'Cache for decoded audio buffers',
         });
         isConfigured = true;
     }
@@ -25,40 +25,42 @@ const getLocalforage = async () => {
 
 
 /**
- * Obtiene un archivo de audio de la caché de IndexedDB.
- * @param url La URL original del archivo de audio, usada como clave.
- * @returns El Blob del audio si se encuentra, o null si no.
+ * Retrieves a decoded AudioBuffer from the IndexedDB cache.
+ * @param url The original URL of the audio file, used as the key.
+ * @returns The AudioBuffer if found, or null if not.
  */
-export const getCachedAudio = async (url: string): Promise<Blob | null> => {
+export const getCachedAudioBuffer = async (url: string): Promise<AudioBuffer | null> => {
   try {
     const localforage = await getLocalforage();
-    const cachedBlob = await localforage.getItem<Blob>(url);
-    if (cachedBlob && cachedBlob instanceof Blob) {
-      console.log('Audio recuperado de la caché:', url);
-      return cachedBlob;
+    // Important: We assume the stored item is an AudioBuffer. 
+    // Type casting might be needed if other types are stored.
+    const cachedBuffer = await localforage.getItem<AudioBuffer>(url);
+    if (cachedBuffer && cachedBuffer instanceof AudioBuffer) {
+      console.log('AudioBuffer retrieved from cache:', url);
+      return cachedBuffer;
     }
     return null;
   } catch (error) {
-    console.error('Error al obtener audio de la caché:', error);
+    console.error('Error getting AudioBuffer from cache:', error);
+    // If there's a corruption error, it might be good to clear the item
+    // localforage.removeItem(url);
     return null;
   }
 };
 
 /**
- * Guarda un blob de audio en la caché de IndexedDB.
- * @param url La URL del archivo de audio para usar como clave.
- * @param blob El Blob de audio para guardar.
- * @returns El Blob guardado.
+ * Saves a decoded AudioBuffer to the IndexedDB cache.
+ * @param url The URL of the audio file to use as a key.
+ * @param buffer The decoded AudioBuffer to save.
  */
-export const cacheAudio = async (url: string, blob: Blob): Promise<Blob> => {
+export const cacheAudioBuffer = async (url: string, buffer: AudioBuffer): Promise<void> => {
   try {
     const localforage = await getLocalforage();
-    await localforage.setItem(url, blob);
-    console.log('Audio cacheado:', url);
-    return blob;
+    await localforage.setItem(url, buffer);
+    console.log('AudioBuffer cached:', url);
   } catch (error) {
-    console.error('Error al cachear el audio:', error);
-    // Re-lanzamos el error para que el que llama pueda manejarlo
+    console.error('Error caching AudioBuffer:', error);
+    // Re-throw the error so the caller can handle it
     throw error;
   }
 };

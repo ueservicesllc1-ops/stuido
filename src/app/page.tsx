@@ -6,7 +6,7 @@ import MixerGrid from '@/components/MixerGrid';
 import SongList from '@/components/SongList';
 import TonicPad from '@/components/TonicPad';
 import { getSetlists, Setlist, SetlistSong } from '@/actions/setlists';
-import { cacheAudio, getCachedAudio } from '@/lib/audiocache';
+import { cacheAudioBuffer, getCachedAudioBuffer } from '@/lib/audiocache';
 import { Song } from '@/actions/songs';
 import { SongStructure } from '@/ai/flows/song-structure';
 import LyricsDisplay from '@/components/LyricsDisplay';
@@ -264,25 +264,33 @@ const DawPage = () => {
 
       await Promise.all(tracksToLoad.map(async (track) => {
         try {
-          let audioData: ArrayBuffer;
-          let blob = await getCachedAudio(track.url);
+          let audioBuffer: AudioBuffer | null = null;
           
-          if (!blob) {
+          // 1. Try to get the decoded AudioBuffer from the cache
+          if (playbackMode !== 'online') {
+            audioBuffer = await getCachedAudioBuffer(track.url);
+          }
+
+          // 2. If not in cache, fetch, decode, and then cache it
+          if (!audioBuffer) {
             const proxyUrl = `/api/download?url=${encodeURIComponent(track.url)}`;
             const response = await fetch(proxyUrl);
             if (!response.ok) throw new Error(`Failed to fetch ${track.url}`);
-            blob = await response.blob();
+            
+            const audioData = await response.arrayBuffer();
+            audioBuffer = await audioContextRef.current!.decodeAudioData(audioData);
+
+            // Cache the newly decoded buffer for next time
             if (playbackMode !== 'online') {
-              await cacheAudio(track.url, blob);
+              await cacheAudioBuffer(track.url, audioBuffer);
             }
           }
           
-          audioData = await blob.arrayBuffer();
-          const audioBuffer = await audioContextRef.current!.decodeAudioData(audioData);
           audioBuffersRef.current[track.url] = audioBuffer;
           if (audioBuffer.duration > maxDuration) {
             maxDuration = audioBuffer.duration;
           }
+
         } catch (error) {
           console.error(`Error loading track ${track.name}:`, error);
         } finally {
@@ -371,7 +379,7 @@ const DawPage = () => {
     }
 
     animationFrameRef.current = requestAnimationFrame(updateVuMeters);
-  }, [duration]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [duration]);
 
   const getGainValue = useCallback((trackId: string) => {
     const isMuted = mutedTracks.includes(trackId);
