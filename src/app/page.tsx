@@ -33,6 +33,7 @@ const DawPage = () => {
   const [songYoutubeUrl, setSongYoutubeUrl] = useState<string | null>(null);
   const [songSyncOffset, setSongSyncOffset] = useState<number>(0);
 
+  const activeSong = songs.find(s => s.id === activeSongId);
   const audioContextStarted = useRef(false);
   const trackNodesRef = useRef<Record<string, {
     player: Tone.Player;
@@ -55,7 +56,7 @@ const DawPage = () => {
   const [playbackRate, setPlaybackRate] = useState(1);
   const [pitch, setPitch] = useState(0); // New state for pitch shifting in semitones
 
-  const [volumes, setVolumes] = useState<{ [key: string]: number }>({});
+  const volumesRef = useRef<{ [key: string]: number }>({});
   const [pans, setPans] = useState<{ [key: string]: number }>({});
   const [masterVolume, setMasterVolume] = useState(100);
   const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('hybrid');
@@ -68,8 +69,6 @@ const DawPage = () => {
   const [isYouTubePlayerOpen, setIsYouTubePlayerOpen] = useState(false);
   const [isTeleprompterOpen, setIsTeleprompterOpen] = useState(false);
   
-  const activeSong = songs.find(s => s.id === activeSongId);
-
   const initAudioContext = async () => {
     if (!audioContextStarted.current) {
         await Tone.start();
@@ -210,14 +209,12 @@ const DawPage = () => {
                 }
     
                 if (audioBuffer) {
-                    player.buffer = audioBuffer;
+                    await player.load(audioBuffer.getChannelData(0));
                 } else {
                     const proxyUrl = `/api/download?url=${encodeURIComponent(track.url)}`;
-                    // Wait for player to load the URL
-                    await player.load(proxyUrl); 
+                    await player.load(proxyUrl);
     
                     if (playbackMode === 'hybrid' || playbackMode === 'offline') {
-                        // We need to fetch it again to get the ArrayBuffer for caching
                         const response = await fetch(proxyUrl);
                         const arrayBuffer = await response.arrayBuffer();
                         await cacheArrayBuffer(track.url, arrayBuffer);
@@ -240,7 +237,7 @@ const DawPage = () => {
             } catch (error) {
                 console.error(`Error loading track ${track.name}:`, error);
                 if (playbackMode === 'offline') {
-                    // Handle offline error - maybe show a toast
+                    // Handle offline error
                 }
             } finally {
                 setLoadingTracks(prev => prev.filter(id => id !== track.id));
@@ -277,13 +274,14 @@ const DawPage = () => {
   }, [activeSongId, songs]);
 
   useEffect(() => {
-    const newVolumes: { [key: string]: number } = {};
+    // Initialize volumes and pans when tracks change
     const newPans: { [key: string]: number } = {};
     tracks.forEach(track => {
-      newVolumes[track.id] = volumes[track.id] ?? 75;
+      if (volumesRef.current[track.id] === undefined) {
+        volumesRef.current[track.id] = 75;
+      }
       newPans[track.id] = pans[track.id] ?? 0;
     });
-    setVolumes(newVolumes);
     setPans(newPans);
   }, [tracks]);
 
@@ -322,14 +320,14 @@ const DawPage = () => {
     const isMuted = mutedTracks.includes(trackId);
     const isSoloActive = soloTracks.length > 0;
     const isThisTrackSolo = soloTracks.includes(trackId);
-    const trackVolume = volumes[trackId] ?? 75;
+    const trackVolume = volumesRef.current[trackId] ?? 75;
 
     const trackVol = trackVolume / 100;
 
     if (isMuted) return 0;
     if (isSoloActive) return isThisTrackSolo ? trackVol : 0;
     return trackVol;
-  }, [mutedTracks, soloTracks, volumes]);
+  }, [mutedTracks, soloTracks]);
 
   useEffect(() => {
     Object.keys(trackNodesRef.current).forEach(trackId => {
@@ -346,7 +344,7 @@ const DawPage = () => {
             node.pitchShift.pitch = pitch;
         }
     });
-  }, [volumes, mutedTracks, soloTracks, getGainValue, pans, pitch]);
+  }, [mutedTracks, soloTracks, getGainValue, pans, pitch]);
   
    useEffect(() => {
       Object.values(trackNodesRef.current).forEach(({ player }) => {
@@ -484,8 +482,14 @@ const DawPage = () => {
       setMasterVolume(newVolume);
   };
   const handleVolumeChange = useCallback((trackId: string, newVolume: number) => {
-    setVolumes(prevVolumes => ({ ...prevVolumes, [trackId]: newVolume }));
-  }, []);
+    volumesRef.current[trackId] = newVolume;
+    const node = trackNodesRef.current[trackId];
+    if (node) {
+      const gainValue = getGainValue(trackId);
+      // Use rampTo for smoother transitions
+      node.volume.volume.rampTo(Tone.gainToDb(gainValue), 0.05);
+    }
+  }, [getGainValue]);
 
   const handlePanChange = useCallback((trackId: string, newPan: number) => {
     setPans(prevPans => ({ ...prevPans, [trackId]: newPan }));
@@ -567,7 +571,7 @@ const DawPage = () => {
               tracks={activeTracks}
               soloTracks={soloTracks}
               mutedTracks={mutedTracks}
-              volumes={volumes}
+              volumes={volumesRef.current}
               pans={pans}
               loadingTracks={loadingTracks}
               onMuteToggle={handleMuteToggle}
@@ -616,5 +620,3 @@ const DawPage = () => {
 };
 
 export default DawPage;
-
-    
