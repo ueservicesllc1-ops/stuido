@@ -23,7 +23,7 @@ interface TeleprompterDialogProps {
 type Speed = 'slow' | 'medium' | 'fast';
 
 const speedValues: Record<Speed, number> = {
-  slow: 0.5,
+  slow: 0.25,
   medium: 1,
   fast: 2,
 };
@@ -49,19 +49,30 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       onClose();
-      setIsAutoScrolling(false);
+      setIsAutoScrolling(false); // Detener scroll al cerrar
     }
   };
 
-  const animateScroll = useCallback(() => {
-    if (!isManuallyScrolling.current && scrollViewportRef.current) {
-        scrollViewportRef.current.scrollTop += speedValues[speed];
-    }
-    animationFrameRef.current = requestAnimationFrame(animateScroll);
+  // Usamos una referencia para la velocidad para que el bucle de animación siempre tenga el último valor
+  const speedRef = useRef(speed);
+  useEffect(() => {
+    speedRef.current = speed;
   }, [speed]);
 
+  const animateScroll = useCallback(() => {
+    if (isManuallyScrolling.current || !scrollViewportRef.current) {
+        // Si el usuario está haciendo scroll manual, no hacemos nada.
+        animationFrameRef.current = requestAnimationFrame(animateScroll);
+        return;
+    };
+    
+    // Usamos el valor de la referencia
+    scrollViewportRef.current.scrollTop += speedValues[speedRef.current];
+    animationFrameRef.current = requestAnimationFrame(animateScroll);
+  }, []);
+
   useEffect(() => {
-    if (isOpen && isAutoScrolling) {
+    if (isAutoScrolling) {
       animationFrameRef.current = requestAnimationFrame(animateScroll);
     } else {
       if (animationFrameRef.current) {
@@ -73,26 +84,39 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isAutoScrolling, isOpen, animateScroll]);
+  }, [isAutoScrolling, animateScroll]);
   
   const handleManualScroll = () => {
     isManuallyScrolling.current = true;
     if (isAutoScrolling) {
+        // Pausamos el auto-scroll si el usuario interviene.
         setIsAutoScrolling(false);
     }
     if (manualScrollTimeoutRef.current) clearTimeout(manualScrollTimeoutRef.current);
     manualScrollTimeoutRef.current = setTimeout(() => {
         isManuallyScrolling.current = false;
-    }, 2000); 
+    }, 2000); // 2 segundos de inactividad para reanudar el auto-scroll
   };
-  
+
   const renderLyrics = () => {
+    if (!lyrics) {
+        return (
+             <div className="flex items-center justify-center h-full">
+                <p 
+                    className="font-mono text-amber-400 text-center p-4"
+                    style={{ fontSize: `${Math.min(fontSize, 32)}px`, lineHeight: 1.5 }}
+                >
+                    No hay letra disponible para esta canción.
+                </p>
+             </div>
+        )
+    }
     return (
       <pre
         className="font-mono text-amber-400 text-center whitespace-pre-wrap p-4 pt-24 pb-24 transition-all"
         style={{ fontSize: `${fontSize}px`, lineHeight: 1.5 }}
       >
-        {lyrics || 'No hay letra disponible para esta canción.'}
+        {lyrics}
       </pre>
     );
   };
