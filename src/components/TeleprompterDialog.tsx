@@ -25,7 +25,7 @@ interface TeleprompterDialogProps {
 type Speed = 'slow' | 'medium' | 'fast';
 
 const speedValues: Record<Speed, number> = {
-  slow: 1,
+  slow: 0.7, // 30% más lento que 1
   medium: 2,
   fast: 4,
 };
@@ -56,23 +56,31 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       onClose();
-      setIsAutoScrolling(false); // Detener scroll al cerrar
+      setIsAutoScrolling(false);
     }
   };
   
+  const scrollPositionRef = useRef(0);
+
   const animateScroll = useCallback(() => {
-    if (scrollViewportRef.current) {
-        if (!isManuallyScrolling.current) {
-            scrollViewportRef.current.scrollTop += speedValues[speedRef.current];
-        }
+    if (scrollViewportRef.current && !isManuallyScrolling.current) {
+        // Acumula la velocidad. Esto permite valores decimales.
+        scrollPositionRef.current += speedValues[speedRef.current];
+        
+        // Aplica el scroll solo a la parte entera. El resto se acumula.
+        scrollViewportRef.current.scrollTop = Math.floor(scrollPositionRef.current);
     }
     animationFrameRef.current = requestAnimationFrame(animateScroll);
   }, []);
 
   useEffect(() => {
     if (isAutoScrolling) {
-      isManuallyScrolling.current = false;
-      animationFrameRef.current = requestAnimationFrame(animateScroll);
+        isManuallyScrolling.current = false;
+        // Sincroniza la posición de scroll acumulada con la real al empezar
+        if (scrollViewportRef.current) {
+            scrollPositionRef.current = scrollViewportRef.current.scrollTop;
+        }
+        animationFrameRef.current = requestAnimationFrame(animateScroll);
     } else {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
@@ -88,13 +96,22 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   
   const handleManualScroll = () => {
     isManuallyScrolling.current = true;
+    
+    // Sincroniza la posición acumulada con la posición real del scroll manual
+    if(scrollViewportRef.current){
+        scrollPositionRef.current = scrollViewportRef.current.scrollTop;
+    }
+
+    // Detiene el autoscroll si estaba activo
     if (isAutoScrolling) {
         setIsAutoScrolling(false);
     }
+
+    // Reinicia el flag de scroll manual después de un tiempo
     if (manualScrollTimeoutRef.current) clearTimeout(manualScrollTimeoutRef.current);
     manualScrollTimeoutRef.current = setTimeout(() => {
         isManuallyScrolling.current = false;
-    }, 2000);
+    }, 2000); // 2 segundos de inactividad para re-permitir autoscroll
   };
 
   const renderLyrics = () => {
