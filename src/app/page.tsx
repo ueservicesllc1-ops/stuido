@@ -175,9 +175,9 @@ const DawPage = () => {
 
   useEffect(() => {
     if (!activeSongId) return;
-  
+
     handleStop(true);
-  
+
     const tracksForCurrentSong = tracks.filter(t => t.songId === activeSongId);
     if (tracksForCurrentSong.length === 0) {
       setIsReadyToPlay(false);
@@ -185,28 +185,40 @@ const DawPage = () => {
       setDuration(0);
       return;
     }
-  
+
     setLoadingTracks(tracksForCurrentSong.map(t => t.id));
     setIsReadyToPlay(false);
-  
+
     const loadAudioData = async () => {
       await initAudioContext();
       let maxDuration = 0;
-  
+
       const loadPromises = tracksForCurrentSong.map(async (track) => {
         try {
           if (trackNodesRef.current[track.id]) {
             trackNodesRef.current[track.id].player.dispose();
           }
 
-          const player = await new Promise<Tone.Player>((resolve, reject) => {
-            const p = new Tone.Player({
-              url: `/api/download?url=${encodeURIComponent(track.url)}`,
-              onload: () => resolve(p),
-              onerror: (e) => reject(e)
-            });
-          });
+          let audioBuffer: ArrayBuffer | null = null;
+          
+          if (playbackMode === 'hybrid' || playbackMode === 'offline') {
+              audioBuffer = await getCachedArrayBuffer(track.url);
+          }
 
+          if (!audioBuffer) {
+              const response = await fetch(`/api/download?url=${encodeURIComponent(track.url)}`);
+              if (!response.ok) throw new Error(`Failed to download ${track.name}`);
+              audioBuffer = await response.arrayBuffer();
+              if (playbackMode === 'hybrid' || playbackMode === 'offline') {
+                  await cacheArrayBuffer(track.url, audioBuffer.slice(0)); 
+              }
+          }
+
+          const player = await new Promise<Tone.Player>((resolve, reject) => {
+              const p = new Tone.Player(audioBuffer as AudioBuffer, () => resolve(p));
+              p.onerror = (e) => reject(e);
+          });
+          
           if (player.buffer.duration > maxDuration) {
             maxDuration = player.buffer.duration;
           }
@@ -222,6 +234,9 @@ const DawPage = () => {
         
         } catch (error) {
           console.error(`Error loading track ${track.name}:`, error);
+          if(playbackMode === 'offline') {
+            // Handle offline error - maybe show a toast
+          }
         } finally {
            setLoadingTracks(prev => prev.filter(id => id !== track.id));
         }
@@ -230,11 +245,10 @@ const DawPage = () => {
       await Promise.all(loadPromises);
       setDuration(maxDuration);
     };
-  
+
     loadAudioData();
-  
+
     return () => {
-      // Cleanup on song change
       Object.values(trackNodesRef.current).forEach(node => {
         node.player.dispose();
         node.panner.dispose();
@@ -244,8 +258,7 @@ const DawPage = () => {
       });
       trackNodesRef.current = {};
     }
-
-  }, [activeSongId, tracks]);
+  }, [activeSongId, tracks, playbackMode]);
 
   useEffect(() => {
     if (activeSongId) {
@@ -598,5 +611,7 @@ const DawPage = () => {
 };
 
 export default DawPage;
+
+    
 
     
