@@ -4,46 +4,32 @@
 import React from 'react';
 import Image from 'next/image';
 import { Button } from './ui/button';
-import { Music4, Youtube } from 'lucide-react';
+import { Youtube } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import GraphicEq from './GraphicEq';
 
 interface LyricsDisplayProps {
   lyrics: string | null;
   youtubeUrl: string | null;
   onOpenYouTube: () => void;
   onOpenTeleprompter: () => void;
+  eqBands: number[];
+  onEqChange: (bandIndex: number, value: number) => void;
 }
 
 const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ 
     lyrics, 
     youtubeUrl, 
     onOpenYouTube,
-    onOpenTeleprompter
+    onOpenTeleprompter,
+    eqBands,
+    onEqChange
 }) => {
   return (
     <div className="grid grid-cols-4 gap-4 h-full">
-        <button 
-            className={cn(
-                "relative rounded-lg overflow-hidden group h-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background",
-                true && "opacity-50 cursor-not-allowed" // Deshabilitado por ahora
-            )}
-            onClick={() => {}}
-            disabled={true}
-        >
-            <Image
-                src="https://picsum.photos/seed/lyrics-btn/600/400"
-                alt="Letra de la canción"
-                fill
-                className="object-cover transition-transform duration-300 group-hover:scale-105"
-                data-ai-hint="sheet music"
-            />
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                <span className="font-bold text-xl text-white drop-shadow-lg flex items-center gap-2">
-                    <Music4 />
-                    Letra
-                </span>
-            </div>
-        </button>
+        <div className="relative rounded-lg overflow-hidden h-full bg-card/50 border border-border p-2">
+            <GraphicEq bands={eqBands} onBandChange={onEqChange} />
+        </div>
        <button 
           className={cn(
             "relative rounded-lg overflow-hidden group h-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background",

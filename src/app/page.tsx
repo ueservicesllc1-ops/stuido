@@ -71,6 +71,9 @@ const DawPage = () => {
   const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('hybrid');
   const [isReadyToPlay, setIsReadyToPlay] = useState(false);
 
+  // --- EQ State ---
+  const [eqBands, setEqBands] = useState([50, 50, 50, 50, 50, 50]); // 6 bands, 0-100 values
+
   // --- Settings State ---
   const [fadeOutDuration, setFadeOutDuration] = useState(0.5); // Duración en segundos
   const [isPanVisible, setIsPanVisible] = useState(true);
@@ -606,6 +609,14 @@ const DawPage = () => {
     setPans(prevPans => ({ ...prevPans, [trackId]: newPan }));
   }, []);
 
+  const handleEqChange = (bandIndex: number, newValue: number) => {
+    setEqBands(prevBands => {
+      const newBands = [...prevBands];
+      newBands[bandIndex] = newValue;
+      return newBands;
+    });
+  };
+
   const handleToggleClick = () => {
     const context = audioContextRef.current;
     if (context && context.state === 'suspended') {
@@ -665,6 +676,8 @@ const DawPage = () => {
             youtubeUrl={songYoutubeUrl}
             onOpenYouTube={() => setIsYouTubePlayerOpen(true)}
             onOpenTeleprompter={() => setIsTeleprompterOpen(true)}
+            eqBands={eqBands}
+            onEqChange={handleEqChange}
         />
       </div>
       
