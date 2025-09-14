@@ -40,7 +40,7 @@ interface HeaderProps {
   onClickVolumeChange: (volume: number) => void;
   clickTempo: number;
   onTempoChange: (tempo: number) => void;
-  songTempo: number | null;
+  originalTempo: number | null | undefined;
   clickSound: ClickSound;
   onClickSoundChange: (sound: ClickSound) => void;
   fadeOutDuration: number;
@@ -73,7 +73,7 @@ const Header: React.FC<HeaderProps> = ({
   onClickVolumeChange,
   clickTempo,
   onTempoChange,
-  songTempo,
+  originalTempo,
   clickSound,
   onClickSoundChange,
   fadeOutDuration,
@@ -82,9 +82,9 @@ const Header: React.FC<HeaderProps> = ({
   onPanVisibilityChange,
 }) => {
   
-  const tempoRange = songTempo ? songTempo * 0.2 : 20;
-  const minTempo = songTempo ? songTempo - tempoRange : 60;
-  const maxTempo = songTempo ? songTempo + tempoRange : 200;
+  const tempoRange = originalTempo ? originalTempo * 0.2 : 20;
+  const minTempo = originalTempo ? originalTempo - tempoRange : 60;
+  const maxTempo = originalTempo ? originalTempo + tempoRange : 200;
 
   return (
     <header className="flex flex-col bg-card/50 border-b border-border p-2 gap-2 rounded-lg">
@@ -108,29 +108,22 @@ const Header: React.FC<HeaderProps> = ({
         </div>
 
         <div className="flex items-center justify-center gap-4">
-            <div className="flex items-center gap-4 bg-background p-1 rounded-lg">
-                <div className="flex items-center gap-2 bg-secondary/30 rounded-md p-1">
-                    <Button 
-                        variant={isClickEnabled ? 'default' : 'secondary'}
-                        size="icon" 
-                        className="w-8 h-8"
-                        onClick={onToggleClick}
-                    >
-                        <Timer className="w-5 h-5" />
-                    </Button>
-                     <Input
+            <div className="flex items-center gap-2 bg-background p-1 rounded-lg">
+                <Button 
+                    variant={isClickEnabled ? 'default' : 'secondary'}
+                    size="icon" 
+                    className="w-8 h-8"
+                    onClick={onToggleClick}
+                >
+                    <Timer className="w-5 h-5" />
+                </Button>
+                <div className="flex items-center gap-2 bg-secondary/30 rounded-md p-1 h-16">
+                    <Input
                         type="number"
-                        className="w-16 bg-transparent border-0 text-center text-lg font-mono font-bold text-primary focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto"
+                        className="w-20 bg-transparent border-0 text-center text-3xl font-mono font-bold text-primary focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto"
                         value={clickTempo}
                         onChange={(e) => onTempoChange(parseInt(e.target.value, 10))}
                     />
-                </div>
-
-                <div className="flex items-center gap-2 bg-secondary/30 rounded-md h-16 px-2">
-                    <div className="flex flex-col items-center justify-center w-24">
-                        <span className="text-3xl font-mono font-bold text-foreground">{songTempo ?? '--'}</span>
-                        <span className="text-xs text-muted-foreground -mt-1">Song BPM</span>
-                    </div>
                     <Slider
                       value={[clickTempo]}
                       onValueChange={(vals) => onTempoChange(vals[0])}

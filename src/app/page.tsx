@@ -29,7 +29,6 @@ const DawPage = () => {
   const [activeSongId, setActiveSongId] = useState<string | null>(null);
   const [songs, setSongs] = useState<Song[]>([]);
   const [songStructure, setSongStructure] = useState<SongStructure | null>(null);
-  const [songTempo, setSongTempo] = useState<number | null>(null);
   const [songLyrics, setSongLyrics] = useState<string | null>(null);
   const [songSyncedLyrics, setSongSyncedLyrics] = useState<LyricsSyncOutput | null>(null);
   const [songYoutubeUrl, setSongYoutubeUrl] = useState<string | null>(null);
@@ -53,7 +52,7 @@ const DawPage = () => {
   // --- Metronome State ---
   const [isClickEnabled, setIsClickEnabled] = useState(false);
   const [clickVolume, setClickVolume] = useState(75);
-  const [clickTempo, setClickTempo] = useState(150);
+  const [clickTempo, setClickTempo] = useState(120);
   const [clickSound, setClickSound] = useState<ClickSound>('beep');
   const isClickEnabledRef = useRef(isClickEnabled);
   const clickSchedulerRef = useRef<number | null>(null);
@@ -192,7 +191,7 @@ const DawPage = () => {
       } else {
         setActiveSongId(null);
         setSongStructure(null);
-        setSongTempo(null);
+        setClickTempo(120);
         setSongLyrics(null);
         setSongSyncedLyrics(null);
         setSongYoutubeUrl(null);
@@ -202,7 +201,7 @@ const DawPage = () => {
       setTracks([]);
       setActiveSongId(null);
       setSongStructure(null);
-      setSongTempo(null);
+      setClickTempo(120);
       setSongLyrics(null);
       setSongSyncedLyrics(null);
       setSongYoutubeUrl(null);
@@ -379,7 +378,11 @@ const DawPage = () => {
     if (activeSongId) {
         const currentSong = songs.find(s => s.id === activeSongId);
         setSongStructure(currentSong?.structure || null);
-        setSongTempo(currentSong?.tempo || null);
+        if (currentSong?.tempo) {
+            setClickTempo(currentSong.tempo);
+        } else {
+            setClickTempo(120); // Default if no tempo
+        }
         setSongLyrics(currentSong?.lyrics || null);
         setSongSyncedLyrics(currentSong?.syncedLyrics || null);
         setSongYoutubeUrl(currentSong?.youtubeUrl || null);
@@ -718,7 +721,7 @@ const DawPage = () => {
             onClickVolumeChange={setClickVolume}
             clickTempo={clickTempo}
             onTempoChange={setClickTempo}
-            songTempo={songTempo}
+            originalTempo={activeSong?.tempo}
             clickSound={clickSound}
             onClickSoundChange={setClickSound}
             fadeOutDuration={fadeOutDuration}
