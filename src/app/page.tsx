@@ -671,6 +671,10 @@ const DawPage = () => {
     });
   };
 
+  const handleEqReset = () => {
+    setEqBands([50, 50, 50, 50, 50]);
+  };
+
   const handleToggleClick = () => {
     const context = audioContextRef.current;
     if (context && context.state === 'suspended') {
@@ -732,6 +736,7 @@ const DawPage = () => {
             onOpenTeleprompter={() => setIsTeleprompterOpen(true)}
             eqBands={eqBands}
             onEqChange={handleEqChange}
+            onReset={handleEqReset}
         />
       </div>
       

@@ -4,10 +4,13 @@
 import React from 'react';
 import { Slider } from './ui/slider';
 import { cn } from '@/lib/utils';
+import { Button } from './ui/button';
+import { RotateCcw } from 'lucide-react';
 
 interface GraphicEqProps {
   bands: number[]; // Array de 5 valores (0-100)
   onBandChange: (bandIndex: number, value: number) => void;
+  onReset: () => void;
 }
 
 const bandFrequencies = ['60', '250', '1k', '4k', '8k'];
@@ -18,11 +21,11 @@ const EqTickMarks = React.memo(() => {
     const TOTAL_RANGE = MAX_GAIN * 2;
 
     const marks = [
-        { gain: 10,  label: "+10" }, // +10dB
-        { gain: 5,   label: "+5" }, // +5dB
-        { gain: 0,   label: "0" },  // 0dB
-        { gain: -5,  label: "-5" }, // -5dB
-        { gain: -10, label: "-10" }, // -10dB
+        { gain: 10,  label: "+10" },
+        { gain: 5,   label: "+5" },
+        { gain: 0,   label: "0" },
+        { gain: -5,  label: "-5" },
+        { gain: -10, label: "-10" },
     ];
     
     return (
@@ -52,9 +55,17 @@ const EqTickMarks = React.memo(() => {
 });
 EqTickMarks.displayName = 'EqTickMarks';
 
-const GraphicEq: React.FC<GraphicEqProps> = ({ bands, onBandChange }) => {
+const GraphicEq: React.FC<GraphicEqProps> = ({ bands, onBandChange, onReset }) => {
   return (
-    <div className="flex justify-around items-end h-full w-full gap-3 px-4 pb-1">
+    <div className="relative flex justify-around items-end h-full w-full gap-3 px-4 pb-1">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="absolute top-0 right-0 w-6 h-6 text-muted-foreground hover:text-primary"
+        onClick={onReset}
+      >
+        <RotateCcw className="w-4 h-4" />
+      </Button>
       {bands.map((bandValue, index) => (
         <div key={index} className="flex flex-col items-center justify-end h-full w-full gap-1">
           <div className="relative h-full w-4 flex justify-center">

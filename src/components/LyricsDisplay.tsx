@@ -15,6 +15,7 @@ interface LyricsDisplayProps {
   onOpenTeleprompter: () => void;
   eqBands: number[];
   onEqChange: (bandIndex: number, value: number) => void;
+  onReset: () => void;
 }
 
 const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ 
@@ -23,12 +24,13 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({
     onOpenYouTube,
     onOpenTeleprompter,
     eqBands,
-    onEqChange
+    onEqChange,
+    onReset
 }) => {
   return (
     <div className="grid grid-cols-4 gap-4 h-full">
         <div className="relative rounded-lg overflow-hidden h-full bg-card/50 border border-border p-2">
-            <GraphicEq bands={eqBands} onBandChange={onEqChange} />
+            <GraphicEq bands={eqBands} onBandChange={onEqChange} onReset={onReset} />
         </div>
        <button 
           className={cn(
