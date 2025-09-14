@@ -248,16 +248,21 @@ const DawPage = () => {
     handleStop(true); // Stop without fade on song change
     
     const tracksForSong = tracks.filter(t => t.songId === activeSongId);
-    const tracksToLoad = tracksForSong.filter(t => !audioBuffersRef.current[t.url]);
     
-    if (tracksToLoad.length === 0) {
-      // All tracks for this song are already in memory
+    // Check if all tracks for the song are already in memory
+    const allTracksInMemory = tracksForSong.length > 0 && tracksForSong.every(t => audioBuffersRef.current[t.url]);
+
+    if (allTracksInMemory) {
       const maxDuration = Math.max(0, ...tracksForSong.map(t => audioBuffersRef.current[t.url]?.duration || 0));
       setDuration(maxDuration);
-      return;
+      return; // All tracks are ready, no need to load.
     }
 
-    setLoadingTracks(tracksToLoad.map(t => t.id));
+    const tracksToLoad = tracksForSong.filter(t => !audioBuffersRef.current[t.url]);
+    
+    if (tracksToLoad.length > 0) {
+        setLoadingTracks(tracksToLoad.map(t => t.id));
+    }
 
     const loadAudioData = async () => {
       let maxDuration = Math.max(0, ...tracksForSong.filter(t => audioBuffersRef.current[t.url]).map(t => audioBuffersRef.current[t.url].duration));
@@ -265,15 +270,13 @@ const DawPage = () => {
 
       await Promise.all(tracksToLoad.map(async (track) => {
         try {
-          let decodedBuffer: AudioBuffer | null = null;
-          let audioData: ArrayBuffer | null = null;
-          
           // 1. Try to get the raw ArrayBuffer from the IndexedDB cache
+          let audioData: ArrayBuffer | null = null;
           if (playbackMode !== 'online') {
             audioData = await getCachedArrayBuffer(track.url);
           }
 
-          // 2. If not in cache, fetch from network and cache the ArrayBuffer
+          // 2. If not in cache, fetch from network
           if (!audioData) {
             const proxyUrl = `/api/download?url=${encodeURIComponent(track.url)}`;
             const response = await fetch(proxyUrl);
@@ -281,16 +284,16 @@ const DawPage = () => {
             
             audioData = await response.arrayBuffer();
 
-            // Cache the newly fetched ArrayBuffer for next time
+            // Cache the newly fetched ArrayBuffer for next time (don't block)
             if (playbackMode !== 'online') {
-              // Note: we don't await this, let it happen in the background
               cacheArrayBuffer(track.url, audioData.slice(0)); // Use slice(0) to clone for caching
             }
           }
           
-          // 3. Decode the ArrayBuffer (from cache or network)
-          decodedBuffer = await context.decodeAudioData(audioData);
+          // 3. Decode the ArrayBuffer (from cache or network) into an AudioBuffer
+          const decodedBuffer = await context.decodeAudioData(audioData);
           
+          // 4. Store the decoded AudioBuffer in the in-memory ref
           audioBuffersRef.current[track.url] = decodedBuffer;
           if (decodedBuffer.duration > maxDuration) {
             maxDuration = decodedBuffer.duration;
@@ -309,7 +312,7 @@ const DawPage = () => {
     loadAudioData();
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSongId, tracks]); // Only re-run when song or available tracks change
+  }, [activeSongId, tracks, playbackMode]);
 
   // This effect updates song metadata without triggering audio reloading
   useEffect(() => {
@@ -720,3 +723,5 @@ const DawPage = () => {
 };
 
 export default DawPage;
+
+    
