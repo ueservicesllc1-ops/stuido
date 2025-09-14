@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Header from '@/components/Header';
@@ -590,14 +589,22 @@ const DawPage = () => {
   const handleEqReset = () => {
     setEqBands([50, 50, 50, 50, 50]);
   };
+  
+  const activeSong = songs.find(s => s.id === activeSongId);
+  const handleBpmChange = (newBpm: number) => {
+      if (!activeSong || !activeSong.tempo) return;
+      const newRate = newBpm / activeSong.tempo;
+      // Clamp the rate to a reasonable range to avoid extreme values
+      const clampedRate = Math.max(0.5, Math.min(2, newRate));
+      setPlaybackRate(clampedRate);
+  };
+
 
   // --- Render ---
   const totalTracksForSong = tracks.filter(t => t.songId === activeSongId).length;
   const loadedTracksCount = totalTracksForSong - loadingTracks.length;
   const loadingProgress = totalTracksForSong > 0 ? (loadedTracksCount / totalTracksForSong) * 100 : 0;
   const showLoadingBar = loadingTracks.length > 0 && totalTracksForSong > 0;
-  
-  const activeSong = songs.find(s => s.id === activeSongId);
   
   return (
     <div className="grid grid-cols-[1fr_384px] grid-rows-[auto_auto_1fr] h-screen w-screen p-4 gap-4">
@@ -627,6 +634,7 @@ const DawPage = () => {
             activeSong={activeSong}
             playbackRate={playbackRate}
             onPlaybackRateChange={setPlaybackRate}
+            onBpmChange={handleBpmChange}
         />
       </div>
 
@@ -697,5 +705,3 @@ const DawPage = () => {
 };
 
 export default DawPage;
-
-    

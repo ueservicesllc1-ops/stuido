@@ -1,7 +1,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Rewind, Play, Pause, Square, FastForward, Settings, RadioTower, Disc, Loader2, DownloadCloud, Timer, Volume2 } from 'lucide-react';
 import { Circle } from './icons';
@@ -42,6 +42,7 @@ interface HeaderProps {
   activeSong: Song | undefined;
   playbackRate: number;
   onPlaybackRateChange: (rate: number) => void;
+  onBpmChange: (bpm: number) => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -68,11 +69,43 @@ const Header: React.FC<HeaderProps> = ({
   onPanVisibilityChange,
   activeSong,
   playbackRate,
-  onPlaybackRateChange
+  onPlaybackRateChange,
+  onBpmChange,
 }) => {
   
   const currentBPM = activeSong?.tempo ? activeSong.tempo * playbackRate : null;
   const pitchPercent = ((playbackRate - 1) * 100).toFixed(1);
+  const [bpmInput, setBpmInput] = useState<string>('');
+
+  useEffect(() => {
+    if (currentBPM !== null) {
+      setBpmInput(currentBPM.toFixed(1));
+    } else {
+      setBpmInput('--');
+    }
+  }, [currentBPM]);
+
+  const handleBpmInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setBpmInput(e.target.value);
+  }
+
+  const handleBpmInputBlur = () => {
+    const newBpm = parseFloat(bpmInput);
+    if (!isNaN(newBpm) && newBpm > 0) {
+      onBpmChange(newBpm);
+    } else {
+      // Revert if input is invalid
+      setBpmInput(currentBPM ? currentBPM.toFixed(1) : '--');
+    }
+  }
+
+  const handleBpmInputKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+        handleBpmInputBlur();
+        e.currentTarget.blur();
+    }
+  }
+
 
   return (
     <header className="flex flex-col bg-card/50 border-b border-border p-2 gap-2 rounded-lg">
@@ -96,11 +129,17 @@ const Header: React.FC<HeaderProps> = ({
         </div>
         
         <div className="flex items-center gap-2">
-            <div className="flex flex-col items-center justify-center bg-black/80 border border-amber-400/20 rounded-md px-3 py-1 w-28 h-12">
-                <span className="font-mono text-xl font-bold text-amber-400 [text-shadow:0_0_8px_theme(colors.amber.400)]">
-                    {currentBPM ? currentBPM.toFixed(1) : '--'}
-                </span>
-                <span className="text-xs font-mono text-amber-400/70">BPM</span>
+            <div className="flex flex-col items-center justify-center bg-black/80 border border-amber-400/20 rounded-md px-1 py-1 w-28 h-12">
+                 <Input
+                    type="text"
+                    value={bpmInput}
+                    onChange={handleBpmInput}
+                    onBlur={handleBpmInputBlur}
+                    onKeyPress={handleBpmInputKeyPress}
+                    disabled={!activeSong?.tempo}
+                    className="w-full h-full p-0 m-0 bg-transparent border-none text-center font-mono text-xl font-bold text-amber-400 [text-shadow:0_0_8px_theme(colors.amber.400)] focus:ring-0 focus:outline-none"
+                />
+                <span className="text-xs font-mono text-amber-400/70 -mt-1">BPM</span>
             </div>
 
             <div className="w-48 flex flex-col items-center justify-center h-12">
@@ -198,5 +237,3 @@ const Header: React.FC<HeaderProps> = ({
 };
 
 export default Header;
-
-    
