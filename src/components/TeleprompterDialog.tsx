@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from './ui/button';
 import { X, ZoomIn, ZoomOut, Play, Pause } from 'lucide-react';
-import { ScrollArea, ScrollBar } from './ui/scroll-area';
+import { ScrollArea } from './ui/scroll-area';
 import { cn } from '@/lib/utils';
 import type { LyricsSyncOutput } from '@/ai/flows/lyrics-synchronization';
 import { Slider } from './ui/slider';
@@ -22,7 +22,7 @@ interface TeleprompterDialogProps {
   lyrics: string | null;
   syncedLyrics: LyricsSyncOutput | null;
   currentTime: number;
-  isPlaying: boolean;
+  isPlaying: boolean; // Is the main song playing?
   syncOffset: number;
 }
 
@@ -39,115 +39,111 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   const [fontSize, setFontSize] = useState(48);
   const [activeWordIndex, setActiveWordIndex] = useState(-1);
   const [isManualAutoScrolling, setIsManualAutoScrolling] = useState(false);
-  const [scrollSpeed, setScrollSpeed] = useState(5); // Píxeles por segundo
-  const [isUserScrolling, setIsUserScrolling] = useState(false);
+  const [scrollSpeed, setScrollSpeed] = useState(5);
+  const [isUserInteracting, setIsUserInteracting] = useState(false);
 
-  const activeWordRef = useRef<HTMLSpanElement | null>(null);
   const wordRefs = useRef<Map<number, HTMLSpanElement>>(new Map());
-  const scrollViewportRef = useRef<HTMLDivElement | null>(null);
-  const scrollAnimationRef = useRef<number>();
-  const manualScrollTimeoutRef = useRef<NodeJS.Timeout>();
-
+  const scrollViewportRef = useRef<HTMLDivElement>(null);
+  const animationFrameRef = useRef<number>();
+  const userInteractionTimeoutRef = useRef<NodeJS.Timeout>();
 
   const handleZoomIn = () => setFontSize(prev => Math.min(prev + 4, 96));
   const handleZoomOut = () => setFontSize(prev => Math.max(prev - 4, 16));
 
+  // Reset states when dialog closes
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       onClose();
-      setIsManualAutoScrolling(false); // Detiene el autoscroll al cerrar
+      setIsManualAutoScrolling(false);
     }
   };
 
-  // --- Lógica de Sincronización con Karaoke (cuando la canción está en play) ---
+  // --- Karaoke Mode Logic (when main song is playing) ---
   useEffect(() => {
     if (!isPlaying || !syncedLyrics) {
-      if(!isPlaying) setActiveWordIndex(-1);
+      if (!isPlaying) setActiveWordIndex(-1); // Reset highlight when song stops
       return;
     }
 
-    // El modo karaoke está activo, desactivamos el autoscroll manual
+    // Karaoke mode is active, disable manual auto-scroll if it was on
     if (isManualAutoScrolling) setIsManualAutoScrolling(false);
 
     const adjustedCurrentTime = currentTime - syncOffset;
-
     const currentWordIndex = syncedLyrics.words.findLastIndex(
       (word) => adjustedCurrentTime >= word.startTime
     );
     
-    setActiveWordIndex(currentWordIndex);
+    if (currentWordIndex !== activeWordIndex) {
+        setActiveWordIndex(currentWordIndex);
+    }
+  }, [currentTime, isPlaying, syncedLyrics, syncOffset, isManualAutoScrolling, activeWordIndex]);
 
-  }, [currentTime, isPlaying, syncedLyrics, syncOffset, isManualAutoScrolling]);
-
-
+  // Effect to scroll the highlighted word into view in Karaoke mode
   useEffect(() => {
-    // Solo hacer scroll automático si el usuario no está interactuando manualmente
-    if (isPlaying && activeWordIndex !== -1 && !isUserScrolling) {
+    if (isPlaying && activeWordIndex > -1 && !isUserInteracting) {
       const wordElement = wordRefs.current.get(activeWordIndex);
-      if (wordElement && wordElement !== activeWordRef.current) {
+      if (wordElement) {
         wordElement.scrollIntoView({
           behavior: 'smooth',
           block: 'center',
         });
-        activeWordRef.current = wordElement;
       }
     }
-  }, [activeWordIndex, isPlaying, isUserScrolling]);
+  }, [activeWordIndex, isPlaying, isUserInteracting]);
 
 
-  // --- Lógica de Auto-Scroll Manual ---
+  // --- Manual Auto-Scroll Logic ---
   const animateScroll = useCallback(() => {
-      if (scrollViewportRef.current) {
-          const scrollAmount = scrollSpeed / 60; // Dividido por 60fps
-          scrollViewportRef.current.scrollTop += scrollAmount;
-          scrollAnimationRef.current = requestAnimationFrame(animateScroll);
-      }
-  }, [scrollSpeed]);
+    if (scrollViewportRef.current && !isUserInteracting) {
+        const scrollAmount = scrollSpeed / 60; // Pixels per 60fps frame
+        scrollViewportRef.current.scrollTop += scrollAmount;
+        animationFrameRef.current = requestAnimationFrame(animateScroll);
+    }
+  }, [scrollSpeed, isUserInteracting]);
 
   useEffect(() => {
+    // Start or stop manual scrolling animation
     if (isManualAutoScrolling && !isPlaying) {
-        // Inicia la animación
-        scrollAnimationRef.current = requestAnimationFrame(animateScroll);
+      animationFrameRef.current = requestAnimationFrame(animateScroll);
     } else {
-        // Detiene la animación
-        if (scrollAnimationRef.current) {
-            cancelAnimationFrame(scrollAnimationRef.current);
-            scrollAnimationRef.current = undefined;
-        }
-    }
-
-    return () => {
-        // Cleanup: se asegura de detener la animación al desmontar
-        if (scrollAnimationRef.current) {
-            cancelAnimationFrame(scrollAnimationRef.current);
-        }
-    };
-  }, [isManualAutoScrolling, animateScroll, isPlaying]);
-  
-  const handleManualScroll = () => {
-      setIsUserScrolling(true);
-      if (manualScrollTimeoutRef.current) {
-          clearTimeout(manualScrollTimeoutRef.current);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
       }
-      manualScrollTimeoutRef.current = setTimeout(() => {
-          setIsUserScrolling(false);
-      }, 2000); // 2 segundos de inactividad para reanudar autoscroll
-  };
+    }
+    // Cleanup function to stop animation when component unmounts or deps change
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [isManualAutoScrolling, isPlaying, animateScroll]);
+  
+  // --- User Interaction Logic ---
+  const handleUserScroll = useCallback(() => {
+    setIsUserInteracting(true);
+    if (userInteractionTimeoutRef.current) {
+      clearTimeout(userInteractionTimeoutRef.current);
+    }
+    userInteractionTimeoutRef.current = setTimeout(() => {
+      setIsUserInteracting(false);
+    }, 2500); // User has 2.5 seconds of manual control before auto-scroll resumes
+  }, []);
   
   useEffect(() => {
     const viewport = scrollViewportRef.current;
     if (viewport) {
-      viewport.addEventListener('scroll', handleManualScroll);
-      return () => viewport.removeEventListener('scroll', handleManualScroll);
+      viewport.addEventListener('scroll', handleUserScroll, { passive: true });
+      return () => viewport.removeEventListener('scroll', handleUserScroll);
     }
-  }, [isOpen]);
+  }, [isOpen, handleUserScroll]); // Re-attach listener if dialog re-opens
+  
 
   const renderLyrics = () => {
     if (syncedLyrics && syncedLyrics.words.length > 0) {
         wordRefs.current.clear();
         return (
             <p 
-                className="font-mono text-center whitespace-pre-wrap p-4 pt-16 transition-all"
+                className="font-mono text-center whitespace-pre-wrap p-4 pt-24 pb-24 transition-all"
                 style={{ fontSize: `${fontSize}px`, lineHeight: 1.5 }}
             >
                 {syncedLyrics.words.map((word, index) => {
@@ -171,9 +167,10 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
         );
     }
     
+    // Fallback to plain text
     return (
         <pre 
-            className="font-mono text-amber-400 text-center whitespace-pre-wrap p-4 pt-16 transition-all"
+            className="font-mono text-amber-400 text-center whitespace-pre-wrap p-4 pt-24 pb-24 transition-all"
             style={{ fontSize: `${fontSize}px`, lineHeight: 1.5 }}
         >
             {lyrics || 'No hay letra disponible para esta canción.'}
@@ -181,7 +178,6 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
     );
   }
 
-  // No mostrar controles de autoscroll si el karaoke está activo
   const showAutoScrollControls = !isPlaying && !!lyrics;
 
   return (
@@ -192,7 +188,12 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
           <div className="flex gap-2 items-center">
              {showAutoScrollControls && (
                 <div className="flex items-center gap-3 bg-card/50 p-1.5 rounded-lg w-48">
-                    <Button variant="ghost" size="icon" className="w-8 h-8 text-amber-400/70 hover:text-amber-400" onClick={() => setIsManualAutoScrolling(!isManualAutoScrolling)}>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="w-8 h-8 text-amber-400/70 hover:text-amber-400" 
+                        onClick={() => setIsManualAutoScrolling(prev => !prev)}
+                    >
                         {isManualAutoScrolling ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
                     </Button>
                     <Slider
