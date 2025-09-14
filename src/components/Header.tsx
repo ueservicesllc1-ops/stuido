@@ -139,7 +139,7 @@ const Header: React.FC<HeaderProps> = ({
                  <Button variant="ghost" size="icon" className="w-10 h-10 text-amber-400/70" onClick={() => handleBpmStep(-1)} disabled={!activeSong}>
                     <Minus className="w-5 h-5" />
                  </Button>
-                 <div className="flex flex-col items-center justify-center px-1 py-1 w-28">
+                 <div className="flex flex-col items-center justify-center px-1 py-1 w-24">
                     <Input
                         type="text"
                         value={bpmInput}
@@ -240,3 +240,5 @@ const Header: React.FC<HeaderProps> = ({
 };
 
 export default Header;
+
+    
