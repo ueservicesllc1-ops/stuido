@@ -46,8 +46,11 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   const manualScrollTimeoutRef = useRef<NodeJS.Timeout>();
   
   const scrollPositionRef = useRef(0);
+  const lastTimeRef = useRef(0);
+  const accumulatedScrollRef = useRef(0);
+  
+  // Ref to hold the latest scroll speed, avoiding useEffect dependency issues
   const scrollSpeedRef = useRef(scrollSpeed);
-
   useEffect(() => {
     scrollSpeedRef.current = scrollSpeed;
   }, [scrollSpeed]);
@@ -62,10 +65,25 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
     }
   };
   
-  const animateScroll = useCallback(() => {
+  const animateScroll = useCallback((currentTime: number) => {
+    if (!lastTimeRef.current) {
+        lastTimeRef.current = currentTime;
+    }
+    const deltaTime = currentTime - lastTimeRef.current;
+    lastTimeRef.current = currentTime;
+
     if (scrollViewportRef.current && !isManuallyScrolling.current) {
-        scrollPositionRef.current += scrollSpeedRef.current;
-        scrollViewportRef.current.scrollTop = Math.floor(scrollPositionRef.current);
+        // scrollSpeed is pixels per second. 
+        const scrollAmount = (scrollSpeedRef.current * deltaTime) / 1000;
+        accumulatedScrollRef.current += scrollAmount;
+
+        const scrollIncrement = Math.floor(accumulatedScrollRef.current);
+        
+        if (scrollIncrement >= 1) {
+            scrollViewportRef.current.scrollTop += scrollIncrement;
+            scrollPositionRef.current = scrollViewportRef.current.scrollTop;
+            accumulatedScrollRef.current -= scrollIncrement;
+        }
     }
     animationFrameRef.current = requestAnimationFrame(animateScroll);
   }, []);
@@ -73,6 +91,8 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   useEffect(() => {
     if (isAutoScrolling) {
         isManuallyScrolling.current = false;
+        lastTimeRef.current = 0; // Reset time on start
+        accumulatedScrollRef.current = 0;
         if (scrollViewportRef.current) {
             scrollPositionRef.current = scrollViewportRef.current.scrollTop;
         }
@@ -175,7 +195,7 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
                      <Slider
                         value={[scrollSpeed]}
                         onValueChange={(value) => setScrollSpeed(value[0])}
-                        max={10}
+                        max={5}
                         step={0.1}
                         className="w-48"
                     />
@@ -221,3 +241,4 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
 };
 
 export default TeleprompterDialog;
+
