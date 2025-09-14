@@ -36,6 +36,12 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   const animationFrameRef = useRef<number>();
   const isManuallyScrolling = useRef(false);
   const manualScrollTimeout = useRef<NodeJS.Timeout>();
+  
+  // Use a ref to hold the latest scroll speed to be used inside requestAnimationFrame
+  const scrollSpeedRef = useRef(scrollSpeed);
+  useEffect(() => {
+    scrollSpeedRef.current = scrollSpeed;
+  }, [scrollSpeed]);
 
   const handleZoomIn = () => setFontSize((prev) => Math.min(prev + 4, 96));
   const handleZoomOut = () => setFontSize((prev) => Math.max(prev - 4, 16));
@@ -43,17 +49,17 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       onClose();
-      setIsAutoScrolling(false);
+      setIsAutoScrolling(false); // Stop scrolling when dialog closes
     }
   };
 
   const animateScroll = useCallback(() => {
     if (scrollViewportRef.current && !isManuallyScrolling.current) {
-        const scrollAmount = scrollSpeed / 60; // Pixels per frame at 60fps
+        const scrollAmount = scrollSpeedRef.current / 60; // Pixels per frame at 60fps
         scrollViewportRef.current.scrollTop += scrollAmount;
     }
     animationFrameRef.current = requestAnimationFrame(animateScroll);
-  }, [scrollSpeed]);
+  }, []);
 
   useEffect(() => {
     if (isAutoScrolling) {
@@ -72,11 +78,14 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
 
   // Detect manual scroll to pause auto-scroll
   const handleManualScroll = () => {
+    if (isAutoScrolling) {
+        setIsAutoScrolling(false);
+    }
     isManuallyScrolling.current = true;
     if (manualScrollTimeout.current) clearTimeout(manualScrollTimeout.current);
     manualScrollTimeout.current = setTimeout(() => {
         isManuallyScrolling.current = false;
-    }, 1000); // 1 second timeout before auto-scroll can resume
+    }, 2000); // 2 second timeout before auto-scroll can resume
   };
   
   const renderLyrics = () => {
@@ -143,8 +152,8 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
           <ScrollArea 
             className="h-full w-full rounded-b-lg" 
             viewportRef={scrollViewportRef}
-            onWheel={handleManualScroll}
-            onTouchMove={handleManualScroll}
+            onWheelCapture={handleManualScroll}
+            onTouchStartCapture={handleManualScroll}
             >
             {renderLyrics()}
           </ScrollArea>
