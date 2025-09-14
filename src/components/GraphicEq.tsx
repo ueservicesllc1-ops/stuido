@@ -13,21 +13,23 @@ interface GraphicEqProps {
 const bandFrequencies = ['60', '250', '1k', '4k', '8k'];
 
 const EqTickMarks = React.memo(() => {
-    const marks = [
-        { gain: 3, label: "+3" },
-        { gain: 2, label: "" },
-        { gain: 1, label: "" },
-        { gain: 0, label: "0" },
-        { gain: -1, label: "" },
-        { gain: -2, label: "" },
-        { gain: -3, label: "-3" },
-    ];
-    const MAX_GAIN = 12;
+    // El rango total es de 24dB (-12 a +12).
+    const MAX_GAIN = 12; 
+    const TOTAL_RANGE = MAX_GAIN * 2;
 
+    const marks = [
+        { gain: 10,  label: "" }, // +10dB
+        { gain: 5,   label: "+5" }, // +5dB
+        { gain: 0,   label: "0" },  // 0dB
+        { gain: -5,  label: "-5" }, // -5dB
+        { gain: -10, label: "" }, // -10dB
+    ];
+    
     return (
         <div className="absolute h-full w-full pointer-events-none text-[8px] text-muted-foreground/70 inset-0 py-2">
             {marks.map((mark) => {
-                const sliderValue = ((mark.gain + MAX_GAIN) / (MAX_GAIN * 2)) * 100;
+                // Convertir la ganancia en dB a un porcentaje del recorrido total (0-100)
+                const sliderValue = ((mark.gain + MAX_GAIN) / TOTAL_RANGE) * 100;
                 const isZero = mark.gain === 0;
 
                 return (
