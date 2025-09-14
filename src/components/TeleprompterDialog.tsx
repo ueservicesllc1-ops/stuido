@@ -25,7 +25,7 @@ interface TeleprompterDialogProps {
 type Speed = 'slow' | 'medium' | 'fast';
 
 const speedValues: Record<Speed, number> = {
-  slow: 0.75,
+  slow: 0.375,
   medium: 2.5,
   fast: 4,
 };
