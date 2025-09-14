@@ -18,11 +18,11 @@ const EqTickMarks = React.memo(() => {
     const TOTAL_RANGE = MAX_GAIN * 2;
 
     const marks = [
-        { gain: 10,  label: "" }, // +10dB
+        { gain: 10,  label: "+10" }, // +10dB
         { gain: 5,   label: "+5" }, // +5dB
         { gain: 0,   label: "0" },  // 0dB
         { gain: -5,  label: "-5" }, // -5dB
-        { gain: -10, label: "" }, // -10dB
+        { gain: -10, label: "-10" }, // -10dB
     ];
     
     return (
