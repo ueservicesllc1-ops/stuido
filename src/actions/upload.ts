@@ -1,6 +1,9 @@
+
 'use server';
 
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+
+let s3Client: S3Client | null = null;
 
 function getRegionFromEndpoint(endpoint: string | undefined): string {
   if (!endpoint) {
@@ -21,15 +24,21 @@ function getRegionFromEndpoint(endpoint: string | undefined): string {
   }
 }
 
-const s3Client = new S3Client({
-  region: getRegionFromEndpoint(process.env.B2_ENDPOINT),
-  endpoint: process.env.B2_ENDPOINT,
-  credentials: {
-    accessKeyId: process.env.B2_KEY_ID!,
-    secretAccessKey: process.env.B2_APPLICATION_KEY!,
-  },
-  forcePathStyle: true,
-});
+function getS3Client(): S3Client {
+  if (!s3Client) {
+    s3Client = new S3Client({
+      region: getRegionFromEndpoint(process.env.B2_ENDPOINT),
+      endpoint: process.env.B2_ENDPOINT,
+      credentials: {
+        accessKeyId: process.env.B2_KEY_ID!,
+        secretAccessKey: process.env.B2_APPLICATION_KEY!,
+      },
+      forcePathStyle: true,
+    });
+  }
+  return s3Client;
+}
+
 
 export async function uploadFileToB2(file: File) {
   const fileBuffer = await file.arrayBuffer();
@@ -43,8 +52,9 @@ export async function uploadFileToB2(file: File) {
   };
 
   try {
+    const client = getS3Client();
     const command = new PutObjectCommand(params);
-    await s3Client.send(command);
+    await client.send(command);
     
     const fileUrl = `${process.env.B2_PUBLIC_URL}/${fileName}`;
     
@@ -63,8 +73,9 @@ export async function deleteFileFromB2(fileKey: string) {
   };
 
   try {
+    const client = getS3Client();
     const command = new DeleteObjectCommand(params);
-    await s3Client.send(command);
+    await client.send(command);
     return { success: true };
   } catch (error) {
     console.error("Error eliminando de B2:", error);
