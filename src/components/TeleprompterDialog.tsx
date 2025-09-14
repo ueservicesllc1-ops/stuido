@@ -1,8 +1,7 @@
 
 'use client';
 
-import React from 'react';
-import { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -14,6 +13,7 @@ import { Button } from './ui/button';
 import { X, ZoomIn, ZoomOut, Play, Pause } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { Slider } from './ui/slider';
 
 interface TeleprompterDialogProps {
   isOpen: boolean;
@@ -25,7 +25,7 @@ interface TeleprompterDialogProps {
 type Speed = 'slow' | 'medium' | 'fast';
 
 const speedValues: Record<Speed, number> = {
-  slow: 0.7, // 30% más lento que 1
+  slow: 0.7,
   medium: 2,
   fast: 4,
 };
@@ -39,16 +39,18 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
 }) => {
   const [fontSize, setFontSize] = useState(48);
   const [isAutoScrolling, setIsAutoScrolling] = useState(false);
-  const [speed, setSpeed] = useState<Speed>('medium');
+  const [scrollSpeed, setScrollSpeed] = useState<number>(speedValues.medium);
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number>();
   const isManuallyScrolling = useRef(false);
   const manualScrollTimeoutRef = useRef<NodeJS.Timeout>();
+  
+  const scrollPositionRef = useRef(0);
+  const scrollSpeedRef = useRef(scrollSpeed);
 
-  const speedRef = useRef(speed);
   useEffect(() => {
-    speedRef.current = speed;
-  }, [speed]);
+    scrollSpeedRef.current = scrollSpeed;
+  }, [scrollSpeed]);
 
   const handleZoomIn = () => setFontSize((prev) => Math.min(prev + 4, 96));
   const handleZoomOut = () => setFontSize((prev) => Math.max(prev - 4, 16));
@@ -56,18 +58,13 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       onClose();
-      setIsAutoScrolling(false);
+      setIsAutoScrolling(false); // Detener el scroll al cerrar
     }
   };
   
-  const scrollPositionRef = useRef(0);
-
   const animateScroll = useCallback(() => {
     if (scrollViewportRef.current && !isManuallyScrolling.current) {
-        // Acumula la velocidad. Esto permite valores decimales.
-        scrollPositionRef.current += speedValues[speedRef.current];
-        
-        // Aplica el scroll solo a la parte entera. El resto se acumula.
+        scrollPositionRef.current += scrollSpeedRef.current;
         scrollViewportRef.current.scrollTop = Math.floor(scrollPositionRef.current);
     }
     animationFrameRef.current = requestAnimationFrame(animateScroll);
@@ -76,7 +73,6 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   useEffect(() => {
     if (isAutoScrolling) {
         isManuallyScrolling.current = false;
-        // Sincroniza la posición de scroll acumulada con la real al empezar
         if (scrollViewportRef.current) {
             scrollPositionRef.current = scrollViewportRef.current.scrollTop;
         }
@@ -97,21 +93,18 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   const handleManualScroll = () => {
     isManuallyScrolling.current = true;
     
-    // Sincroniza la posición acumulada con la posición real del scroll manual
     if(scrollViewportRef.current){
         scrollPositionRef.current = scrollViewportRef.current.scrollTop;
     }
 
-    // Detiene el autoscroll si estaba activo
     if (isAutoScrolling) {
         setIsAutoScrolling(false);
     }
 
-    // Reinicia el flag de scroll manual después de un tiempo
     if (manualScrollTimeoutRef.current) clearTimeout(manualScrollTimeoutRef.current);
     manualScrollTimeoutRef.current = setTimeout(() => {
         isManuallyScrolling.current = false;
-    }, 2000); // 2 segundos de inactividad para re-permitir autoscroll
+    }, 2000);
   };
 
   const renderLyrics = () => {
@@ -137,6 +130,13 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
     );
   };
 
+  const getActiveSpeedPreset = (): Speed | null => {
+    if (scrollSpeed === speedValues.slow) return 'slow';
+    if (scrollSpeed === speedValues.medium) return 'medium';
+    if (scrollSpeed === speedValues.fast) return 'fast';
+    return null;
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-4xl h-[80vh] p-0 flex flex-col bg-black/90 border-amber-400/20">
@@ -153,23 +153,32 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
                 >
                   {isAutoScrolling ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
                 </Button>
-                <div className="flex items-center gap-1 bg-black/50 p-1 rounded-md">
-                    {(['slow', 'medium', 'fast'] as Speed[]).map((s) => (
-                        <Button
-                            key={s}
-                            variant={speed === s ? 'secondary' : 'ghost'}
-                            size="sm"
-                            onClick={() => setSpeed(s)}
-                            className={cn(
-                                "h-auto px-2 py-1 text-xs capitalize",
-                                speed === s ? 'bg-amber-500/20 text-amber-400' : 'text-amber-400/70'
-                            )}
-                        >
-                            {s === 'slow' && 'Lento'}
-                            {s === 'medium' && 'Medio'}
-                            {s === 'fast' && 'Rápido'}
-                        </Button>
-                    ))}
+                <div className="flex flex-col items-center gap-2">
+                    <div className="flex items-center gap-1 bg-black/50 p-1 rounded-md">
+                        {(['slow', 'medium', 'fast'] as Speed[]).map((s) => (
+                            <Button
+                                key={s}
+                                variant={getActiveSpeedPreset() === s ? 'secondary' : 'ghost'}
+                                size="sm"
+                                onClick={() => setScrollSpeed(speedValues[s])}
+                                className={cn(
+                                    "h-auto px-2 py-1 text-xs capitalize",
+                                    getActiveSpeedPreset() === s ? 'bg-amber-500/20 text-amber-400' : 'text-amber-400/70'
+                                )}
+                            >
+                                {s === 'slow' && 'Lento'}
+                                {s === 'medium' && 'Medio'}
+                                {s === 'fast' && 'Rápido'}
+                            </Button>
+                        ))}
+                    </div>
+                     <Slider
+                        value={[scrollSpeed]}
+                        onValueChange={(value) => setScrollSpeed(value[0])}
+                        max={10}
+                        step={0.1}
+                        className="w-48"
+                    />
                 </div>
               </>
             )}
