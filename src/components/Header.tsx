@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -162,24 +163,19 @@ const Header: React.FC<HeaderProps> = ({
         
          <div className="flex items-center gap-2">
             <div className="flex items-center bg-black/80 border border-amber-400/20 rounded-md h-12 px-3">
-                <div className="flex flex-col items-center justify-center py-1">
-                    <Slider
-                        value={[pitch]}
-                        onValueChange={(vals) => onPitchChange(vals[0])}
-                        min={-12}
-                        max={12}
-                        step={1}
-                        className="w-32"
-                        renderRange={false}
-                    />
-                    <span className="text-xs font-mono text-amber-400/70 mt-1">PITCH</span>
-                </div>
-                <div className="bg-black/80 border border-amber-400/20 rounded-md px-2 py-1 w-20 text-center ml-2">
+                 <Button variant="ghost" size="icon" className="w-10 h-10 text-amber-400/70" onClick={() => onPitchChange(pitch - 1)} disabled={!activeSong}>
+                    <Minus className="w-5 h-5" />
+                 </Button>
+                <div className="bg-black/80 border border-amber-400/20 rounded-md px-2 py-1 w-20 text-center mx-2">
                     <span className="font-mono text-lg text-amber-400 [text-shadow:0_0_8px_theme(colors.amber.400)]">
                         {displayNote}
                     </span>
+                    <span className="text-xs font-mono text-amber-400/70 -mt-1 block">PITCH</span>
                 </div>
-                 <Button variant="ghost" size="icon" className="w-10 h-10 text-amber-400/70" onClick={() => onPitchChange(0)}>
+                 <Button variant="ghost" size="icon" className="w-10 h-10 text-amber-400/70" onClick={() => onPitchChange(pitch + 1)} disabled={!activeSong}>
+                    <Plus className="w-5 h-5" />
+                 </Button>
+                 <Button variant="ghost" size="icon" className="w-10 h-10 text-amber-400/70 ml-2" onClick={() => onPitchChange(0)} disabled={!activeSong}>
                     <RotateCcw className="w-4 h-4" />
                  </Button>
             </div>
@@ -265,3 +261,5 @@ const Header: React.FC<HeaderProps> = ({
 };
 
 export default Header;
+
+    
