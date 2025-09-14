@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -23,9 +24,9 @@ interface TeleprompterDialogProps {
 type Speed = 'slow' | 'medium' | 'fast';
 
 const speedValues: Record<Speed, number> = {
-  slow: 0.25,
-  medium: 1,
-  fast: 2,
+  slow: 1.5,
+  medium: 2.5,
+  fast: 4,
 };
 
 const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
@@ -43,30 +44,27 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   const isManuallyScrolling = useRef(false);
   const manualScrollTimeoutRef = useRef<NodeJS.Timeout>();
 
+  const speedRef = useRef(speed);
+  useEffect(() => {
+    speedRef.current = speed;
+  }, [speed]);
+
   const handleZoomIn = () => setFontSize((prev) => Math.min(prev + 4, 96));
   const handleZoomOut = () => setFontSize((prev) => Math.max(prev - 4, 16));
 
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       onClose();
-      setIsAutoScrolling(false); // Detener scroll al cerrar
+      setIsAutoScrolling(false);
     }
   };
 
-  // Usamos una referencia para la velocidad para que el bucle de animación siempre tenga el último valor
-  const speedRef = useRef(speed);
-  useEffect(() => {
-    speedRef.current = speed;
-  }, [speed]);
-
   const animateScroll = useCallback(() => {
     if (isManuallyScrolling.current || !scrollViewportRef.current) {
-        // Si el usuario está haciendo scroll manual, no hacemos nada.
         animationFrameRef.current = requestAnimationFrame(animateScroll);
         return;
     };
     
-    // Usamos el valor de la referencia
     scrollViewportRef.current.scrollTop += speedValues[speedRef.current];
     animationFrameRef.current = requestAnimationFrame(animateScroll);
   }, []);
@@ -89,13 +87,12 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   const handleManualScroll = () => {
     isManuallyScrolling.current = true;
     if (isAutoScrolling) {
-        // Pausamos el auto-scroll si el usuario interviene.
         setIsAutoScrolling(false);
     }
     if (manualScrollTimeoutRef.current) clearTimeout(manualScrollTimeoutRef.current);
     manualScrollTimeoutRef.current = setTimeout(() => {
         isManuallyScrolling.current = false;
-    }, 2000); // 2 segundos de inactividad para reanudar el auto-scroll
+    }, 2000);
   };
 
   const renderLyrics = () => {
