@@ -11,7 +11,6 @@ import {
 import { Button } from './ui/button';
 import { X, ZoomIn, ZoomOut, Play, Pause } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
-import { Slider } from './ui/slider';
 
 interface TeleprompterDialogProps {
   isOpen: boolean;
@@ -19,6 +18,8 @@ interface TeleprompterDialogProps {
   songTitle: string;
   lyrics: string | null;
 }
+
+const SCROLL_SPEED = 1; // Velocidad fija (píxeles por frame)
 
 const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   isOpen,
@@ -28,26 +29,11 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
 }) => {
   const [fontSize, setFontSize] = useState(48);
   const [isAutoScrolling, setIsAutoScrolling] = useState(false);
-  const [scrollSpeed, setScrollSpeed] = useState(5);
-
+  
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number>();
-  
-  // Refs to hold the latest values for the animation loop
-  const scrollSpeedRef = useRef(scrollSpeed);
-  const isAutoScrollingRef = useRef(isAutoScrolling);
   const isManuallyScrolling = useRef(false);
   const manualScrollTimeoutRef = useRef<NodeJS.Timeout>();
-
-  // Update refs when state changes
-  useEffect(() => {
-    scrollSpeedRef.current = scrollSpeed;
-  }, [scrollSpeed]);
-
-  useEffect(() => {
-    isAutoScrollingRef.current = isAutoScrolling;
-  }, [isAutoScrolling]);
-
 
   const handleZoomIn = () => setFontSize((prev) => Math.min(prev + 4, 96));
   const handleZoomOut = () => setFontSize((prev) => Math.max(prev - 4, 16));
@@ -55,29 +41,22 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       onClose();
-      setIsAutoScrolling(false); // Stop scrolling when dialog closes
+      setIsAutoScrolling(false); 
     }
   };
 
   const animateScroll = useCallback(() => {
-    // Stop if no longer auto-scrolling
-    if (!isAutoScrollingRef.current || isManuallyScrolling.current) {
-        return;
-    }
+    if (isManuallyScrolling.current) return;
 
     if (scrollViewportRef.current) {
-        const scrollAmount = scrollSpeedRef.current / 60; // Pixels per frame at 60fps
-        scrollViewportRef.current.scrollTop += scrollAmount;
+        scrollViewportRef.current.scrollTop += SCROLL_SPEED;
     }
     
-    // Continue the loop
     animationFrameRef.current = requestAnimationFrame(animateScroll);
   }, []);
 
-  // Effect to start/stop the animation loop
   useEffect(() => {
-    if (isAutoScrolling) {
-      isManuallyScrolling.current = false;
+    if (isOpen && isAutoScrolling) {
       animationFrameRef.current = requestAnimationFrame(animateScroll);
     } else {
       if (animationFrameRef.current) {
@@ -90,7 +69,7 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isAutoScrolling, animateScroll]);
+  }, [isAutoScrolling, isOpen, animateScroll]);
   
   const handleManualScroll = () => {
     isManuallyScrolling.current = true;
@@ -121,24 +100,14 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
           <DialogTitle className="text-amber-400">{songTitle}</DialogTitle>
           <div className="flex gap-2 items-center">
             {lyrics && (
-              <div className="flex items-center gap-3 bg-card/50 p-1.5 rounded-lg w-48">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-8 h-8 text-amber-400/70 hover:text-amber-400"
-                  onClick={() => setIsAutoScrolling((prev) => !prev)}
-                >
-                  {isAutoScrolling ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-                </Button>
-                <Slider
-                  value={[scrollSpeed]}
-                  onValueChange={(val) => setScrollSpeed(val[0])}
-                  min={1}
-                  max={50}
-                  step={1}
-                  className="flex-grow"
-                />
-              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-8 h-8 text-amber-400/70 hover:text-amber-400"
+                onClick={() => setIsAutoScrolling((prev) => !prev)}
+              >
+                {isAutoScrolling ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+              </Button>
             )}
             <Button
               variant="ghost"
@@ -169,7 +138,7 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
             viewportRef={scrollViewportRef}
             onWheelCapture={handleManualScroll}
             onTouchStartCapture={handleManualScroll}
-            >
+          >
             {renderLyrics()}
           </ScrollArea>
         </div>
