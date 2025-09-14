@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -33,13 +32,22 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
 
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number>();
-  const isManuallyScrolling = useRef(false);
-  const manualScrollTimeout = useRef<NodeJS.Timeout>();
   
+  // Refs to hold the latest values for the animation loop
   const scrollSpeedRef = useRef(scrollSpeed);
+  const isAutoScrollingRef = useRef(isAutoScrolling);
+  const isManuallyScrolling = useRef(false);
+  const manualScrollTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // Update refs when state changes
   useEffect(() => {
     scrollSpeedRef.current = scrollSpeed;
   }, [scrollSpeed]);
+
+  useEffect(() => {
+    isAutoScrollingRef.current = isAutoScrolling;
+  }, [isAutoScrolling]);
+
 
   const handleZoomIn = () => setFontSize((prev) => Math.min(prev + 4, 96));
   const handleZoomOut = () => setFontSize((prev) => Math.max(prev - 4, 16));
@@ -52,43 +60,47 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   };
 
   const animateScroll = useCallback(() => {
-    if (scrollViewportRef.current && !isManuallyScrolling.current) {
+    // Stop if no longer auto-scrolling
+    if (!isAutoScrollingRef.current || isManuallyScrolling.current) {
+        return;
+    }
+
+    if (scrollViewportRef.current) {
         const scrollAmount = scrollSpeedRef.current / 60; // Pixels per frame at 60fps
         scrollViewportRef.current.scrollTop += scrollAmount;
     }
-    // Continue the animation loop
+    
+    // Continue the loop
     animationFrameRef.current = requestAnimationFrame(animateScroll);
   }, []);
 
+  // Effect to start/stop the animation loop
   useEffect(() => {
     if (isAutoScrolling) {
-      // Start the animation
+      isManuallyScrolling.current = false;
       animationFrameRef.current = requestAnimationFrame(animateScroll);
     } else {
-      // Stop the animation
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
     }
-    // Cleanup function to stop animation when component unmounts or effect re-runs
+
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
   }, [isAutoScrolling, animateScroll]);
-
-
-  // Detect manual scroll to pause auto-scroll
+  
   const handleManualScroll = () => {
+    isManuallyScrolling.current = true;
     if (isAutoScrolling) {
         setIsAutoScrolling(false);
     }
-    isManuallyScrolling.current = true;
-    if (manualScrollTimeout.current) clearTimeout(manualScrollTimeout.current);
-    manualScrollTimeout.current = setTimeout(() => {
+    if (manualScrollTimeoutRef.current) clearTimeout(manualScrollTimeoutRef.current);
+    manualScrollTimeoutRef.current = setTimeout(() => {
         isManuallyScrolling.current = false;
-    }, 2000); // 2 second timeout before auto-scroll can resume
+    }, 2000); 
   };
   
   const renderLyrics = () => {
