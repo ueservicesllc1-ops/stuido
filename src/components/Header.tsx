@@ -34,15 +34,6 @@ interface HeaderProps {
   songStructure: SongStructure | null;
   masterVolume: number;
   onMasterVolumeChange: (volume: number) => void;
-  isClickEnabled: boolean;
-  onToggleClick: () => void;
-  clickVolume: number;
-  onClickVolumeChange: (volume: number) => void;
-  clickTempo: number;
-  onTempoChange: (tempo: number) => void;
-  originalTempo: number | null | undefined;
-  clickSound: ClickSound;
-  onClickSoundChange: (sound: ClickSound) => void;
   fadeOutDuration: number;
   onFadeOutDurationChange: (duration: number) => void;
   isPanVisible: boolean;
@@ -67,25 +58,12 @@ const Header: React.FC<HeaderProps> = ({
   songStructure,
   masterVolume,
   onMasterVolumeChange,
-  isClickEnabled,
-  onToggleClick,
-  clickVolume,
-  onClickVolumeChange,
-  clickTempo,
-  onTempoChange,
-  originalTempo,
-  clickSound,
-  onClickSoundChange,
   fadeOutDuration,
   onFadeOutDurationChange,
   isPanVisible,
   onPanVisibilityChange,
 }) => {
   
-  const tempoRange = originalTempo ? originalTempo * 0.2 : 20;
-  const minTempo = originalTempo ? originalTempo - tempoRange : 60;
-  const maxTempo = originalTempo ? originalTempo + tempoRange : 200;
-
   return (
     <header className="flex flex-col bg-card/50 border-b border-border p-2 gap-2 rounded-lg">
       <div className="flex items-center justify-start gap-6">
@@ -108,33 +86,6 @@ const Header: React.FC<HeaderProps> = ({
         </div>
 
         <div className="flex items-center justify-center gap-4">
-            <div className="flex items-center gap-2 bg-background p-1 rounded-lg">
-                <Button 
-                    variant={isClickEnabled ? 'default' : 'secondary'}
-                    size="icon" 
-                    className="w-8 h-8"
-                    onClick={onToggleClick}
-                >
-                    <Timer className="w-5 h-5" />
-                </Button>
-                <div className="flex items-center gap-2 bg-secondary/30 rounded-md p-1 h-16">
-                    <Input
-                        type="number"
-                        className="w-20 bg-transparent border-0 text-center text-3xl font-mono font-bold text-primary focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto"
-                        value={clickTempo}
-                        onChange={(e) => onTempoChange(parseInt(e.target.value, 10))}
-                    />
-                    <Slider
-                      value={[clickTempo]}
-                      onValueChange={(vals) => onTempoChange(vals[0])}
-                      min={minTempo}
-                      max={maxTempo}
-                      step={1}
-                      orientation="vertical"
-                      className="h-full w-4"
-                    />
-                </div>
-            </div>
             <div className="flex items-center gap-1 bg-background p-1 rounded-lg">
                 <Button variant="secondary" size="icon" className="w-12 h-10" onClick={onRewind} disabled={!isReadyToPlay}>
                 <Rewind className="w-6 h-6" />
@@ -178,8 +129,6 @@ const Header: React.FC<HeaderProps> = ({
                 OUTS
             </Button>
             <SettingsDialog 
-              clickSound={clickSound} 
-              onClickSoundChange={onClickSoundChange}
               fadeOutDuration={fadeOutDuration}
               onFadeOutDurationChange={onFadeOutDurationChange}
               isPanVisible={isPanVisible}

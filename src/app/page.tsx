@@ -49,18 +49,6 @@ const DawPage = () => {
   const audioBuffersRef = useRef<Record<string, AudioBuffer>>({});
   const [loadingTracks, setLoadingTracks] = useState<string[]>([]);
 
-  // --- Metronome State ---
-  const [isClickEnabled, setIsClickEnabled] = useState(false);
-  const [clickVolume, setClickVolume] = useState(75);
-  const [clickTempo, setClickTempo] = useState(120);
-  const [clickSound, setClickSound] = useState<ClickSound>('beep');
-  const isClickEnabledRef = useRef(isClickEnabled);
-  const clickSchedulerRef = useRef<number | null>(null);
-  const nextClickTimeRef = useRef(0);
-  const clickGainNodeRef = useRef<GainNode | null>(null);
-  const clickTempoRef = useRef(clickTempo);
-  const clickSoundRef = useRef(clickSound);
-
   // --- Playback State ---
   const [isPlaying, setIsPlaying] = useState(false);
   const isPlayingRef = useRef(isPlaying);
@@ -94,10 +82,6 @@ const DawPage = () => {
         try {
             const context = new (window.AudioContext || (window as any).webkitAudioContext)();
             audioContextRef.current = context;
-
-            // --- Set up Click Track Chain ---
-            clickGainNodeRef.current = context.createGain();
-            clickGainNodeRef.current.connect(context.destination);
 
             // --- Set up Master Track Chain ---
             masterGainNodeRef.current = context.createGain();
@@ -191,7 +175,6 @@ const DawPage = () => {
       } else {
         setActiveSongId(null);
         setSongStructure(null);
-        setClickTempo(120);
         setSongLyrics(null);
         setSongSyncedLyrics(null);
         setSongYoutubeUrl(null);
@@ -201,7 +184,6 @@ const DawPage = () => {
       setTracks([]);
       setActiveSongId(null);
       setSongStructure(null);
-      setClickTempo(120);
       setSongLyrics(null);
       setSongSyncedLyrics(null);
       setSongYoutubeUrl(null);
@@ -210,83 +192,6 @@ const DawPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSetlist]);
   
-  const clickScheduler = useCallback(() => {
-    const context = audioContextRef.current;
-    if (!context || !isClickEnabledRef.current) return;
-
-    while (nextClickTimeRef.current < context.currentTime + 0.1) {
-        const osc = context.createOscillator();
-        const clickGain = context.createGain();
-        
-        osc.connect(clickGain);
-        clickGain.connect(clickGainNodeRef.current!);
-        
-        if (clickSoundRef.current === 'beep') {
-            osc.frequency.setValueAtTime(1000, nextClickTimeRef.current);
-            clickGain.gain.setValueAtTime(1, nextClickTimeRef.current);
-            clickGain.gain.exponentialRampToValueAtTime(0.001, nextClickTimeRef.current + 0.05);
-        } else { // click
-            osc.frequency.setValueAtTime(1500, nextClickTimeRef.current);
-            clickGain.gain.setValueAtTime(1, nextClickTimeRef.current);
-            clickGain.gain.exponentialRampToValueAtTime(0.001, nextClickTimeRef.current + 0.02);
-        }
-
-        osc.start(nextClickTimeRef.current);
-        osc.stop(nextClickTimeRef.current + 0.05);
-
-        const secondsPerBeat = 60.0 / clickTempoRef.current;
-        nextClickTimeRef.current += secondsPerBeat;
-    }
-    clickSchedulerRef.current = window.setTimeout(clickScheduler, 25);
-  }, []);
-  
-  // Sync refs with state
-  useEffect(() => {
-    clickTempoRef.current = clickTempo;
-  }, [clickTempo]);
-
-  useEffect(() => {
-    clickSoundRef.current = clickSound;
-  }, [clickSound]);
-
-  useEffect(() => {
-    isClickEnabledRef.current = isClickEnabled;
-
-    const startScheduler = () => {
-        if (audioContextRef.current) {
-            const context = audioContextRef.current;
-            if (context.state === 'suspended') {
-                context.resume();
-            }
-            nextClickTimeRef.current = context.currentTime;
-            // Clear any existing timer to avoid duplicates
-            if (clickSchedulerRef.current) {
-                clearTimeout(clickSchedulerRef.current);
-            }
-            clickScheduler();
-        }
-    };
-
-    if (isClickEnabled) {
-        startScheduler();
-    }
-
-    return () => {
-        if (clickSchedulerRef.current) {
-            clearTimeout(clickSchedulerRef.current);
-            clickSchedulerRef.current = null;
-        }
-    };
-  }, [isClickEnabled, clickScheduler]);
-
-  useEffect(() => {
-    if (clickGainNodeRef.current && audioContextRef.current) {
-        // Solo el click va a su propio volumen, no afectado por el master fader
-        const finalVolume = (clickVolume / 100);
-        clickGainNodeRef.current.gain.setValueAtTime(finalVolume, audioContextRef.current.currentTime);
-    }
-  }, [clickVolume]);
-
   // Handle Master Volume
   useEffect(() => {
     if (masterGainNodeRef.current && audioContextRef.current) {
@@ -378,11 +283,6 @@ const DawPage = () => {
     if (activeSongId) {
         const currentSong = songs.find(s => s.id === activeSongId);
         setSongStructure(currentSong?.structure || null);
-        if (currentSong?.tempo) {
-            setClickTempo(currentSong.tempo);
-        } else {
-            setClickTempo(120); // Default if no tempo
-        }
         setSongLyrics(currentSong?.lyrics || null);
         setSongSyncedLyrics(currentSong?.syncedLyrics || null);
         setSongYoutubeUrl(currentSong?.youtubeUrl || null);
@@ -678,14 +578,6 @@ const DawPage = () => {
     setEqBands([50, 50, 50, 50, 50]);
   };
 
-  const handleToggleClick = () => {
-    const context = audioContextRef.current;
-    if (context && context.state === 'suspended') {
-        context.resume();
-    }
-    setIsClickEnabled(prev => !prev);
-  }
-
   // --- Render ---
   const totalTracksForSong = tracks.filter(t => t.songId === activeSongId).length;
   const loadedTracksCount = totalTracksForSong - loadingTracks.length;
@@ -715,15 +607,6 @@ const DawPage = () => {
             songStructure={songStructure}
             masterVolume={masterVolume}
             onMasterVolumeChange={handleMasterVolumeChange}
-            isClickEnabled={isClickEnabled}
-            onToggleClick={handleToggleClick}
-            clickVolume={clickVolume}
-            onClickVolumeChange={setClickVolume}
-            clickTempo={clickTempo}
-            onTempoChange={setClickTempo}
-            originalTempo={activeSong?.tempo}
-            clickSound={clickSound}
-            onClickSoundChange={setClickSound}
             fadeOutDuration={fadeOutDuration}
             onFadeOutDurationChange={setFadeOutDuration}
             isPanVisible={isPanVisible}

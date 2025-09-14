@@ -90,8 +90,6 @@ const SettingsSwitchRow: React.FC<SettingsSwitchRowProps> = ({ label, checked, o
 
 interface SettingsDialogProps {
     children: React.ReactNode;
-    clickSound: ClickSound;
-    onClickSoundChange: (sound: ClickSound) => void;
     fadeOutDuration: number;
     onFadeOutDurationChange: (duration: number) => void;
     isPanVisible: boolean;
@@ -101,8 +99,6 @@ interface SettingsDialogProps {
 
 const SettingsDialog = ({ 
     children, 
-    clickSound, 
-    onClickSoundChange, 
     fadeOutDuration, 
     onFadeOutDurationChange,
     isPanVisible,
@@ -117,43 +113,11 @@ const SettingsDialog = ({
 
   const renderGeneralSettings = () => {
     switch (generalView) {
-        case 'click-sound':
-            return (
-                 <div>
-                    <div className="relative flex items-center justify-center mb-4">
-                        <Button variant="ghost" size="icon" className="absolute left-0" onClick={() => setGeneralView('main')}>
-                            <ChevronLeft />
-                        </Button>
-                        <h3 className="font-semibold text-lg">Click Sound</h3>
-                    </div>
-                    <Separator />
-                    <SettingsSelectionRow 
-                        label="Beep" 
-                        isSelected={clickSound === 'beep'} 
-                        onClick={() => {
-                            onClickSoundChange('beep');
-                            setGeneralView('main');
-                        }}
-                    />
-                    <Separator />
-                    <SettingsSelectionRow 
-                        label="Click" 
-                        isSelected={clickSound === 'click'}
-                        onClick={() => {
-                            onClickSoundChange('click');
-                            setGeneralView('main');
-                        }}
-                    />
-                    <Separator />
-                </div>
-            );
         case 'main':
         default:
             return (
                 <div>
                     <SettingsRow label="Appearance" value="Dark" isSelect />
-                    <Separator />
-                    <SettingsRow label="Click Sound" value={clickSound === 'beep' ? 'Beep' : 'Click'} isSelect onClick={() => setGeneralView('click-sound')} />
                     <Separator />
                     <SettingsSliderRow 
                       label="Fade out / in duration" 
