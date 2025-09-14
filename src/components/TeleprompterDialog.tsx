@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -24,11 +23,13 @@ interface TeleprompterDialogProps {
 
 type Speed = 'slow' | 'medium' | 'fast';
 
-const speedValues: Record<Speed, number> = {
+const speedPresets: Record<Speed, number> = {
   slow: 1,
   medium: 3,
   fast: 6,
 };
+
+const maxSpeed = 8;
 
 
 const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
@@ -39,7 +40,7 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
 }) => {
   const [fontSize, setFontSize] = useState(48);
   const [isAutoScrolling, setIsAutoScrolling] = useState(false);
-  const [scrollSpeed, setScrollSpeed] = useState<number>(speedValues.medium);
+  const [scrollSpeed, setScrollSpeed] = useState<number>(speedPresets.medium);
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number>();
   const isManuallyScrolling = useRef(false);
@@ -49,7 +50,6 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   const lastTimeRef = useRef(0);
   const accumulatedScrollRef = useRef(0);
   
-  // Ref to hold the latest scroll speed, avoiding useEffect dependency issues
   const scrollSpeedRef = useRef(scrollSpeed);
   useEffect(() => {
     scrollSpeedRef.current = scrollSpeed;
@@ -61,7 +61,7 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       onClose();
-      setIsAutoScrolling(false); // Detener el scroll al cerrar
+      setIsAutoScrolling(false);
     }
   };
   
@@ -73,7 +73,6 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
     lastTimeRef.current = currentTime;
 
     if (scrollViewportRef.current && !isManuallyScrolling.current) {
-        // scrollSpeed is pixels per second. We need to convert it to pixels per frame.
         const scrollAmount = (scrollSpeedRef.current * deltaTime) / 1000;
         accumulatedScrollRef.current += scrollAmount;
 
@@ -91,7 +90,7 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   useEffect(() => {
     if (isAutoScrolling) {
         isManuallyScrolling.current = false;
-        lastTimeRef.current = performance.now(); // Use performance.now() for high-precision time
+        lastTimeRef.current = performance.now();
         accumulatedScrollRef.current = 0;
         if (scrollViewportRef.current) {
             scrollPositionRef.current = scrollViewportRef.current.scrollTop;
@@ -117,16 +116,14 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
         scrollPositionRef.current = scrollViewportRef.current.scrollTop;
     }
 
-    // Stop auto-scrolling if it's active
     if (isAutoScrolling) {
         setIsAutoScrolling(false);
     }
 
-    // Set a timeout to re-enable auto-scrolling possibility
     if (manualScrollTimeoutRef.current) clearTimeout(manualScrollTimeoutRef.current);
     manualScrollTimeoutRef.current = setTimeout(() => {
         isManuallyScrolling.current = false;
-    }, 2000); // 2-second timeout
+    }, 2000);
   };
 
   const renderLyrics = () => {
@@ -153,13 +150,18 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   };
 
   const getActiveSpeedPreset = (): Speed | null => {
-    for (const [key, value] of Object.entries(speedValues)) {
-        if (value === scrollSpeed) {
+    for (const [key, value] of Object.entries(speedPresets)) {
+        // Use a small tolerance for float comparison
+        if (Math.abs(value - scrollSpeed) < 0.01) {
             return key as Speed;
         }
     }
     return null;
   }
+  
+  const handleSliderChange = (value: number[]) => {
+    setScrollSpeed(value[0]);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -184,7 +186,7 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
                                 key={s}
                                 variant={getActiveSpeedPreset() === s ? 'secondary' : 'ghost'}
                                 size="sm"
-                                onClick={() => setScrollSpeed(speedValues[s])}
+                                onClick={() => setScrollSpeed(speedPresets[s])}
                                 className={cn(
                                     "h-auto px-2 py-1 text-xs capitalize",
                                     getActiveSpeedPreset() === s ? 'bg-amber-500/20 text-amber-400' : 'text-amber-400/70'
@@ -198,8 +200,8 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
                     </div>
                      <Slider
                         value={[scrollSpeed]}
-                        onValueChange={(value) => setScrollSpeed(value[0])}
-                        max={8}
+                        onValueChange={handleSliderChange}
+                        max={maxSpeed}
                         step={0.1}
                         className="w-48"
                     />
@@ -245,4 +247,3 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
 };
 
 export default TeleprompterDialog;
-
