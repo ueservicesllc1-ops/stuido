@@ -209,7 +209,14 @@ const DawPage = () => {
                 }
     
                 if (audioBuffer) {
-                    await player.load(audioBuffer.getChannelData(0));
+                    player.buffer = Tone.context.createBuffer(
+                        audioBuffer.numberOfChannels,
+                        audioBuffer.length,
+                        audioBuffer.sampleRate
+                    );
+                    for (let i = 0; i < audioBuffer.numberOfChannels; i++) {
+                        player.buffer.getChannelData(i).set(audioBuffer.getChannelData(i));
+                    }
                 } else {
                     const proxyUrl = `/api/download?url=${encodeURIComponent(track.url)}`;
                     await player.load(proxyUrl);
@@ -230,7 +237,7 @@ const DawPage = () => {
                 const volume = new Tone.Volume(0).connect(panner);
                 const analyser = new Tone.Analyser('waveform', 256);
                 player.connect(volume);
-                player.connect(analyser);
+                volume.connect(analyser);
     
                 trackNodesRef.current[track.id] = { player, panner, volume, analyser, pitchShift };
     
