@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
-import { Rewind, Play, Pause, Square, FastForward, Settings, RadioTower, Disc, Loader2, DownloadCloud, Timer, Volume2 } from 'lucide-react';
+import { Rewind, Play, Pause, Square, FastForward, Settings, RadioTower, Disc, Loader2, DownloadCloud, Timer, Volume2, Plus, Minus } from 'lucide-react';
 import { Circle } from './icons';
 import PlaybackModeToggle from './PlaybackModeToggle';
 import type { PlaybackMode } from '@/app/page';
@@ -105,6 +105,12 @@ const Header: React.FC<HeaderProps> = ({
         e.currentTarget.blur();
     }
   }
+  
+  const handleBpmStep = (amount: number) => {
+    if (currentBPM) {
+        onBpmChange(currentBPM + amount);
+    }
+  }
 
 
   return (
@@ -129,31 +135,28 @@ const Header: React.FC<HeaderProps> = ({
         </div>
         
         <div className="flex items-center gap-2">
-            <div className="flex flex-col items-center justify-center bg-black/80 border border-amber-400/20 rounded-md px-1 py-1 w-28 h-12">
-                 <Input
-                    type="text"
-                    value={bpmInput}
-                    onChange={handleBpmInput}
-                    onBlur={handleBpmInputBlur}
-                    onKeyPress={handleBpmInputKeyPress}
-                    disabled={!activeSong?.tempo}
-                    className="w-full h-full p-0 m-0 bg-transparent border-none text-center font-mono text-xl font-bold text-amber-400 [text-shadow:0_0_8px_theme(colors.amber.400)] focus:ring-0 focus:outline-none"
-                />
-                <span className="text-xs font-mono text-amber-400/70 -mt-1">BPM</span>
+            <div className="flex items-center bg-black/80 border border-amber-400/20 rounded-md h-12">
+                 <Button variant="ghost" size="icon" className="w-10 h-10 text-amber-400/70" onClick={() => handleBpmStep(-1)} disabled={!activeSong}>
+                    <Minus className="w-5 h-5" />
+                 </Button>
+                 <div className="flex flex-col items-center justify-center px-1 py-1 w-28">
+                    <Input
+                        type="text"
+                        value={bpmInput}
+                        onChange={handleBpmInput}
+                        onBlur={handleBpmInputBlur}
+                        onKeyPress={handleBpmInputKeyPress}
+                        disabled={!activeSong?.tempo}
+                        className="w-full h-full p-0 m-0 bg-transparent border-none text-center font-mono text-xl font-bold text-amber-400 [text-shadow:0_0_8px_theme(colors.amber.400)] focus:ring-0 focus:outline-none"
+                    />
+                    <span className="text-xs font-mono text-amber-400/70 -mt-1">BPM</span>
+                 </div>
+                 <Button variant="ghost" size="icon" className="w-10 h-10 text-amber-400/70" onClick={() => handleBpmStep(1)} disabled={!activeSong}>
+                    <Plus className="w-5 h-5" />
+                 </Button>
             </div>
-
-            <div className="w-48 flex flex-col items-center justify-center h-12">
-                <Slider
-                    value={[playbackRate]}
-                    onValueChange={(vals) => onPlaybackRateChange(vals[0])}
-                    min={0.75}
-                    max={1.25}
-                    step={0.01}
-                    disabled={!activeSong}
-                />
-                 <div className="text-xs font-mono text-amber-400/70 mt-1">
-                    Pitch: {playbackRate === 1.0 ? "0.0%" : `${pitchPercent}%`}
-                </div>
+             <div className="text-xs font-mono text-amber-400/70 ml-2 w-24">
+                Pitch: {playbackRate === 1.0 ? "0.0%" : `${pitchPercent}%`}
             </div>
         </div>
 
