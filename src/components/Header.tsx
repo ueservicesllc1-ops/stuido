@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
-import { Rewind, Play, Pause, Square, FastForward, Settings, RadioTower, Disc, Loader2, DownloadCloud, Timer, Volume2, Plus, Minus } from 'lucide-react';
+import { Rewind, Play, Pause, Square, FastForward, Settings, RadioTower, Disc, Loader2, DownloadCloud, Timer, Volume2, Plus, Minus, RotateCcw } from 'lucide-react';
 import { Circle } from './icons';
 import PlaybackModeToggle from './PlaybackModeToggle';
 import type { PlaybackMode } from '@/app/page';
@@ -42,6 +42,8 @@ interface HeaderProps {
   playbackRate: number;
   onPlaybackRateChange: (rate: number) => void;
   onBpmChange: (bpm: number) => void;
+  pitch: number;
+  onPitchChange: (pitch: number) => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -70,10 +72,11 @@ const Header: React.FC<HeaderProps> = ({
   playbackRate,
   onPlaybackRateChange,
   onBpmChange,
+  pitch,
+  onPitchChange
 }) => {
   
   const currentBPM = activeSong?.tempo ? activeSong.tempo * playbackRate : null;
-  const pitchPercent = ((playbackRate - 1) * 100).toFixed(1);
   const [bpmInput, setBpmInput] = useState<string>('');
 
   useEffect(() => {
@@ -111,18 +114,17 @@ const Header: React.FC<HeaderProps> = ({
     }
   }
 
-
   return (
     <header className="flex flex-col bg-card/50 border-b border-border p-2 gap-2 rounded-lg">
-      <div className="flex items-center justify-start gap-6">
-        <div className="flex items-center gap-2 w-52">
+      <div className="flex items-center justify-between gap-6">
+        <div className="flex items-center gap-2">
             <Volume2 className="w-5 h-5 text-muted-foreground ml-1 flex-shrink-0" />
             <Slider
                 value={[masterVolume]}
                 onValueChange={(vals) => onMasterVolumeChange(vals[0])}
                 max={100}
                 step={1}
-                className="flex-grow"
+                className="w-32"
                 rangeClassName="bg-amber-400"
                 thumbClassName="bg-amber-400 border-amber-600 h-5 w-5"
             />
@@ -154,10 +156,33 @@ const Header: React.FC<HeaderProps> = ({
                     <Plus className="w-5 h-5" />
                  </Button>
             </div>
-             <div className="text-xs font-mono text-amber-400/70 ml-2 w-24">
-                Pitch: {playbackRate === 1.0 ? "0.0%" : `${pitchPercent}%`}
+        </div>
+        
+         <div className="flex items-center gap-2">
+            <div className="flex items-center bg-black/80 border border-amber-400/20 rounded-md h-12 px-3">
+                <div className="flex flex-col items-center justify-center py-1">
+                    <Slider
+                        value={[pitch]}
+                        onValueChange={(vals) => onPitchChange(vals[0])}
+                        min={-12}
+                        max={12}
+                        step={1}
+                        className="w-32"
+                        renderRange={false}
+                    />
+                    <span className="text-xs font-mono text-amber-400/70 mt-1">PITCH</span>
+                </div>
+                <div className="bg-black/80 border border-amber-400/20 rounded-md px-2 py-1 w-20 text-center ml-2">
+                    <span className="font-mono text-lg text-amber-400 [text-shadow:0_0_8px_theme(colors.amber.400)]">
+                        {pitch > 0 ? '+' : ''}{pitch.toFixed(0)} st
+                    </span>
+                </div>
+                 <Button variant="ghost" size="icon" className="w-10 h-10 text-amber-400/70" onClick={() => onPitchChange(0)}>
+                    <RotateCcw className="w-4 h-4" />
+                 </Button>
             </div>
         </div>
+
 
         <div className="flex items-center justify-center gap-4">
             <div className="flex items-center gap-1 bg-background p-1 rounded-lg">
@@ -196,7 +221,6 @@ const Header: React.FC<HeaderProps> = ({
                 <div className="w-2 h-2 rounded-full bg-destructive shadow-[0_0_4px] shadow-destructive" />
                 <span className="text-destructive font-bold text-sm">IA</span>
             </div>
-            <Button variant="outline">D</Button>
             <PlaybackModeToggle value={playbackMode} onChange={onPlaybackModeChange} />
             <Button variant="ghost" className="gap-2">
                 <Circle className="w-2 h-2 fill-current" />

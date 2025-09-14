@@ -333,7 +333,9 @@ const DawPage = () => {
       Object.values(trackNodesRef.current).forEach(({ player }) => {
         player.playbackRate = playbackRate;
       });
-      Tone.Transport.bpm.value = (activeSong?.tempo || 120) * playbackRate;
+      if(activeSong) {
+        Tone.Transport.bpm.value = activeSong.tempo * playbackRate;
+      }
   }, [playbackRate, activeSong]);
 
 
@@ -457,6 +459,7 @@ const DawPage = () => {
       if (songId === activeSongId) return;
       setActiveSongId(songId);
       setPlaybackRate(1);
+      setPitch(0);
   }
   const handleMasterVolumeChange = (newVolume: number) => {
       setMasterVolume(newVolume);
@@ -522,6 +525,8 @@ const DawPage = () => {
             playbackRate={playbackRate}
             onPlaybackRateChange={setPlaybackRate}
             onBpmChange={handleBpmChange}
+            pitch={pitch}
+            onPitchChange={setPitch}
         />
       </div>
 
