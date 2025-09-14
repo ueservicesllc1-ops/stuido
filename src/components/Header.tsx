@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -15,7 +14,6 @@ import SettingsDialog from './SettingsDialog';
 import { Input } from './ui/input';
 import { Slider } from './ui/slider';
 import type { Song } from '@/actions/songs';
-import DonationDialog from './DonationDialog';
 
 
 interface HeaderProps {
@@ -198,9 +196,7 @@ const Header: React.FC<HeaderProps> = ({
                 <div className="w-2 h-2 rounded-full bg-destructive shadow-[0_0_4px] shadow-destructive" />
                 <span className="text-destructive font-bold text-sm">IA</span>
             </div>
-            <DonationDialog>
-              <Button variant="outline">D</Button>
-            </DonationDialog>
+            <Button variant="outline">D</Button>
             <PlaybackModeToggle value={playbackMode} onChange={onPlaybackModeChange} />
             <Button variant="ghost" className="gap-2">
                 <Circle className="w-2 h-2 fill-current" />
@@ -243,5 +239,3 @@ const Header: React.FC<HeaderProps> = ({
 };
 
 export default Header;
-
-    
