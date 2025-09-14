@@ -266,7 +266,7 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
     toast({ title: 'Iniciando análisis...', description: 'Descargando pista de Cues para el análisis.' });
 
     try {
-        // Since the audio cache now stores AudioBuffers, and we need a Blob to create a Data URI,
+        // Since the audio cache now stores ArrayBuffers, and we need a Blob to create a Data URI,
         // it's simpler and more reliable to just fetch the file directly for analysis.
         // Cues tracks are small, so this should be fast.
         const response = await fetch(`/api/download?url=${encodeURIComponent(cuesTrack.url)}`);
@@ -778,5 +778,3 @@ const SongList: React.FC<SongListProps> = ({ initialSetlist, activeSongId, onSet
 };
 
 export default SongList;
-
-    

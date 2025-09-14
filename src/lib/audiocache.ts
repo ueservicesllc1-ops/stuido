@@ -1,22 +1,23 @@
-
 'use client';
 
-// We don't import localforage at the top level anymore.
-// Instead, we'll import it dynamically inside the functions.
+// Dynamically import localforage to avoid SSR issues.
+import type LocalForage from 'localforage';
 
+let localforage: LocalForage | null = null;
 let isConfigured = false;
 
 const getLocalforage = async () => {
-    // Dynamically import localforage
-    const localforage = (await import('localforage')).default;
+    if (!localforage) {
+        localforage = (await import('localforage')).default;
+    }
     
     if (!isConfigured) {
         localforage.config({
             driver: localforage.INDEXEDDB,
             name: 'multitrackPlayerCache',
             version: 1.0,
-            storeName: 'audio_buffers', // Changed store name to reflect what we store
-            description: 'Cache for decoded audio buffers',
+            storeName: 'audio_array_buffers', // Store ArrayBuffers, not AudioBuffers
+            description: 'Cache for raw audio ArrayBuffers',
         });
         isConfigured = true;
     }
@@ -25,42 +26,38 @@ const getLocalforage = async () => {
 
 
 /**
- * Retrieves a decoded AudioBuffer from the IndexedDB cache.
+ * Retrieves a raw ArrayBuffer from the IndexedDB cache.
  * @param url The original URL of the audio file, used as the key.
- * @returns The AudioBuffer if found, or null if not.
+ * @returns The ArrayBuffer if found, or null if not.
  */
-export const getCachedAudioBuffer = async (url: string): Promise<AudioBuffer | null> => {
+export const getCachedArrayBuffer = async (url: string): Promise<ArrayBuffer | null> => {
   try {
-    const localforage = await getLocalforage();
-    // Important: We assume the stored item is an AudioBuffer. 
-    // Type casting might be needed if other types are stored.
-    const cachedBuffer = await localforage.getItem<AudioBuffer>(url);
-    if (cachedBuffer && cachedBuffer instanceof AudioBuffer) {
-      console.log('AudioBuffer retrieved from cache:', url);
+    const lf = await getLocalforage();
+    const cachedBuffer = await lf.getItem<ArrayBuffer>(url);
+    
+    if (cachedBuffer && cachedBuffer instanceof ArrayBuffer) {
+      console.log('ArrayBuffer retrieved from cache:', url);
       return cachedBuffer;
     }
     return null;
   } catch (error) {
-    console.error('Error getting AudioBuffer from cache:', error);
-    // If there's a corruption error, it might be good to clear the item
-    // localforage.removeItem(url);
+    console.error('Error getting ArrayBuffer from cache:', error);
     return null;
   }
 };
 
 /**
- * Saves a decoded AudioBuffer to the IndexedDB cache.
+ * Saves a raw ArrayBuffer to the IndexedDB cache.
  * @param url The URL of the audio file to use as a key.
- * @param buffer The decoded AudioBuffer to save.
+ * @param buffer The raw ArrayBuffer to save.
  */
-export const cacheAudioBuffer = async (url: string, buffer: AudioBuffer): Promise<void> => {
+export const cacheArrayBuffer = async (url: string, buffer: ArrayBuffer): Promise<void> => {
   try {
-    const localforage = await getLocalforage();
-    await localforage.setItem(url, buffer);
-    console.log('AudioBuffer cached:', url);
+    const lf = await getLocalforage();
+    await lf.setItem(url, buffer);
+    console.log('ArrayBuffer cached:', url);
   } catch (error) {
-    console.error('Error caching AudioBuffer:', error);
-    // Re-throw the error so the caller can handle it
+    console.error('Error caching ArrayBuffer:', error);
     throw error;
   }
 };

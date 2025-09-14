@@ -6,7 +6,7 @@ import MixerGrid from '@/components/MixerGrid';
 import SongList from '@/components/SongList';
 import TonicPad from '@/components/TonicPad';
 import { getSetlists, Setlist, SetlistSong } from '@/actions/setlists';
-import { cacheAudioBuffer, getCachedAudioBuffer } from '@/lib/audiocache';
+import { cacheArrayBuffer, getCachedArrayBuffer } from '@/lib/audiocache';
 import { Song } from '@/actions/songs';
 import { SongStructure } from '@/ai/flows/song-structure';
 import LyricsDisplay from '@/components/LyricsDisplay';
@@ -261,34 +261,39 @@ const DawPage = () => {
 
     const loadAudioData = async () => {
       let maxDuration = Math.max(0, ...tracksForSong.filter(t => audioBuffersRef.current[t.url]).map(t => audioBuffersRef.current[t.url].duration));
+      const context = audioContextRef.current!;
 
       await Promise.all(tracksToLoad.map(async (track) => {
         try {
-          let audioBuffer: AudioBuffer | null = null;
+          let decodedBuffer: AudioBuffer | null = null;
+          let audioData: ArrayBuffer | null = null;
           
-          // 1. Try to get the decoded AudioBuffer from the cache
+          // 1. Try to get the raw ArrayBuffer from the IndexedDB cache
           if (playbackMode !== 'online') {
-            audioBuffer = await getCachedAudioBuffer(track.url);
+            audioData = await getCachedArrayBuffer(track.url);
           }
 
-          // 2. If not in cache, fetch, decode, and then cache it
-          if (!audioBuffer) {
+          // 2. If not in cache, fetch from network and cache the ArrayBuffer
+          if (!audioData) {
             const proxyUrl = `/api/download?url=${encodeURIComponent(track.url)}`;
             const response = await fetch(proxyUrl);
             if (!response.ok) throw new Error(`Failed to fetch ${track.url}`);
             
-            const audioData = await response.arrayBuffer();
-            audioBuffer = await audioContextRef.current!.decodeAudioData(audioData);
+            audioData = await response.arrayBuffer();
 
-            // Cache the newly decoded buffer for next time
+            // Cache the newly fetched ArrayBuffer for next time
             if (playbackMode !== 'online') {
-              await cacheAudioBuffer(track.url, audioBuffer);
+              // Note: we don't await this, let it happen in the background
+              cacheArrayBuffer(track.url, audioData.slice(0)); // Use slice(0) to clone for caching
             }
           }
           
-          audioBuffersRef.current[track.url] = audioBuffer;
-          if (audioBuffer.duration > maxDuration) {
-            maxDuration = audioBuffer.duration;
+          // 3. Decode the ArrayBuffer (from cache or network)
+          decodedBuffer = await context.decodeAudioData(audioData);
+          
+          audioBuffersRef.current[track.url] = decodedBuffer;
+          if (decodedBuffer.duration > maxDuration) {
+            maxDuration = decodedBuffer.duration;
           }
 
         } catch (error) {
