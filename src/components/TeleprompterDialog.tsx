@@ -25,8 +25,8 @@ interface TeleprompterDialogProps {
 type Speed = 'slow' | 'medium' | 'fast';
 
 const speedValues: Record<Speed, number> = {
-  slow: 0.375,
-  medium: 2.5,
+  slow: 1,
+  medium: 2,
   fast: 4,
 };
 
@@ -61,8 +61,10 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   };
   
   const animateScroll = useCallback(() => {
-    if (!isManuallyScrolling.current && scrollViewportRef.current) {
-        scrollViewportRef.current.scrollTop += speedValues[speedRef.current];
+    if (scrollViewportRef.current) {
+        if (!isManuallyScrolling.current) {
+            scrollViewportRef.current.scrollTop += speedValues[speedRef.current];
+        }
     }
     animationFrameRef.current = requestAnimationFrame(animateScroll);
   }, []);
