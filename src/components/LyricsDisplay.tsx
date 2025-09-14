@@ -25,10 +25,10 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({
         <button 
             className={cn(
                 "relative rounded-lg overflow-hidden group h-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background",
-                !lyrics && "opacity-50 cursor-not-allowed"
+                true && "opacity-50 cursor-not-allowed" // Deshabilitado por ahora
             )}
-            onClick={() => lyrics && onOpenTeleprompter()}
-            disabled={!lyrics}
+            onClick={() => {}}
+            disabled={true}
         >
             <Image
                 src="https://picsum.photos/seed/lyrics-btn/600/400"
@@ -66,18 +66,25 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({
              </span>
          </div>
       </button>
-      <div className="relative rounded-lg overflow-hidden group h-full">
+      <button 
+        className={cn(
+            "relative rounded-lg overflow-hidden group h-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background",
+            !lyrics && "opacity-50 cursor-not-allowed"
+        )}
+        onClick={() => lyrics && onOpenTeleprompter()}
+        disabled={!lyrics}
+        >
         <Image
           src="https://picsum.photos/seed/lights/600/400"
-          alt="Luces"
+          alt="Teleprompter"
           fill
           className="object-cover transition-transform duration-300 group-hover:scale-105"
           data-ai-hint="stage lights"
         />
         <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-             <span className="font-bold text-xl text-white drop-shadow-lg">Luces</span>
+             <span className="font-bold text-xl text-white drop-shadow-lg">Teleprompter</span>
          </div>
-      </div>
+      </button>
       <div className="relative rounded-lg overflow-hidden group h-full">
         <Image
           src="https://picsum.photos/seed/extra/600/400"

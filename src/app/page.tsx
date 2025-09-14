@@ -717,10 +717,6 @@ const DawPage = () => {
         onClose={() => setIsTeleprompterOpen(false)}
         songTitle={activeSong?.name || 'Teleprompter'}
         lyrics={songLyrics}
-        syncedLyrics={songSyncedLyrics}
-        currentTime={playbackPosition}
-        isPlaying={isPlaying}
-        syncOffset={songSyncOffset}
       />
     </div>
   );
