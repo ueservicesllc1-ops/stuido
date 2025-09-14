@@ -244,61 +244,73 @@ const DawPage = () => {
     if (!activeSongId || !audioContextRef.current) {
       return;
     }
-
-    handleStop(true); // Stop without fade on song change
-    
-    const tracksForSong = tracks.filter(t => t.songId === activeSongId);
-    
-    // Check if all tracks for the song are already in memory
-    const allTracksInMemory = tracksForSong.length > 0 && tracksForSong.every(t => audioBuffersRef.current[t.url]);
-
+  
+    handleStop(true); // Detiene la reproducción actual
+  
+    const tracksForCurrentSong = tracks.filter(t => t.songId === activeSongId);
+    if (tracksForCurrentSong.length === 0) {
+      setIsReadyToPlay(false);
+      setLoadingTracks([]);
+      setDuration(0);
+      return;
+    }
+  
+    // Comprueba si todas las pistas para la canción actual ya están en memoria.
+    const allTracksInMemory = tracksForCurrentSong.every(t => audioBuffersRef.current[t.url]);
+  
     if (allTracksInMemory) {
-      const maxDuration = Math.max(0, ...tracksForSong.map(t => audioBuffersRef.current[t.url]?.duration || 0));
+      const maxDuration = Math.max(0, ...tracksForCurrentSong.map(t => audioBuffersRef.current[t.url]?.duration || 0));
       setDuration(maxDuration);
-      return; // All tracks are ready, no need to load.
+      setLoadingTracks([]); // No hay nada que cargar
+      setIsReadyToPlay(true);
+      return; // Todo listo.
     }
-
-    const tracksToLoad = tracksForSong.filter(t => !audioBuffersRef.current[t.url]);
+  
+    // Si no están todas en memoria, determina cuáles faltan.
+    const tracksToLoad = tracksForCurrentSong.filter(t => !audioBuffersRef.current[t.url]);
     
-    if (tracksToLoad.length > 0) {
-        setLoadingTracks(tracksToLoad.map(t => t.id));
-    }
-
+    setLoadingTracks(tracksToLoad.map(t => t.id));
+    setIsReadyToPlay(false);
+  
     const loadAudioData = async () => {
-      let maxDuration = Math.max(0, ...tracksForSong.filter(t => audioBuffersRef.current[t.url]).map(t => audioBuffersRef.current[t.url].duration));
       const context = audioContextRef.current!;
-
+      let maxDuration = 0;
+  
+      // Calcula la duración máxima de las pistas ya cargadas (si las hay).
+      tracksForCurrentSong
+        .filter(t => audioBuffersRef.current[t.url])
+        .forEach(t => {
+            if (audioBuffersRef.current[t.url].duration > maxDuration) {
+                maxDuration = audioBuffersRef.current[t.url].duration;
+            }
+        });
+  
       await Promise.all(tracksToLoad.map(async (track) => {
         try {
-          // 1. Try to get the raw ArrayBuffer from the IndexedDB cache
           let audioData: ArrayBuffer | null = null;
           if (playbackMode !== 'online') {
             audioData = await getCachedArrayBuffer(track.url);
           }
-
-          // 2. If not in cache, fetch from network
+  
           if (!audioData) {
             const proxyUrl = `/api/download?url=${encodeURIComponent(track.url)}`;
             const response = await fetch(proxyUrl);
             if (!response.ok) throw new Error(`Failed to fetch ${track.url}`);
             
             audioData = await response.arrayBuffer();
-
-            // Cache the newly fetched ArrayBuffer for next time (don't block)
+  
             if (playbackMode !== 'online') {
-              cacheArrayBuffer(track.url, audioData.slice(0)); // Use slice(0) to clone for caching
+              cacheArrayBuffer(track.url, audioData.slice(0));
             }
           }
           
-          // 3. Decode the ArrayBuffer (from cache or network) into an AudioBuffer
           const decodedBuffer = await context.decodeAudioData(audioData);
-          
-          // 4. Store the decoded AudioBuffer in the in-memory ref
           audioBuffersRef.current[track.url] = decodedBuffer;
+  
           if (decodedBuffer.duration > maxDuration) {
             maxDuration = decodedBuffer.duration;
           }
-
+  
         } catch (error) {
           console.error(`Error loading track ${track.name}:`, error);
         } finally {
@@ -308,9 +320,9 @@ const DawPage = () => {
       
       setDuration(maxDuration);
     };
-
+  
     loadAudioData();
-
+  
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSongId, tracks, playbackMode]);
 
@@ -723,5 +735,7 @@ const DawPage = () => {
 };
 
 export default DawPage;
+
+    
 
     
