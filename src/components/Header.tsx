@@ -82,6 +82,10 @@ const Header: React.FC<HeaderProps> = ({
   onPanVisibilityChange,
 }) => {
   
+  const tempoRange = songTempo ? songTempo * 0.2 : 20;
+  const minTempo = songTempo ? songTempo - tempoRange : 60;
+  const maxTempo = songTempo ? songTempo + tempoRange : 200;
+
   return (
     <header className="flex flex-col bg-card/50 border-b border-border p-2 gap-2 rounded-lg">
       <div className="flex items-center justify-start gap-6">
@@ -122,9 +126,20 @@ const Header: React.FC<HeaderProps> = ({
                     />
                 </div>
 
-                <div className="flex flex-col items-center justify-center bg-secondary/30 rounded-md w-24 h-16">
-                    <span className="text-3xl font-mono font-bold text-foreground">{songTempo ?? '--'}</span>
-                    <span className="text-xs text-muted-foreground -mt-1">Song BPM</span>
+                <div className="flex items-center gap-2 bg-secondary/30 rounded-md h-16 px-2">
+                    <div className="flex flex-col items-center justify-center w-24">
+                        <span className="text-3xl font-mono font-bold text-foreground">{songTempo ?? '--'}</span>
+                        <span className="text-xs text-muted-foreground -mt-1">Song BPM</span>
+                    </div>
+                    <Slider
+                      value={[clickTempo]}
+                      onValueChange={(vals) => onTempoChange(vals[0])}
+                      min={minTempo}
+                      max={maxTempo}
+                      step={1}
+                      orientation="vertical"
+                      className="h-full w-4"
+                    />
                 </div>
             </div>
             <div className="flex items-center gap-1 bg-background p-1 rounded-lg">

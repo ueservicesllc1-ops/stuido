@@ -30,11 +30,11 @@ const Slider = React.forwardRef<
     <SliderPrimitive.Track className={cn(
         "relative grow overflow-hidden rounded-full",
         orientation === 'horizontal' && 'h-1 w-full bg-muted-foreground/30',
-        orientation === 'vertical' && 'h-full w-1.5 bg-transparent',
+        orientation === 'vertical' && 'h-full w-1.5 bg-input',
         trackClassName
     )}>
       {orientation === 'vertical' && (
-        <div className="absolute bottom-[75%] top-0 left-0 w-full bg-muted-foreground/30 rounded-t-full" />
+        <div className="absolute left-1/2 top-1/2 h-full w-px -translate-x-1/2 -translate-y-1/2 bg-muted-foreground/30" />
       )}
       {renderRange && (
           <SliderPrimitive.Range className={cn(
