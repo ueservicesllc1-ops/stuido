@@ -17,6 +17,10 @@ import TeleprompterDialog from '@/components/TeleprompterDialog';
 export type PlaybackMode = 'online' | 'hybrid' | 'offline';
 export type ClickSound = 'beep' | 'click';
 
+// Definir las frecuencias para cada banda del EQ
+const eqFrequencies = [60, 250, 1000, 4000, 8000, 16000];
+const MAX_EQ_GAIN = 12; // Ganancia máxima de +12dB
+
 const DawPage = () => {
   const [tracks, setTracks] = useState<SetlistSong[]>([]);
   const [soloTracks, setSoloTracks] = useState<string[]>([]);
@@ -40,6 +44,8 @@ const DawPage = () => {
     gainNode: GainNode;
     analyserNode: AnalyserNode;
   }>>({});
+  const masterGainNodeRef = useRef<GainNode | null>(null);
+  const eqNodesRef = useRef<BiquadFilterNode[]>([]);
   const [vuData, setVuData] = useState<Record<string, number>>({});
   const audioBuffersRef = useRef<Record<string, AudioBuffer>>({});
   const [loadingTracks, setLoadingTracks] = useState<string[]>([]);
@@ -83,19 +89,57 @@ const DawPage = () => {
   const [isTeleprompterOpen, setIsTeleprompterOpen] = useState(false);
 
 
-  // Initialize AudioContext
+  // Initialize AudioContext and Master Chain
   useEffect(() => {
     if (!audioContextRef.current) {
         try {
             const context = new (window.AudioContext || (window as any).webkitAudioContext)();
             audioContextRef.current = context;
+
+            // --- Set up Click Track Chain ---
             clickGainNodeRef.current = context.createGain();
             clickGainNodeRef.current.connect(context.destination);
+
+            // --- Set up Master Track Chain ---
+            masterGainNodeRef.current = context.createGain();
+            
+            // Create and connect EQ nodes
+            let lastNode: AudioNode = masterGainNodeRef.current;
+            eqNodesRef.current = eqFrequencies.map((freq, i) => {
+                const filter = context.createBiquadFilter();
+                filter.type = 'peaking';
+                filter.frequency.value = freq;
+                const gain = (eqBands[i] / 100) * (MAX_EQ_GAIN * 2) - MAX_EQ_GAIN;
+                filter.gain.value = gain;
+                filter.Q.value = 1.5; // Un Q razonable para empezar
+                
+                lastNode.connect(filter);
+                lastNode = filter;
+                return filter;
+            });
+            
+            // Connect the end of the EQ chain to the destination
+            lastNode.connect(context.destination);
+
         } catch (e) {
             console.error("Web Audio API is not supported in this browser", e);
         }
     }
   }, []);
+
+  // Update EQ gains when sliders change
+  useEffect(() => {
+    if (!audioContextRef.current || eqNodesRef.current.length === 0) return;
+
+    eqBands.forEach((bandValue, i) => {
+        if (eqNodesRef.current[i]) {
+            // Convert slider value (0-100) to gain value (-12dB to +12dB)
+            const gainValue = (bandValue / 100) * (MAX_EQ_GAIN * 2) - MAX_EQ_GAIN;
+            eqNodesRef.current[i].gain.setValueAtTime(gainValue, audioContextRef.current!.currentTime);
+        }
+    });
+  }, [eqBands]);
+
 
   // Set readiness to play
   useEffect(() => {
@@ -238,10 +282,19 @@ const DawPage = () => {
 
   useEffect(() => {
     if (clickGainNodeRef.current && audioContextRef.current) {
-        const finalVolume = (clickVolume / 100) * (masterVolume / 100);
+        // Solo el click va a su propio volumen, no afectado por el master fader
+        const finalVolume = (clickVolume / 100);
         clickGainNodeRef.current.gain.setValueAtTime(finalVolume, audioContextRef.current.currentTime);
     }
-  }, [clickVolume, masterVolume]);
+  }, [clickVolume]);
+
+  // Handle Master Volume
+  useEffect(() => {
+    if (masterGainNodeRef.current && audioContextRef.current) {
+        const finalVolume = masterVolume / 100;
+        masterGainNodeRef.current.gain.setValueAtTime(finalVolume, audioContextRef.current.currentTime);
+    }
+  }, [masterVolume]);
 
 
   // Lógica de carga de canciones y preparación de audios
@@ -397,19 +450,18 @@ const DawPage = () => {
     const isThisTrackSolo = soloTracks.includes(trackId);
     const trackVolume = volumes[trackId] ?? 75;
 
-    const masterVol = masterVolume / 100;
     const trackVol = trackVolume / 100;
 
     let finalVolume = 0;
     if (isMuted) {
       finalVolume = 0;
     } else if (isSoloActive) {
-      finalVolume = isThisTrackSolo ? trackVol * masterVol : 0;
+      finalVolume = isThisTrackSolo ? trackVol : 0;
     } else {
-      finalVolume = trackVol * masterVol;
+      finalVolume = trackVol;
     }
     return finalVolume;
-  }, [masterVolume, mutedTracks, soloTracks, volumes]);
+  }, [mutedTracks, soloTracks, volumes]);
 
   useEffect(() => {
     if (!audioContextRef.current) return;
@@ -425,11 +477,11 @@ const DawPage = () => {
             node.pannerNode.pan.setValueAtTime(panValue, context.currentTime);
         }
     });
-  }, [volumes, masterVolume, mutedTracks, soloTracks, getGainValue, pans]);
+  }, [volumes, mutedTracks, soloTracks, getGainValue, pans]);
 
 
   const handlePlay = useCallback(() => {
-    if (!isReadyToPlay || isPlaying || !audioContextRef.current) return;
+    if (!isReadyToPlay || isPlaying || !audioContextRef.current || !masterGainNodeRef.current) return;
 
     if (audioContextRef.current.state === 'suspended') {
         audioContextRef.current.resume();
@@ -455,10 +507,12 @@ const DawPage = () => {
         analyserNode.fftSize = 256;
         analyserNode.smoothingTimeConstant = 0.2;
         
+        // Conectar la cadena de la pista
         source.connect(pannerNode);
         pannerNode.connect(gainNode);
         gainNode.connect(analyserNode);
-        analyserNode.connect(context.destination);
+        // Conectar el analizador al nodo maestro en lugar del destino
+        analyserNode.connect(masterGainNodeRef.current!);
         
         const finalVolume = getGainValue(track.id);
         const panValue = pans[track.id] ?? 0;
@@ -736,3 +790,5 @@ const DawPage = () => {
 };
 
 export default DawPage;
+
+    
