@@ -6,11 +6,11 @@ import { Slider } from './ui/slider';
 import { cn } from '@/lib/utils';
 
 interface GraphicEqProps {
-  bands: number[]; // Array de 6 valores (0-100)
+  bands: number[]; // Array de 5 valores (0-100)
   onBandChange: (bandIndex: number, value: number) => void;
 }
 
-const bandFrequencies = ['60', '250', '1k', '4k', '8k', '16k'];
+const bandFrequencies = ['60', '250', '1k', '4k', '8k'];
 
 const GraphicEq: React.FC<GraphicEqProps> = ({ bands, onBandChange }) => {
   return (

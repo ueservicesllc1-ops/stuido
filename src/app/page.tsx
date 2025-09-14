@@ -18,7 +18,7 @@ export type PlaybackMode = 'online' | 'hybrid' | 'offline';
 export type ClickSound = 'beep' | 'click';
 
 // Definir las frecuencias para cada banda del EQ
-const eqFrequencies = [60, 250, 1000, 4000, 8000, 16000];
+const eqFrequencies = [60, 250, 1000, 4000, 8000];
 const MAX_EQ_GAIN = 12; // Ganancia máxima de +12dB
 
 const DawPage = () => {
@@ -78,7 +78,7 @@ const DawPage = () => {
   const [isReadyToPlay, setIsReadyToPlay] = useState(false);
 
   // --- EQ State ---
-  const [eqBands, setEqBands] = useState([50, 50, 50, 50, 50, 50]); // 6 bands, 0-100 values
+  const [eqBands, setEqBands] = useState([50, 50, 50, 50, 50]); // 5 bands, 0-100 values
 
   // --- Settings State ---
   const [fadeOutDuration, setFadeOutDuration] = useState(0.5); // Duración en segundos
@@ -790,5 +790,3 @@ const DawPage = () => {
 };
 
 export default DawPage;
-
-    
