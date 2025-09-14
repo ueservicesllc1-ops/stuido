@@ -13,7 +13,6 @@ import { Button } from './ui/button';
 import { X, ZoomIn, ZoomOut, Play, Pause } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { Slider } from './ui/slider';
-import { cn } from '@/lib/utils';
 
 interface TeleprompterDialogProps {
   isOpen: boolean;
@@ -37,7 +36,6 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   const isManuallyScrolling = useRef(false);
   const manualScrollTimeout = useRef<NodeJS.Timeout>();
   
-  // Use a ref to hold the latest scroll speed to be used inside requestAnimationFrame
   const scrollSpeedRef = useRef(scrollSpeed);
   useEffect(() => {
     scrollSpeedRef.current = scrollSpeed;
@@ -58,23 +56,28 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
         const scrollAmount = scrollSpeedRef.current / 60; // Pixels per frame at 60fps
         scrollViewportRef.current.scrollTop += scrollAmount;
     }
+    // Continue the animation loop
     animationFrameRef.current = requestAnimationFrame(animateScroll);
   }, []);
 
   useEffect(() => {
     if (isAutoScrolling) {
+      // Start the animation
       animationFrameRef.current = requestAnimationFrame(animateScroll);
     } else {
+      // Stop the animation
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
     }
+    // Cleanup function to stop animation when component unmounts or effect re-runs
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
   }, [isAutoScrolling, animateScroll]);
+
 
   // Detect manual scroll to pause auto-scroll
   const handleManualScroll = () => {
