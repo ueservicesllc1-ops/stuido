@@ -25,9 +25,9 @@ interface TeleprompterDialogProps {
 type Speed = 'slow' | 'medium' | 'fast';
 
 const speedValues: Record<Speed, number> = {
-  slow: 0.7,
-  medium: 2,
-  fast: 4,
+  slow: 1,
+  medium: 3,
+  fast: 6,
 };
 
 
@@ -73,7 +73,7 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
     lastTimeRef.current = currentTime;
 
     if (scrollViewportRef.current && !isManuallyScrolling.current) {
-        // scrollSpeed is pixels per second. 
+        // scrollSpeed is pixels per second. We need to convert it to pixels per frame.
         const scrollAmount = (scrollSpeedRef.current * deltaTime) / 1000;
         accumulatedScrollRef.current += scrollAmount;
 
@@ -91,7 +91,7 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   useEffect(() => {
     if (isAutoScrolling) {
         isManuallyScrolling.current = false;
-        lastTimeRef.current = 0; // Reset time on start
+        lastTimeRef.current = performance.now(); // Use performance.now() for high-precision time
         accumulatedScrollRef.current = 0;
         if (scrollViewportRef.current) {
             scrollPositionRef.current = scrollViewportRef.current.scrollTop;
@@ -117,14 +117,16 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
         scrollPositionRef.current = scrollViewportRef.current.scrollTop;
     }
 
+    // Stop auto-scrolling if it's active
     if (isAutoScrolling) {
         setIsAutoScrolling(false);
     }
 
+    // Set a timeout to re-enable auto-scrolling possibility
     if (manualScrollTimeoutRef.current) clearTimeout(manualScrollTimeoutRef.current);
     manualScrollTimeoutRef.current = setTimeout(() => {
         isManuallyScrolling.current = false;
-    }, 2000);
+    }, 2000); // 2-second timeout
   };
 
   const renderLyrics = () => {
@@ -151,9 +153,11 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
   };
 
   const getActiveSpeedPreset = (): Speed | null => {
-    if (scrollSpeed === speedValues.slow) return 'slow';
-    if (scrollSpeed === speedValues.medium) return 'medium';
-    if (scrollSpeed === speedValues.fast) return 'fast';
+    for (const [key, value] of Object.entries(speedValues)) {
+        if (value === scrollSpeed) {
+            return key as Speed;
+        }
+    }
     return null;
   }
 
@@ -195,7 +199,7 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
                      <Slider
                         value={[scrollSpeed]}
                         onValueChange={(value) => setScrollSpeed(value[0])}
-                        max={5}
+                        max={8}
                         step={0.1}
                         className="w-48"
                     />
