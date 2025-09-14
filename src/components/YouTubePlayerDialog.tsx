@@ -21,21 +21,28 @@ interface YouTubePlayerDialogProps {
 
 const getYouTubeEmbedUrl = (url: string | null): string | null => {
   if (!url) return null;
-
-  let videoId: string | null = null;
   
-  if (url.includes('youtu.be/')) {
-    videoId = url.split('youtu.be/')[1]?.split('?')[0];
-  } else if (url.includes('youtube.com/watch?v=')) {
-    const urlParams = new URLSearchParams(url.split('?')[1]);
-    videoId = urlParams.get('v');
+  let videoId: string | null = null;
+
+  try {
+    const urlObject = new URL(url);
+    if (urlObject.hostname === 'youtu.be') {
+      videoId = urlObject.pathname.slice(1);
+    } else if (urlObject.hostname.includes('youtube.com')) {
+      videoId = urlObject.searchParams.get('v');
+    }
+  } catch (error) {
+    console.error("Invalid URL for YouTube parsing", error);
+    return null;
   }
+
 
   if (videoId) {
-    return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+    // Se elimina el autoplay=1 para mayor compatibilidad
+    return `https://www.youtube.com/embed/${videoId}`;
   }
   
-  return null; // Return null if the URL is not a valid YouTube URL
+  return null; // Devuelve null si la URL no es una URL de YouTube válida
 };
 
 
@@ -67,7 +74,7 @@ const YouTubePlayerDialog: React.FC<YouTubePlayerDialogProps> = ({ isOpen, onClo
                     src={embedUrl}
                     title="YouTube video player"
                     frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
                     className="rounded-b-lg"
                 ></iframe>
