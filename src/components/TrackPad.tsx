@@ -50,7 +50,7 @@ const FaderTickMarks = React.memo(() => {
 FaderTickMarks.displayName = 'FaderTickMarks';
 
 
-const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
+const TrackPad: React.FC<TrackPadProps> = React.memo(({
   track,
   isLoading,
   isMuted,
@@ -127,7 +127,7 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
                 max={100}
                 step={1}
                 orientation="vertical"
-                onValueChange={(val) => onValueChange(val[0])}
+                onValueChange={(val) => onVolumeChange(val[0])}
                 disabled={isDisabled}
                 className={cn(
                   'h-full w-4',
