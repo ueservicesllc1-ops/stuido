@@ -12,6 +12,7 @@ import { SongStructure } from '@/ai/flows/song-structure';
 import LyricsDisplay from '@/components/LyricsDisplay';
 import YouTubePlayerDialog from '@/components/YouTubePlayerDialog';
 import type { LyricsSyncOutput } from '@/ai/flows/lyrics-synchronization';
+import TeleprompterDialog from '@/components/TeleprompterDialog';
 
 export type PlaybackMode = 'online' | 'hybrid' | 'offline';
 export type ClickSound = 'beep' | 'click';
@@ -74,8 +75,9 @@ const DawPage = () => {
   const [fadeOutDuration, setFadeOutDuration] = useState(0.5); // Duración en segundos
   const [isPanVisible, setIsPanVisible] = useState(true);
   
-  // --- YouTube Modal State ---
+  // --- Dialogs State ---
   const [isYouTubePlayerOpen, setIsYouTubePlayerOpen] = useState(false);
+  const [isTeleprompterOpen, setIsTeleprompterOpen] = useState(false);
 
 
   // Initialize AudioContext
@@ -255,18 +257,15 @@ const DawPage = () => {
       return;
     }
   
-    // Comprueba si todas las pistas para la canción actual ya están en memoria.
     const allTracksInMemory = tracksForCurrentSong.every(t => audioBuffersRef.current[t.url]);
-  
     if (allTracksInMemory) {
-      const maxDuration = Math.max(0, ...tracksForCurrentSong.map(t => audioBuffersRef.current[t.url]?.duration || 0));
-      setDuration(maxDuration);
-      setLoadingTracks([]); // No hay nada que cargar
-      setIsReadyToPlay(true);
-      return; // Todo listo.
+        const maxDuration = Math.max(0, ...tracksForCurrentSong.map(t => audioBuffersRef.current[t.url]?.duration || 0));
+        setDuration(maxDuration);
+        setLoadingTracks([]); 
+        setIsReadyToPlay(true);
+        return;
     }
   
-    // Si no están todas en memoria, determina cuáles faltan.
     const tracksToLoad = tracksForCurrentSong.filter(t => !audioBuffersRef.current[t.url]);
     
     setLoadingTracks(tracksToLoad.map(t => t.id));
@@ -274,16 +273,9 @@ const DawPage = () => {
   
     const loadAudioData = async () => {
       const context = audioContextRef.current!;
-      let maxDuration = 0;
-  
-      // Calcula la duración máxima de las pistas ya cargadas (si las hay).
-      tracksForCurrentSong
+      let maxDuration = Math.max(0, ...tracksForCurrentSong
         .filter(t => audioBuffersRef.current[t.url])
-        .forEach(t => {
-            if (audioBuffersRef.current[t.url].duration > maxDuration) {
-                maxDuration = audioBuffersRef.current[t.url].duration;
-            }
-        });
+        .map(t => audioBuffersRef.current[t.url].duration));
   
       await Promise.all(tracksToLoad.map(async (track) => {
         try {
@@ -378,14 +370,9 @@ const DawPage = () => {
             peak = Math.max(peak, Math.abs(dataArray[i]));
         }
 
-        // Convert linear amplitude (0.0 to 1.0) to dBFS
-        // -60dB is a common floor for digital meters
         const dbfs = peak > 0 ? 20 * Math.log10(peak) : -60;
-
-        // Map dBFS range (-60dB to 0dB) to a 0-100 scale for the VU meter component
-        // Values over 0dB will be "peaking" (over 100)
         const meterScale = (dbfs + 60) / 60 * 100;
-        newVuData[trackId] = Math.max(0, meterScale); // Ensure it doesn't go below 0
+        newVuData[trackId] = Math.max(0, meterScale);
       }
     });
     setVuData(newVuData);
@@ -462,9 +449,8 @@ const DawPage = () => {
         const gainNode = context.createGain();
         const analyserNode = context.createAnalyser();
         
-        // For time domain data, fftSize is the buffer size. A smaller size is more responsive.
         analyserNode.fftSize = 256;
-        analyserNode.smoothingTimeConstant = 0.2; // A little smoothing
+        analyserNode.smoothingTimeConstant = 0.2;
         
         source.connect(pannerNode);
         pannerNode.connect(gainNode);
@@ -475,8 +461,8 @@ const DawPage = () => {
         const panValue = pans[track.id] ?? 0;
 
         pannerNode.pan.setValueAtTime(panValue, now);
-        gainNode.gain.setValueAtTime(0, now); // Empezar en silencio
-        gainNode.gain.linearRampToValueAtTime(finalVolume, now + 0.01); // Quick fade in
+        gainNode.gain.setValueAtTime(0, now);
+        gainNode.gain.linearRampToValueAtTime(finalVolume, now + 0.01);
         
         source.start(now, playbackPosition);
 
@@ -536,7 +522,7 @@ const DawPage = () => {
       if (newPosition < duration) {
         setPlaybackPosition(newPosition);
       } else {
-        setPlaybackPosition(0); // or duration, depending on desired behavior
+        setPlaybackPosition(0);
       }
     });
   };
@@ -578,7 +564,6 @@ const DawPage = () => {
     setPlaybackPosition(newPosition);
   
     if (wasPlaying) {
-      // Use a timeout to ensure the state has updated before playing again
       setTimeout(() => {
         handlePlay();
       }, 50);
@@ -677,12 +662,9 @@ const DawPage = () => {
       <div className="col-span-2 row-start-2 h-32">
         <LyricsDisplay 
             lyrics={songLyrics}
-            syncedLyrics={songSyncedLyrics}
-            currentTime={playbackPosition}
-            isPlaying={isPlaying}
             youtubeUrl={songYoutubeUrl}
             onOpenYouTube={() => setIsYouTubePlayerOpen(true)}
-            syncOffset={songSyncOffset}
+            onOpenTeleprompter={() => setIsTeleprompterOpen(true)}
         />
       </div>
       
@@ -730,12 +712,18 @@ const DawPage = () => {
         videoUrl={songYoutubeUrl}
         songTitle={activeSong?.name || 'Video de YouTube'}
        />
+       <TeleprompterDialog
+        isOpen={isTeleprompterOpen}
+        onClose={() => setIsTeleprompterOpen(false)}
+        songTitle={activeSong?.name || 'Teleprompter'}
+        lyrics={songLyrics}
+        syncedLyrics={songSyncedLyrics}
+        currentTime={playbackPosition}
+        isPlaying={isPlaying}
+        syncOffset={songSyncOffset}
+      />
     </div>
   );
 };
 
 export default DawPage;
-
-    
-
-    

@@ -1,141 +1,25 @@
 
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React from 'react';
 import Image from 'next/image';
 import { Button } from './ui/button';
-import { X, Music4, Youtube, ZoomIn, ZoomOut } from 'lucide-react';
-import { ScrollArea } from './ui/scroll-area';
+import { Music4, Youtube } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { LyricsSyncOutput } from '@/ai/flows/lyrics-synchronization';
 
 interface LyricsDisplayProps {
   lyrics: string | null;
-  syncedLyrics: LyricsSyncOutput | null;
-  currentTime: number;
-  isPlaying: boolean;
   youtubeUrl: string | null;
   onOpenYouTube: () => void;
-  syncOffset: number;
+  onOpenTeleprompter: () => void;
 }
 
 const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ 
     lyrics, 
-    syncedLyrics,
-    currentTime,
-    isPlaying,
     youtubeUrl, 
     onOpenYouTube,
-    syncOffset = 0
+    onOpenTeleprompter
 }) => {
-  const [showLyrics, setShowLyrics] = useState(false);
-  const [fontSize, setFontSize] = useState(24);
-  const [activeWordIndex, setActiveWordIndex] = useState(-1);
-  
-  const activeWordRef = useRef<HTMLSpanElement | null>(null);
-  const wordRefs = useRef<Map<number, HTMLSpanElement>>(new Map());
-
-  const handleZoomIn = () => setFontSize(prev => Math.min(prev + 2, 48));
-  const handleZoomOut = () => setFontSize(prev => Math.max(prev - 2, 12));
-
-  // Determine current word
-  useEffect(() => {
-    if (!isPlaying || !syncedLyrics || !showLyrics) {
-      if(isPlaying) setActiveWordIndex(-1); // Reset if playing but no lyrics shown
-      return;
-    }
-
-    const adjustedCurrentTime = currentTime - syncOffset;
-
-    // Use findLastIndex to get the last word that has started
-    const currentWordIndex = syncedLyrics.words.findLastIndex(
-      (word) => adjustedCurrentTime >= word.startTime
-    );
-    
-    setActiveWordIndex(currentWordIndex);
-
-  }, [currentTime, isPlaying, showLyrics, syncedLyrics, syncOffset]);
-
-
-  // Scroll into view when active word changes
-  useEffect(() => {
-    if (activeWordIndex !== -1 && isPlaying) {
-      const wordElement = wordRefs.current.get(activeWordIndex);
-      if (wordElement && wordElement !== activeWordRef.current) {
-        wordElement.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-        });
-        activeWordRef.current = wordElement;
-      }
-    }
-  }, [activeWordIndex, isPlaying]);
-
-
-  const renderLyrics = () => {
-    // Karaoke Mode
-    if (syncedLyrics && syncedLyrics.words.length > 0) {
-        wordRefs.current.clear();
-        return (
-            <p 
-                className="font-mono text-center whitespace-pre-wrap p-4 pt-16 transition-all"
-                style={{ fontSize: `${fontSize}px`, lineHeight: 1.5 }}
-            >
-                {syncedLyrics.words.map((word, index) => {
-                    const isActive = isPlaying && activeWordIndex === index;
-                    return (
-                        <span
-                            key={index}
-                            ref={(el) => {
-                                if (el) wordRefs.current.set(index, el);
-                            }}
-                            className={cn(
-                                'transition-colors duration-150',
-                                isActive ? 'text-amber-400' : 'text-muted-foreground/70'
-                            )}
-                        >
-                            {word.word}{' '}
-                        </span>
-                    );
-                })}
-            </p>
-        );
-    }
-    
-    // Static Text Mode
-    return (
-        <pre 
-            className="font-mono text-amber-400 text-center whitespace-pre-wrap p-4 pt-16 transition-all"
-            style={{ fontSize: `${fontSize}px`, lineHeight: 1.5 }}
-        >
-            {lyrics || 'No hay letra disponible para esta canción.'}
-        </pre>
-    );
-  }
-
-  if (showLyrics) {
-    return (
-       <div className="relative bg-black/80 border border-amber-400/20 rounded-lg h-full flex flex-col">
-          <Button variant="ghost" size="icon" className="absolute top-2 right-2 z-20 w-8 h-8 text-amber-400/70 hover:text-amber-400" onClick={() => setShowLyrics(false)}>
-              <X className="w-5 h-5" />
-          </Button>
-
-          <div className="absolute top-2 left-2 z-20 flex gap-2 items-center bg-black/50 p-1 rounded-lg">
-            <Button variant="ghost" size="icon" className="w-8 h-8 text-amber-400/70 hover:text-amber-400" onClick={handleZoomIn}>
-                <ZoomIn className="w-5 h-5" />
-            </Button>
-             <Button variant="ghost" size="icon" className="w-8 h-8 text-amber-400/70 hover:text-amber-400" onClick={handleZoomOut}>
-                <ZoomOut className="w-5 h-5" />
-            </Button>
-          </div>
-
-          <ScrollArea className="h-full w-full rounded-lg">
-            {renderLyrics()}
-          </ScrollArea>
-        </div>
-    );
-  }
-
   return (
     <div className="grid grid-cols-4 gap-4 h-full">
         <button 
@@ -143,7 +27,7 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({
                 "relative rounded-lg overflow-hidden group h-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background",
                 !lyrics && "opacity-50 cursor-not-allowed"
             )}
-            onClick={() => lyrics && setShowLyrics(true)}
+            onClick={() => lyrics && onOpenTeleprompter()}
             disabled={!lyrics}
         >
             <Image
