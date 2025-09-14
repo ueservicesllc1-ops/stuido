@@ -15,7 +15,6 @@ import type { LyricsSyncOutput } from '@/ai/flows/lyrics-synchronization';
 import TeleprompterDialog from '@/components/TeleprompterDialog';
 
 export type PlaybackMode = 'online' | 'hybrid' | 'offline';
-export type ClickSound = 'beep' | 'click';
 
 // Definir las frecuencias para cada banda del EQ
 const eqFrequencies = [60, 250, 1000, 4000, 8000];
@@ -57,6 +56,7 @@ const DawPage = () => {
   const animationFrameRef = useRef<number>();
   const playbackStartTimeRef = useRef(0);
   const playbackStartOffsetRef = useRef(0);
+  const [playbackRate, setPlaybackRate] = useState(1);
   
   const [volumes, setVolumes] = useState<{ [key: string]: number }>({});
   const [pans, setPans] = useState<{ [key: string]: number }>({});
@@ -108,7 +108,7 @@ const DawPage = () => {
             console.error("Web Audio API is not supported in this browser", e);
         }
     }
-  }, []);
+  }, [eqBands]);
 
   // Update EQ gains when sliders change
   useEffect(() => {
@@ -336,7 +336,7 @@ const DawPage = () => {
     });
     setVuData(newVuData);
     
-    const elapsedTime = audioContextRef.current.currentTime - playbackStartTimeRef.current;
+    const elapsedTime = (audioContextRef.current.currentTime - playbackStartTimeRef.current) * playbackRate;
     const newPosition = playbackStartOffsetRef.current + elapsedTime;
     if (newPosition <= duration) {
       setPlaybackPosition(newPosition);
@@ -345,7 +345,7 @@ const DawPage = () => {
     }
 
     animationFrameRef.current = requestAnimationFrame(updateVuMeters);
-  }, [duration]);
+  }, [duration, playbackRate]);
 
   const getGainValue = useCallback((trackId: string) => {
     const isMuted = mutedTracks.includes(trackId);
@@ -382,6 +382,17 @@ const DawPage = () => {
     });
   }, [volumes, mutedTracks, soloTracks, getGainValue, pans]);
 
+  useEffect(() => {
+      if (!audioContextRef.current) return;
+      const context = audioContextRef.current;
+      Object.keys(trackNodesRef.current).forEach(trackId => {
+          const node = trackNodesRef.current[trackId];
+          if (node?.source) {
+              node.source.playbackRate.setValueAtTime(playbackRate, context.currentTime);
+          }
+      });
+  }, [playbackRate]);
+
 
   const handlePlay = useCallback(() => {
     if (!isReadyToPlay || isPlaying || !audioContextRef.current || !masterGainNodeRef.current) return;
@@ -402,6 +413,7 @@ const DawPage = () => {
       if (buffer) {
         const source = context.createBufferSource();
         source.buffer = buffer;
+        source.playbackRate.value = playbackRate;
         
         const pannerNode = context.createStereoPanner();
         const gainNode = context.createGain();
@@ -435,7 +447,7 @@ const DawPage = () => {
     isPlayingRef.current = true;
     animationFrameRef.current = requestAnimationFrame(updateVuMeters);
 
-  }, [isReadyToPlay, isPlaying, activeTracks, playbackPosition, getGainValue, pans, updateVuMeters]);
+  }, [isReadyToPlay, isPlaying, activeTracks, playbackPosition, getGainValue, pans, updateVuMeters, playbackRate]);
 
   const handleFadeOutAndStop = useCallback((onStopComplete?: () => void) => {
     if (!audioContextRef.current || !isPlayingRef.current) {
@@ -475,7 +487,7 @@ const DawPage = () => {
     if (!isPlaying || !audioContextRef.current) return;
     
     const context = audioContextRef.current;
-    const elapsedTime = context.currentTime - playbackStartTimeRef.current;
+    const elapsedTime = (context.currentTime - playbackStartTimeRef.current) * playbackRate;
     const newPosition = playbackStartOffsetRef.current + elapsedTime;
 
     handleFadeOutAndStop(() => {
@@ -554,6 +566,7 @@ const DawPage = () => {
   const handleSongSelected = (songId: string) => {
       if (songId === activeSongId) return;
       setActiveSongId(songId);
+      setPlaybackRate(1); // Reset playback rate on song change
   }
   const handleMasterVolumeChange = (newVolume: number) => {
       setMasterVolume(newVolume);
@@ -611,6 +624,9 @@ const DawPage = () => {
             onFadeOutDurationChange={setFadeOutDuration}
             isPanVisible={isPanVisible}
             onPanVisibilityChange={setIsPanVisible}
+            activeSong={activeSong}
+            playbackRate={playbackRate}
+            onPlaybackRateChange={setPlaybackRate}
         />
       </div>
 
@@ -681,3 +697,5 @@ const DawPage = () => {
 };
 
 export default DawPage;
+
+    

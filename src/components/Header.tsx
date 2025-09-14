@@ -6,7 +6,7 @@ import { Button } from './ui/button';
 import { Rewind, Play, Pause, Square, FastForward, Settings, RadioTower, Disc, Loader2, DownloadCloud, Timer, Volume2 } from 'lucide-react';
 import { Circle } from './icons';
 import PlaybackModeToggle from './PlaybackModeToggle';
-import type { PlaybackMode, ClickSound } from '@/app/page';
+import type { PlaybackMode } from '@/app/page';
 import { Progress } from './ui/progress';
 import { cn } from '@/lib/utils';
 import Timeline from './Timeline';
@@ -14,6 +14,7 @@ import { SongStructure } from '@/ai/flows/song-structure';
 import SettingsDialog from './SettingsDialog';
 import { Input } from './ui/input';
 import { Slider } from './ui/slider';
+import type { Song } from '@/actions/songs';
 
 
 interface HeaderProps {
@@ -38,6 +39,9 @@ interface HeaderProps {
   onFadeOutDurationChange: (duration: number) => void;
   isPanVisible: boolean;
   onPanVisibilityChange: (isVisible: boolean) => void;
+  activeSong: Song | undefined;
+  playbackRate: number;
+  onPlaybackRateChange: (rate: number) => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -62,8 +66,14 @@ const Header: React.FC<HeaderProps> = ({
   onFadeOutDurationChange,
   isPanVisible,
   onPanVisibilityChange,
+  activeSong,
+  playbackRate,
+  onPlaybackRateChange
 }) => {
   
+  const currentBPM = activeSong?.tempo ? activeSong.tempo * playbackRate : null;
+  const pitchPercent = ((playbackRate - 1) * 100).toFixed(1);
+
   return (
     <header className="flex flex-col bg-card/50 border-b border-border p-2 gap-2 rounded-lg">
       <div className="flex items-center justify-start gap-6">
@@ -82,6 +92,29 @@ const Header: React.FC<HeaderProps> = ({
                 <span className="font-mono text-lg text-amber-400 [text-shadow:0_0_8px_theme(colors.amber.400)]">
                     {masterVolume}
                 </span>
+            </div>
+        </div>
+        
+        <div className="flex items-center gap-2">
+            <div className="flex flex-col items-center justify-center bg-black/80 border border-amber-400/20 rounded-md px-3 py-1 w-28 h-12">
+                <span className="font-mono text-xl font-bold text-amber-400 [text-shadow:0_0_8px_theme(colors.amber.400)]">
+                    {currentBPM ? currentBPM.toFixed(1) : '--'}
+                </span>
+                <span className="text-xs font-mono text-amber-400/70">BPM</span>
+            </div>
+
+            <div className="w-48 flex flex-col items-center justify-center h-12">
+                <Slider
+                    value={[playbackRate]}
+                    onValueChange={(vals) => onPlaybackRateChange(vals[0])}
+                    min={0.75}
+                    max={1.25}
+                    step={0.01}
+                    disabled={!activeSong}
+                />
+                 <div className="text-xs font-mono text-amber-400/70 mt-1">
+                    Pitch: {playbackRate === 1.0 ? "0.0%" : `${pitchPercent}%`}
+                </div>
             </div>
         </div>
 
@@ -165,3 +198,5 @@ const Header: React.FC<HeaderProps> = ({
 };
 
 export default Header;
+
+    
