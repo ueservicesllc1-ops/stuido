@@ -22,7 +22,7 @@ interface TeleprompterDialogProps {
   lyrics: string | null;
   syncedLyrics: LyricsSyncOutput | null;
   currentTime: number;
-  isPlaying: boolean; // Is the main song playing?
+  isPlaying: boolean;
   syncOffset: number;
 }
 
@@ -37,37 +37,27 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
     syncOffset = 0
 }) => {
   const [fontSize, setFontSize] = useState(48);
-  const [activeWordIndex, setActiveWordIndex] = useState(-1);
-  const [isManualAutoScrolling, setIsManualAutoScrolling] = useState(false);
+  const [isAutoScrolling, setIsAutoScrolling] = useState(false);
   const [scrollSpeed, setScrollSpeed] = useState(5);
-  const [isUserInteracting, setIsUserInteracting] = useState(false);
+  const [activeWordIndex, setActiveWordIndex] = useState(-1);
 
-  const wordRefs = useRef<Map<number, HTMLSpanElement>>(new Map());
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number>();
-  const userInteractionTimeoutRef = useRef<NodeJS.Timeout>();
 
   const handleZoomIn = () => setFontSize(prev => Math.min(prev + 4, 96));
   const handleZoomOut = () => setFontSize(prev => Math.max(prev - 4, 16));
 
-  // Reset states when dialog closes
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       onClose();
-      setIsManualAutoScrolling(false);
+      setIsAutoScrolling(false); // Detener scroll al cerrar
     }
   };
-
-  // --- Karaoke Mode Logic (when main song is playing) ---
+  
+  // Lógica de resaltado de palabra (no afecta el scroll)
   useEffect(() => {
-    if (!isPlaying || !syncedLyrics) {
-      if (!isPlaying) setActiveWordIndex(-1); // Reset highlight when song stops
-      return;
-    }
-
-    // Karaoke mode is active, disable manual auto-scroll if it was on
-    if (isManualAutoScrolling) setIsManualAutoScrolling(false);
-
+    if (!syncedLyrics) return;
+    
     const adjustedCurrentTime = currentTime - syncOffset;
     const currentWordIndex = syncedLyrics.words.findLastIndex(
       (word) => adjustedCurrentTime >= word.startTime
@@ -76,71 +66,36 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
     if (currentWordIndex !== activeWordIndex) {
         setActiveWordIndex(currentWordIndex);
     }
-  }, [currentTime, isPlaying, syncedLyrics, syncOffset, isManualAutoScrolling, activeWordIndex]);
-
-  // Effect to scroll the highlighted word into view in Karaoke mode
-  useEffect(() => {
-    if (isPlaying && activeWordIndex > -1 && !isUserInteracting) {
-      const wordElement = wordRefs.current.get(activeWordIndex);
-      if (wordElement) {
-        wordElement.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-        });
-      }
-    }
-  }, [activeWordIndex, isPlaying, isUserInteracting]);
+  }, [currentTime, syncedLyrics, syncOffset, activeWordIndex]);
 
 
-  // --- Manual Auto-Scroll Logic ---
+  // Lógica de auto-scroll manual
   const animateScroll = useCallback(() => {
-    if (scrollViewportRef.current && !isUserInteracting) {
-        const scrollAmount = scrollSpeed / 60; // Pixels per 60fps frame
+    if (scrollViewportRef.current) {
+        const scrollAmount = scrollSpeed / 60; // Pixels per frame at 60fps
         scrollViewportRef.current.scrollTop += scrollAmount;
         animationFrameRef.current = requestAnimationFrame(animateScroll);
     }
-  }, [scrollSpeed, isUserInteracting]);
+  }, [scrollSpeed]);
 
   useEffect(() => {
-    // Start or stop manual scrolling animation
-    if (isManualAutoScrolling && !isPlaying) {
+    if (isAutoScrolling) {
       animationFrameRef.current = requestAnimationFrame(animateScroll);
     } else {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
     }
-    // Cleanup function to stop animation when component unmounts or deps change
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isManualAutoScrolling, isPlaying, animateScroll]);
+  }, [isAutoScrolling, animateScroll]);
   
-  // --- User Interaction Logic ---
-  const handleUserScroll = useCallback(() => {
-    setIsUserInteracting(true);
-    if (userInteractionTimeoutRef.current) {
-      clearTimeout(userInteractionTimeoutRef.current);
-    }
-    userInteractionTimeoutRef.current = setTimeout(() => {
-      setIsUserInteracting(false);
-    }, 2500); // User has 2.5 seconds of manual control before auto-scroll resumes
-  }, []);
-  
-  useEffect(() => {
-    const viewport = scrollViewportRef.current;
-    if (viewport) {
-      viewport.addEventListener('scroll', handleUserScroll, { passive: true });
-      return () => viewport.removeEventListener('scroll', handleUserScroll);
-    }
-  }, [isOpen, handleUserScroll]); // Re-attach listener if dialog re-opens
-  
-
   const renderLyrics = () => {
+    // Si hay letra sincronizada, la usamos para el resaltado
     if (syncedLyrics && syncedLyrics.words.length > 0) {
-        wordRefs.current.clear();
         return (
             <p 
                 className="font-mono text-center whitespace-pre-wrap p-4 pt-24 pb-24 transition-all"
@@ -151,9 +106,6 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
                     return (
                         <span
                             key={index}
-                            ref={(el) => {
-                                if (el) wordRefs.current.set(index, el);
-                            }}
                             className={cn(
                                 'transition-colors duration-150',
                                 isActive ? 'text-amber-400' : 'text-muted-foreground/70'
@@ -167,7 +119,7 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
         );
     }
     
-    // Fallback to plain text
+    // Si no, usamos la letra en texto plano
     return (
         <pre 
             className="font-mono text-amber-400 text-center whitespace-pre-wrap p-4 pt-24 pb-24 transition-all"
@@ -178,23 +130,21 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
     );
   }
 
-  const showAutoScrollControls = !isPlaying && !!lyrics;
-
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-4xl h-[80vh] p-0 flex flex-col bg-black/90 border-amber-400/20">
         <DialogHeader className="p-4 flex-row flex justify-between items-center z-20">
           <DialogTitle className="text-amber-400">{songTitle}</DialogTitle>
           <div className="flex gap-2 items-center">
-             {showAutoScrollControls && (
+            {lyrics && (
                 <div className="flex items-center gap-3 bg-card/50 p-1.5 rounded-lg w-48">
                     <Button 
                         variant="ghost" 
                         size="icon" 
                         className="w-8 h-8 text-amber-400/70 hover:text-amber-400" 
-                        onClick={() => setIsManualAutoScrolling(prev => !prev)}
+                        onClick={() => setIsAutoScrolling(prev => !prev)}
                     >
-                        {isManualAutoScrolling ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                        {isAutoScrolling ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
                     </Button>
                     <Slider
                         value={[scrollSpeed]}
@@ -203,6 +153,7 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
                         max={50}
                         step={1}
                         className="flex-grow"
+                        disabled={isAutoScrolling}
                     />
                 </div>
             )}
