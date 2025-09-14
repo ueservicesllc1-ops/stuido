@@ -95,26 +95,30 @@ const TeleprompterDialog: React.FC<TeleprompterDialogProps> = ({
 
   // --- Lógica de Auto-Scroll Manual ---
   const animateScroll = useCallback(() => {
-    if (scrollAreaRef.current) {
-        const scrollAmount = scrollSpeed / 60; // Dividido por 60fps
-        scrollAreaRef.current.scrollTop += scrollAmount;
-    }
-    scrollAnimationRef.current = requestAnimationFrame(animateScroll);
+      if (!scrollAreaRef.current) return;
+      const scrollAmount = scrollSpeed / 60; // Dividido por 60fps
+      scrollAreaRef.current.scrollTop += scrollAmount;
+      scrollAnimationRef.current = requestAnimationFrame(animateScroll);
   }, [scrollSpeed]);
 
   useEffect(() => {
-      if (isAutoScrolling) {
-          scrollAnimationRef.current = requestAnimationFrame(animateScroll);
-      } else {
-          if (scrollAnimationRef.current) {
-              cancelAnimationFrame(scrollAnimationRef.current);
-          }
+    if (isAutoScrolling) {
+      // Inicia la animación
+      scrollAnimationRef.current = requestAnimationFrame(animateScroll);
+    } else {
+      // Detiene la animación
+      if (scrollAnimationRef.current) {
+        cancelAnimationFrame(scrollAnimationRef.current);
+        scrollAnimationRef.current = undefined;
       }
-      return () => {
-          if (scrollAnimationRef.current) {
-              cancelAnimationFrame(scrollAnimationRef.current);
-          }
-      };
+    }
+
+    return () => {
+      // Cleanup: se asegura de detener la animación al desmontar
+      if (scrollAnimationRef.current) {
+        cancelAnimationFrame(scrollAnimationRef.current);
+      }
+    };
   }, [isAutoScrolling, animateScroll]);
   
   const handleManualScroll = () => {
