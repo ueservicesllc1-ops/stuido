@@ -67,6 +67,8 @@ const DawPage = () => {
   const [isYouTubePlayerOpen, setIsYouTubePlayerOpen] = useState(false);
   const [isTeleprompterOpen, setIsTeleprompterOpen] = useState(false);
 
+  const activeSong = songs.find(s => s.id === activeSongId);
+
   const initAudioContext = async () => {
     if (!audioContextStarted.current) {
         await Tone.start();
@@ -331,7 +333,7 @@ const DawPage = () => {
       Object.values(trackNodesRef.current).forEach(({ player }) => {
         player.playbackRate = playbackRate;
       });
-      Tone.Transport.bpm.value = (activeSong?.tempo || 120) * playbackRate * 60 / (activeSong?.tempo || 120);
+      Tone.Transport.bpm.value = (activeSong?.tempo || 120) * playbackRate;
   }, [playbackRate, activeSong]);
 
 
@@ -479,7 +481,6 @@ const DawPage = () => {
     setEqBands([50, 50, 50, 50, 50]);
   };
   
-  const activeSong = songs.find(s => s.id === activeSongId);
   const handleBpmChange = (newBpm: number) => {
       if (!activeSong || !activeSong.tempo) return;
       const newRate = newBpm / activeSong.tempo;
