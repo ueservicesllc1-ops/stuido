@@ -67,7 +67,7 @@ const DawPage = () => {
   
   const [isYouTubePlayerOpen, setIsYouTubePlayerOpen] = useState(false);
   const [isTeleprompterOpen, setIsTeleprompterOpen] = useState(false);
-
+  
   const activeSong = songs.find(s => s.id === activeSongId);
 
   const initAudioContext = async () => {
@@ -190,60 +190,65 @@ const DawPage = () => {
     setIsReadyToPlay(false);
 
     const loadAudioData = async () => {
-      await initAudioContext();
-      let maxDuration = 0;
-
-      const loadPromises = tracksForCurrentSong.map(async (track) => {
-        try {
-          if (trackNodesRef.current[track.id]) {
-            trackNodesRef.current[track.id].player.dispose();
-          }
-
-          let audioBuffer: ArrayBuffer | null = null;
-          
-          if (playbackMode === 'hybrid' || playbackMode === 'offline') {
-              audioBuffer = await getCachedArrayBuffer(track.url);
-          }
-
-          if (!audioBuffer) {
-              const response = await fetch(`/api/download?url=${encodeURIComponent(track.url)}`);
-              if (!response.ok) throw new Error(`Failed to download ${track.name}`);
-              audioBuffer = await response.arrayBuffer();
-              if (playbackMode === 'hybrid' || playbackMode === 'offline') {
-                  await cacheArrayBuffer(track.url, audioBuffer.slice(0)); 
-              }
-          }
-
-          const player = await new Promise<Tone.Player>((resolve, reject) => {
-              const p = new Tone.Player(audioBuffer as AudioBuffer, () => resolve(p));
-              p.onerror = (e) => reject(e);
-          });
-          
-          if (player.buffer.duration > maxDuration) {
-            maxDuration = player.buffer.duration;
-          }
-
-          const pitchShift = new Tone.PitchShift({ pitch: pitch }).toDestination();
-          const panner = new Tone.Panner(0).connect(pitchShift);
-          const volume = new Tone.Volume(0).connect(panner);
-          const analyser = new Tone.Analyser('waveform', 256);
-          player.connect(volume);
-          player.connect(analyser);
-
-          trackNodesRef.current[track.id] = { player, panner, volume, analyser, pitchShift };
-        
-        } catch (error) {
-          console.error(`Error loading track ${track.name}:`, error);
-          if(playbackMode === 'offline') {
-            // Handle offline error - maybe show a toast
-          }
-        } finally {
-           setLoadingTracks(prev => prev.filter(id => id !== track.id));
-        }
-      });
-
-      await Promise.all(loadPromises);
-      setDuration(maxDuration);
+        await initAudioContext();
+        let maxDuration = 0;
+    
+        const loadPromises = tracksForCurrentSong.map(async (track) => {
+            try {
+                if (trackNodesRef.current[track.id]) {
+                    trackNodesRef.current[track.id].player.dispose();
+                }
+    
+                const player = new Tone.Player();
+                let audioBuffer: AudioBuffer | null = null;
+    
+                if (playbackMode === 'hybrid' || playbackMode === 'offline') {
+                    const cachedData = await getCachedArrayBuffer(track.url);
+                    if (cachedData) {
+                        audioBuffer = await Tone.context.decodeAudioData(cachedData);
+                    }
+                }
+    
+                if (audioBuffer) {
+                    player.buffer = audioBuffer;
+                } else {
+                    const proxyUrl = `/api/download?url=${encodeURIComponent(track.url)}`;
+                    // Wait for player to load the URL
+                    await player.load(proxyUrl); 
+    
+                    if (playbackMode === 'hybrid' || playbackMode === 'offline') {
+                        // We need to fetch it again to get the ArrayBuffer for caching
+                        const response = await fetch(proxyUrl);
+                        const arrayBuffer = await response.arrayBuffer();
+                        await cacheArrayBuffer(track.url, arrayBuffer);
+                    }
+                }
+    
+                if (player.buffer.duration > maxDuration) {
+                    maxDuration = player.buffer.duration;
+                }
+    
+                const pitchShift = new Tone.PitchShift({ pitch: pitch }).toDestination();
+                const panner = new Tone.Panner(0).connect(pitchShift);
+                const volume = new Tone.Volume(0).connect(panner);
+                const analyser = new Tone.Analyser('waveform', 256);
+                player.connect(volume);
+                player.connect(analyser);
+    
+                trackNodesRef.current[track.id] = { player, panner, volume, analyser, pitchShift };
+    
+            } catch (error) {
+                console.error(`Error loading track ${track.name}:`, error);
+                if (playbackMode === 'offline') {
+                    // Handle offline error - maybe show a toast
+                }
+            } finally {
+                setLoadingTracks(prev => prev.filter(id => id !== track.id));
+            }
+        });
+    
+        await Promise.all(loadPromises);
+        setDuration(maxDuration);
     };
 
     loadAudioData();
@@ -611,3 +616,5 @@ const DawPage = () => {
 };
 
 export default DawPage;
+
+    
