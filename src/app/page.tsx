@@ -13,12 +13,21 @@ import LyricsDisplay from '@/components/LyricsDisplay';
 import YouTubePlayerDialog from '@/components/YouTubePlayerDialog';
 import type { LyricsSyncOutput } from '@/ai/flows/lyrics-synchronization';
 import TeleprompterDialog from '@/components/TeleprompterDialog';
-import * as Tone from 'tone';
 
-export type PlaybackMode = 'online' | 'hybrid' | 'offline';
+export type PlaybackMode = 'online' | 'offline';
 
 const eqFrequencies = [60, 250, 1000, 4000, 8000];
 const MAX_EQ_GAIN = 12;
+
+type ToneModule = typeof import('tone');
+type TrackNodes = Record<string, {
+    player: import('tone').Player;
+    panner: import('tone').Panner;
+    volume: import('tone').Volume;
+    analyser: import('tone').Analyser;
+    pitchShift: import('tone').PitchShift;
+}>;
+
 
 const DawPage = () => {
   const [tracks, setTracks] = useState<SetlistSong[]>([]);
@@ -35,16 +44,11 @@ const DawPage = () => {
 
   const activeSong = songs.find(s => s.id === activeSongId);
   const audioContextStarted = useRef(false);
-  const trackNodesRef = useRef<Record<string, {
-    player: Tone.Player;
-    panner: Tone.Panner;
-    volume: Tone.Volume;
-    analyser: Tone.Analyser;
-    pitchShift: Tone.PitchShift;
-  }>>({});
+  const trackNodesRef = useRef<TrackNodes>({});
   
-  const masterVolumeNodeRef = useRef<Tone.Volume | null>(null);
-  const eqNodesRef = useRef<Tone.Filter[]>([]);
+  const toneRef = useRef<ToneModule | null>(null);
+  const masterVolumeNodeRef = useRef<import('tone').Volume | null>(null);
+  const eqNodesRef = useRef<import('tone').Filter[]>([]);
   const [vuData, setVuData] = useState<Record<string, number>>({});
   const [loadingTracks, setLoadingTracks] = useState<string[]>([]);
 
@@ -59,7 +63,7 @@ const DawPage = () => {
   const volumesRef = useRef<{ [key: string]: number }>({});
   const [pans, setPans] = useState<{ [key: string]: number }>({});
   const [masterVolume, setMasterVolume] = useState(100);
-  const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('hybrid');
+  const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('online');
   const [isReadyToPlay, setIsReadyToPlay] = useState(false);
 
   const [eqBands, setEqBands] = useState([50, 50, 50, 50, 50]);
@@ -69,41 +73,46 @@ const DawPage = () => {
   const [isYouTubePlayerOpen, setIsYouTubePlayerOpen] = useState(false);
   const [isTeleprompterOpen, setIsTeleprompterOpen] = useState(false);
   
-  const initAudioContext = async () => {
-    if (!audioContextStarted.current) {
-        await Tone.start();
+  const initAudio = useCallback(async () => {
+    if (!toneRef.current) {
+        const Tone = await import('tone');
+        toneRef.current = Tone;
+    }
+    if (!audioContextStarted.current && toneRef.current) {
+        await toneRef.current.start();
         audioContextStarted.current = true;
         console.log("Audio context started with Tone.js");
+
+        if (!masterVolumeNodeRef.current) {
+            const Tone = toneRef.current;
+            masterVolumeNodeRef.current = new Tone.Volume(0).toDestination();
+            
+            let lastNode: import('tone').InputNode = masterVolumeNodeRef.current;
+            eqNodesRef.current = eqFrequencies.map((freq) => {
+                const filter = new Tone.Filter(freq, 'peaking');
+                filter.Q.value = 1.5;
+                lastNode.connect(filter);
+                lastNode = filter;
+                return filter;
+            });
+            
+            lastNode.connect(Tone.getDestination());
+        }
     }
-  };
+  }, []);
 
   useEffect(() => {
-    if (Tone.context.state !== 'running') {
-      initAudioContext();
-    }
+    initAudio();
+  }, [initAudio]);
 
-    if (!masterVolumeNodeRef.current) {
-        masterVolumeNodeRef.current = new Tone.Volume(0).toDestination();
-        
-        let lastNode: Tone.InputNode = masterVolumeNodeRef.current;
-        eqNodesRef.current = eqFrequencies.map((freq) => {
-            const filter = new Tone.Filter(freq, 'peaking');
-            filter.Q.value = 1.5;
-            lastNode.connect(filter);
-            lastNode = filter;
-            return filter;
-        });
-        
-        lastNode.connect(Tone.getDestination());
-    }
 
-    // Set master volume
-    if (masterVolumeNodeRef.current) {
-        masterVolumeNodeRef.current.volume.value = Tone.gainToDb(masterVolume / 100);
-    }
+  useEffect(() => {
+    if (!toneRef.current || !masterVolumeNodeRef.current) return;
+    masterVolumeNodeRef.current.volume.value = toneRef.current.gainToDb(masterVolume / 100);
   }, [masterVolume]);
 
   useEffect(() => {
+    if (!toneRef.current || eqNodesRef.current.length === 0) return;
     eqNodesRef.current.forEach((filter, i) => {
       const gainValue = (eqBands[i] / 100) * (MAX_EQ_GAIN * 2) - MAX_EQ_GAIN;
       filter.gain.value = gainValue;
@@ -112,6 +121,10 @@ const DawPage = () => {
 
   useEffect(() => {
     const activeTracksForSong = tracks.filter(t => t.songId === activeSongId);
+    if (!toneRef.current) {
+        setIsReadyToPlay(false);
+        return;
+    }
     const allTracksLoaded = activeTracksForSong.length > 0 && activeTracksForSong.every(t => trackNodesRef.current[t.id]?.player.loaded);
     setIsReadyToPlay(allTracksLoaded && loadingTracks.length === 0);
   }, [loadingTracks, tracks, activeSongId]);
@@ -189,7 +202,10 @@ const DawPage = () => {
     setIsReadyToPlay(false);
 
     const loadAudioData = async () => {
-        await initAudioContext();
+        await initAudio();
+        const Tone = toneRef.current;
+        if (!Tone) return;
+
         let maxDuration = 0;
     
         const loadPromises = tracksForCurrentSong.map(async (track) => {
@@ -201,31 +217,18 @@ const DawPage = () => {
                 const player = new Tone.Player();
                 let audioBuffer: AudioBuffer | null = null;
     
-                if (playbackMode === 'hybrid' || playbackMode === 'offline') {
+                if (playbackMode === 'offline') {
                     const cachedData = await getCachedArrayBuffer(track.url);
                     if (cachedData) {
                         audioBuffer = await Tone.context.decodeAudioData(cachedData);
+                        player.buffer.load(audioBuffer);
+                    } else {
+                         console.error(`Offline mode: Track ${track.name} not in cache.`);
+                         throw new Error("Track not cached for offline use");
                     }
-                }
-    
-                if (audioBuffer) {
-                    player.buffer = Tone.context.createBuffer(
-                        audioBuffer.numberOfChannels,
-                        audioBuffer.length,
-                        audioBuffer.sampleRate
-                    );
-                    for (let i = 0; i < audioBuffer.numberOfChannels; i++) {
-                        player.buffer.getChannelData(i).set(audioBuffer.getChannelData(i));
-                    }
-                } else {
+                } else { // Online mode
                     const proxyUrl = `/api/download?url=${encodeURIComponent(track.url)}`;
                     await player.load(proxyUrl);
-    
-                    if (playbackMode === 'hybrid' || playbackMode === 'offline') {
-                        const response = await fetch(proxyUrl);
-                        const arrayBuffer = await response.arrayBuffer();
-                        await cacheArrayBuffer(track.url, arrayBuffer);
-                    }
                 }
     
                 if (player.buffer.duration > maxDuration) {
@@ -243,9 +246,6 @@ const DawPage = () => {
     
             } catch (error) {
                 console.error(`Error loading track ${track.name}:`, error);
-                if (playbackMode === 'offline') {
-                    // Handle offline error
-                }
             } finally {
                 setLoadingTracks(prev => prev.filter(id => id !== track.id));
             }
@@ -267,7 +267,7 @@ const DawPage = () => {
       });
       trackNodesRef.current = {};
     }
-  }, [activeSongId, tracks, playbackMode]);
+  }, [activeSongId, tracks, playbackMode, initAudio]);
 
   useEffect(() => {
     if (activeSongId) {
@@ -293,7 +293,8 @@ const DawPage = () => {
   }, [tracks]);
 
   const updateVuMeters = useCallback(() => {
-    if (!isPlayingRef.current) return;
+    const Tone = toneRef.current;
+    if (!isPlayingRef.current || !Tone) return;
 
     const newVuData: Record<string, number> = {};
     Object.keys(trackNodesRef.current).forEach(trackId => {
@@ -337,6 +338,9 @@ const DawPage = () => {
   }, [mutedTracks, soloTracks]);
 
   useEffect(() => {
+    const Tone = toneRef.current;
+    if (!Tone) return;
+
     Object.keys(trackNodesRef.current).forEach(trackId => {
         const node = trackNodesRef.current[trackId];
         if (node?.volume) {
@@ -354,6 +358,8 @@ const DawPage = () => {
   }, [mutedTracks, soloTracks, getGainValue, pans, pitch]);
   
    useEffect(() => {
+      const Tone = toneRef.current;
+      if (!Tone) return;
       Object.values(trackNodesRef.current).forEach(({ player }) => {
         player.playbackRate = playbackRate;
       });
@@ -364,9 +370,10 @@ const DawPage = () => {
 
 
   const handlePlay = useCallback(async () => {
-    if (!isReadyToPlay || isPlaying) return;
+    const Tone = toneRef.current;
+    if (!isReadyToPlay || isPlaying || !Tone) return;
 
-    await initAudioContext();
+    await initAudio();
     if (Tone.context.state === 'suspended') {
       await Tone.context.resume();
     }
@@ -382,10 +389,11 @@ const DawPage = () => {
     isPlayingRef.current = true;
     animationFrameRef.current = requestAnimationFrame(updateVuMeters);
 
-  }, [isReadyToPlay, isPlaying, playbackPosition, updateVuMeters]);
+  }, [isReadyToPlay, isPlaying, playbackPosition, updateVuMeters, initAudio]);
 
   const handleFadeOutAndStop = useCallback((onStopComplete?: () => void) => {
-    if (!isPlayingRef.current) {
+    const Tone = toneRef.current;
+    if (!isPlayingRef.current || !Tone) {
         if(onStopComplete) onStopComplete();
         return;
     };
@@ -409,7 +417,8 @@ const DawPage = () => {
   }, [fadeOutDuration]);
 
   const handlePause = () => {
-    if (!isPlaying) return;
+    const Tone = toneRef.current;
+    if (!isPlaying || !Tone) return;
     const newPosition = Tone.Transport.seconds;
 
     handleFadeOutAndStop(() => {
@@ -422,6 +431,9 @@ const DawPage = () => {
   };
   
   const handleStop = (immediate = false) => {
+    const Tone = toneRef.current;
+    if (!Tone) return;
+    
     if (immediate) {
         if (isPlayingRef.current) {
             Tone.Transport.stop();
@@ -489,11 +501,13 @@ const DawPage = () => {
       setMasterVolume(newVolume);
   };
   const handleVolumeChange = useCallback((trackId: string, newVolume: number) => {
+    const Tone = toneRef.current;
+    if (!Tone) return;
+
     volumesRef.current[trackId] = newVolume;
     const node = trackNodesRef.current[trackId];
     if (node) {
       const gainValue = getGainValue(trackId);
-      // Use rampTo for smoother transitions
       node.volume.volume.rampTo(Tone.gainToDb(gainValue), 0.05);
     }
   }, [getGainValue]);
@@ -627,3 +641,5 @@ const DawPage = () => {
 };
 
 export default DawPage;
+
+    
