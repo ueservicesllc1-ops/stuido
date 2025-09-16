@@ -215,11 +215,12 @@ const DawPage = () => {
                 }
     
                 const player = new Tone.Player();
+                
                 if (playbackMode === 'offline') {
                     const cachedData = await getCachedArrayBuffer(track.url);
                     if (cachedData) {
                         const audioBuffer = await Tone.context.decodeAudioData(cachedData);
-                        player.buffer.load(audioBuffer);
+                        await player.buffer.load(audioBuffer);
                     } else {
                         console.error(`Offline mode: Track ${track.name} not in cache.`);
                         throw new Error("Track not cached for offline use");
@@ -227,6 +228,10 @@ const DawPage = () => {
                 } else { // Online mode
                     const proxyUrl = `/api/download?url=${encodeURIComponent(track.url)}`;
                     await player.load(proxyUrl);
+                    // Also cache for future offline use
+                    const response = await fetch(proxyUrl);
+                    const arrayBuffer = await response.arrayBuffer();
+                    await cacheArrayBuffer(track.url, arrayBuffer);
                 }
     
                 if (player.buffer.duration > maxDuration) {
