@@ -5,7 +5,7 @@ import React from 'react';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
 import type { PlaybackMode } from '@/app/page';
-import { Wifi, WifiOff, CloudCog } from 'lucide-react';
+import { Wifi, WifiOff } from 'lucide-react';
 
 interface PlaybackModeToggleProps {
   value: PlaybackMode;
@@ -26,18 +26,6 @@ const PlaybackModeToggle: React.FC<PlaybackModeToggleProps> = ({ value, onChange
       >
         <Wifi className="w-4 h-4" />
         Online
-      </Button>
-       <Button
-        variant={value === 'hybrid' ? 'ghost' : 'ghost'}
-        size="sm"
-        onClick={() => onChange('hybrid')}
-        className={cn(
-          "h-auto px-2 py-1 text-xs gap-2",
-          value === 'hybrid' ? 'bg-yellow-500/20 text-yellow-400' : 'text-muted-foreground'
-        )}
-      >
-        <CloudCog className="w-4 h-4" />
-        Híbrido
       </Button>
       <Button
         variant={value === 'offline' ? 'ghost' : 'ghost'}

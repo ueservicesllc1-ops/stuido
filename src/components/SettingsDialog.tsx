@@ -15,12 +15,10 @@ import { Separator } from './ui/separator';
 import { Label } from './ui/label';
 import { Slider } from './ui/slider';
 import { Switch } from './ui/switch';
-import { ChevronRight, X, ChevronLeft, Check, Heart } from 'lucide-react';
+import { ChevronRight, X, Heart } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { ClickSound } from '@/app/page';
 
-type SettingsTab = 'General' | 'MIDI' | 'Audio' | 'Loop Connect™' | 'Prime MD™' | 'About';
-type GeneralSettingsView = 'main' | 'click-sound';
+type SettingsTab = 'General' | 'MIDI' | 'Audio' | 'About';
 
 interface SettingsRowProps {
   label: string;
@@ -37,19 +35,6 @@ const SettingsRow: React.FC<SettingsRowProps> = ({ label, value, onClick, isSele
       {isSelect && <ChevronRight className="h-5 w-5" />}
     </div>
   </div>
-);
-
-interface SettingsSelectionRowProps {
-    label: string;
-    isSelected: boolean;
-    onClick: () => void;
-}
-
-const SettingsSelectionRow: React.FC<SettingsSelectionRowProps> = ({ label, isSelected, onClick }) => (
-    <div className="flex items-center justify-between py-3 cursor-pointer" onClick={onClick}>
-        <Label className="text-base cursor-pointer">{label}</Label>
-        {isSelected && <Check className="h-5 w-5 text-primary" />}
-    </div>
 );
 
 
@@ -105,36 +90,29 @@ const SettingsDialog = ({
     onPanVisibilityChange
 }: SettingsDialogProps) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('General');
-  const [generalView, setGeneralView] = useState<GeneralSettingsView>('main');
   const [transition, setTransition] = useState(12);
   const [tonicFollows, setTonicFollows] = useState(true);
 
-  const tabs: SettingsTab[] = ['General', 'MIDI', 'Audio', 'Loop Connect™', 'Prime MD™', 'About'];
+  const tabs: SettingsTab[] = ['General', 'MIDI', 'Audio', 'About'];
 
   const renderGeneralSettings = () => {
-    switch (generalView) {
-        case 'main':
-        default:
-            return (
-                <div>
-                    <SettingsRow label="Appearance" value="Dark" isSelect />
-                    <Separator />
-                    <SettingsSliderRow 
-                      label="Fade out / in duration" 
-                      value={fadeOutDuration} 
-                      onValueChange={onFadeOutDurationChange}
-                      displayFormatter={(value) => `${value.toFixed(1)}s`}
-                    />
-                    <Separator />
-                    <SettingsSliderRow label="Transition Duration" value={transition} onValueChange={setTransition} />
-                    <Separator />
-                    <SettingsSwitchRow label="Show Pan Controls" checked={isPanVisible} onCheckedChange={onPanVisibilityChange} />
-                    <Separator />
-                    <SettingsSwitchRow label="Tonic Pad follows Key of Tracks" checked={tonicFollows} onCheckedChange={setTonicFollows} />
-                    <Separator />
-                </div>
-            );
-    }
+    return (
+        <div>
+            <SettingsRow label="Appearance" value="Dark" isSelect />
+            <Separator />
+            <SettingsSliderRow 
+              label="Fade out / in duration" 
+              value={fadeOutDuration} 
+              onValueChange={onFadeOutDurationChange}
+              displayFormatter={(value) => `${value.toFixed(1)}s`}
+            />
+            <Separator />
+            <SettingsSwitchRow label="Show Pan Controls" checked={isPanVisible} onCheckedChange={onPanVisibilityChange} />
+            <Separator />
+            <SettingsSwitchRow label="Tonic Pad follows Key of Tracks" checked={tonicFollows} onCheckedChange={setTonicFollows} />
+            <Separator />
+        </div>
+    );
   }
 
   const renderAboutSettings = () => {
@@ -161,9 +139,7 @@ const SettingsDialog = ({
   return (
     <Sheet onOpenChange={(isOpen) => {
         if (!isOpen) {
-            // Reset views when closing the sheet
             setActiveTab('General');
-            setGeneralView('main');
         }
     }}>
       <SheetTrigger asChild>{children}</SheetTrigger>
@@ -193,10 +169,7 @@ const SettingsDialog = ({
                                 "justify-start text-lg h-12 px-4",
                                 activeTab === tab && "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
                             )}
-                            onClick={() => {
-                                setActiveTab(tab);
-                                setGeneralView('main'); // Reset sub-view when changing tabs
-                            }}
+                            onClick={() => setActiveTab(tab)}
                         >
                             {tab}
                         </Button>

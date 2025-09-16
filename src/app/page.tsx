@@ -215,16 +215,14 @@ const DawPage = () => {
                 }
     
                 const player = new Tone.Player();
-                let audioBuffer: AudioBuffer | null = null;
-    
                 if (playbackMode === 'offline') {
                     const cachedData = await getCachedArrayBuffer(track.url);
                     if (cachedData) {
-                        audioBuffer = await Tone.context.decodeAudioData(cachedData);
+                        const audioBuffer = await Tone.context.decodeAudioData(cachedData);
                         player.buffer.load(audioBuffer);
                     } else {
-                         console.error(`Offline mode: Track ${track.name} not in cache.`);
-                         throw new Error("Track not cached for offline use");
+                        console.error(`Offline mode: Track ${track.name} not in cache.`);
+                        throw new Error("Track not cached for offline use");
                     }
                 } else { // Online mode
                     const proxyUrl = `/api/download?url=${encodeURIComponent(track.url)}`;
@@ -267,7 +265,7 @@ const DawPage = () => {
       });
       trackNodesRef.current = {};
     }
-  }, [activeSongId, tracks, playbackMode, initAudio]);
+  }, [activeSongId, tracks, playbackMode, initAudio, pitch]);
 
   useEffect(() => {
     if (activeSongId) {
