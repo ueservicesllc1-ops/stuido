@@ -6,14 +6,14 @@
 # Este script realiza las siguientes acciones:
 # 1. Añade todos los cambios al área de preparación.
 # 2. Crea un commit con un mensaje descriptivo.
-# 3. Se actualiza con los últimos cambios de GitHub.
-# 4. Sube (push) los commits locales a la rama 'main'.
+# 3. FUERZA la subida (push) de los commits locales a la rama 'main'.
+#    ¡ADVERTENCIA! Esto sobrescribirá el historial en GitHub.
 #
 # Para ejecutar este script:
 #    ./save_to_github.sh
 # ==============================================================================
 
-echo "✅ Iniciando respaldo a GitHub..."
+echo "✅ Iniciando respaldo FORZADO a GitHub..."
 
 # 1. Añadir todos los cambios al área de preparación (staging)
 git add .
@@ -25,7 +25,7 @@ echo "    => Cambios añadidos al área de preparación."
 
 # 2. Crear un commit con un mensaje que incluye la fecha y hora actual
 TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
-COMMIT_MESSAGE="Respaldo manual: $TIMESTAMP"
+COMMIT_MESSAGE="Respaldo forzado: $TIMESTAMP"
 if ! git diff --cached --quiet; then
     git commit -m "$COMMIT_MESSAGE"
     if [ $? -ne 0 ]; then
@@ -37,20 +37,12 @@ else
     echo "✅ No había cambios nuevos para guardar en un commit."
 fi
 
-# 3. Integrar los cambios remotos antes de subir
-echo "    => Sincronizando con los últimos cambios de GitHub..."
-git pull origin main --rebase
+# 3. Forzar la subida de los cambios a GitHub (rama main)
+echo "    => Forzando la subida de todos los cambios pendientes a GitHub..."
+git push --force origin main
 if [ $? -ne 0 ]; then
-    echo "❌ Error: 'git pull' falló. Resuelve los conflictos si los hay y vuelve a intentarlo."
+    echo "❌ Error: 'git push --force' falló. Revisa tu conexión o los permisos del repositorio."
     exit 1
 fi
 
-# 4. Subir los cambios a GitHub (rama main)
-echo "    => Subiendo todos los cambios pendientes a GitHub..."
-git push origin main
-if [ $? -ne 0 ]; then
-    echo "❌ Error: 'git push' falló. Revisa tu conexión o los permisos del repositorio."
-    exit 1
-fi
-
-echo "🚀 ¡Éxito! Tus cambios han sido guardados en GitHub."
+echo "🚀 ¡Éxito! Tus cambios han sido guardados en GitHub, sobrescribiendo la versión anterior."
