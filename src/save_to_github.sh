@@ -13,6 +13,10 @@
 
 echo "✅ Iniciando respaldo FORZADO a GitHub..."
 
+# Asegurarse de que los scripts importantes tengan permisos de ejecución
+chmod +x src/save_to_github.sh
+chmod +x src/force_restore_from_github.sh
+
 # 1. Añadir todos los cambios al área de preparación (staging)
 git add .
 if [ $? -ne 0 ]; then
