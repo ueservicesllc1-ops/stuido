@@ -1,13 +1,11 @@
 #!/bin/bash
 
 # ==============================================================================
-# Script para guardar y subir cambios a GitHub de forma automatizada.
+# Script para GUARDAR FORZADAMENTE los cambios locales en GitHub.
 #
-# Este script realiza las siguientes acciones:
-# 1. Añade todos los cambios al área de preparación.
-# 2. Crea un commit con un mensaje descriptivo.
-# 3. FUERZA la subida (push) de los commits locales a la rama 'main'.
-#    ¡ADVERTENCIA! Esto sobrescribirá el historial en GitHub.
+# ¡ADVERTENCIA! Este script sobrescribe el historial en la rama 'main' de GitHub.
+# Úsalo cuando estés seguro de que tus cambios locales son los correctos y
+# quieres reemplazar lo que hay en el repositorio.
 #
 # Para ejecutar este script:
 #    ./save_to_github.sh
@@ -23,13 +21,13 @@ if [ $? -ne 0 ]; then
 fi
 echo "    => Cambios añadidos al área de preparación."
 
-# 2. Crear un commit con un mensaje que incluye la fecha y hora actual
+# 2. Crear un commit si hay cambios nuevos
 TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
 COMMIT_MESSAGE="Respaldo forzado: $TIMESTAMP"
 if ! git diff --cached --quiet; then
     git commit -m "$COMMIT_MESSAGE"
     if [ $? -ne 0 ]; then
-        echo "⚠️  No se creó un nuevo commit. Probablemente no había cambios nuevos que guardar."
+        echo "⚠️  No se pudo crear el commit. Probablemente no había cambios que guardar."
     else
         echo "    => Commit creado con el mensaje: '$COMMIT_MESSAGE'"
     fi

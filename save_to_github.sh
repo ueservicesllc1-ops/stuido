@@ -1,26 +1,17 @@
 #!/bin/bash
 
 # ==============================================================================
-# Script para guardar y subir cambios a GitHub de forma automatizada.
+# Script para GUARDAR FORZADAMENTE los cambios locales en GitHub.
 #
-# Este script realiza las siguientes acciones:
-# 1. Añade todos los cambios (archivos nuevos, modificados, eliminados) al
-#    área de preparación de Git.
-# 2. Crea un commit con un mensaje descriptivo si hay cambios que guardar.
-# 3. Sube (push) todos los commits locales a la rama 'main' del repositorio.
+# ¡ADVERTENCIA! Este script sobrescribe el historial en la rama 'main' de GitHub.
+# Úsalo cuando estés seguro de que tus cambios locales son los correctos y
+# quieres reemplazar lo que hay en el repositorio.
 #
 # Para ejecutar este script:
-# 1. Asegúrate de estar en la terminal, en el directorio raíz de tu proyecto.
-# 2. Concede permisos de ejecución al archivo con el comando:
-#    chmod +x save_to_github.sh
-# 3. Ejecuta el script con:
 #    ./save_to_github.sh
 # ==============================================================================
 
-# Da permisos de ejecución al propio script la primera vez.
-chmod +x save_to_github.sh
-
-echo "✅ Iniciando respaldo a GitHub..."
+echo "✅ Iniciando respaldo FORZADO a GitHub..."
 
 # 1. Añadir todos los cambios al área de preparación (staging)
 git add .
@@ -30,14 +21,13 @@ if [ $? -ne 0 ]; then
 fi
 echo "    => Cambios añadidos al área de preparación."
 
-# 2. Crear un commit con un mensaje que incluye la fecha y hora actual
+# 2. Crear un commit si hay cambios nuevos
 TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
-COMMIT_MESSAGE="Respaldo manual: $TIMESTAMP"
-# Solo intenta hacer commit si hay algo en el staging
+COMMIT_MESSAGE="Respaldo forzado: $TIMESTAMP"
 if ! git diff --cached --quiet; then
     git commit -m "$COMMIT_MESSAGE"
     if [ $? -ne 0 ]; then
-        echo "⚠️  No se creó un nuevo commit. Probablemente no había cambios nuevos que guardar."
+        echo "⚠️  No se pudo crear el commit. Probablemente no había cambios que guardar."
     else
         echo "    => Commit creado con el mensaje: '$COMMIT_MESSAGE'"
     fi
@@ -45,13 +35,12 @@ else
     echo "✅ No había cambios nuevos para guardar en un commit."
 fi
 
-
-# 3. Subir los cambios a GitHub (rama main)
-echo "    => Subiendo todos los cambios pendientes a GitHub..."
-git push origin main
+# 3. Forzar la subida de los cambios a GitHub (rama main)
+echo "    => Forzando la subida de todos los cambios pendientes a GitHub..."
+git push --force origin main
 if [ $? -ne 0 ]; then
-    echo "❌ Error: 'git push' falló. Revisa tu conexión, los permisos del repositorio o si necesitas hacer 'git pull' primero."
+    echo "❌ Error: 'git push --force' falló. Revisa tu conexión o los permisos del repositorio."
     exit 1
 fi
 
-echo "🚀 ¡Éxito! Tus cambios han sido guardados en GitHub."
+echo "🚀 ¡Éxito! Tus cambios han sido guardados en GitHub, sobrescribiendo la versión anterior."
