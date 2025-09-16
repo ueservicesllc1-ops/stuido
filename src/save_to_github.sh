@@ -4,12 +4,10 @@
 # Script para guardar y subir cambios a GitHub de forma automatizada.
 #
 # Este script realiza las siguientes acciones:
-# 1. Pide el nombre de usuario y token de acceso para autenticarse.
-# 2. Añade todos los cambios (archivos nuevos, modificados, eliminados) al
+# 1. Añade todos los cambios (archivos nuevos, modificados, eliminados) al
 #    área de preparación de Git.
-# 3. Crea un commit con un mensaje descriptivo si hay cambios que guardar.
-# 4. Sube (push) todos los commits locales a la rama 'main' del repositorio
-#    usando las credenciales proporcionadas.
+# 2. Crea un commit con un mensaje descriptivo si hay cambios que guardar.
+# 3. Sube (push) todos los commits locales a la rama 'main' del repositorio.
 #
 # Para ejecutar este script:
 # 1. Asegúrate de estar en la terminal, en el directorio raíz de tu proyecto.
@@ -23,19 +21,6 @@
 chmod +x save_to_github.sh
 
 echo "✅ Iniciando respaldo a GitHub..."
-
-# --- Solicitar credenciales ---
-read -p "Introduce tu nombre de usuario de GitHub: " GITHUB_USER
-read -s -p "Introduce tu Token de Acceso Personal de GitHub: " GITHUB_TOKEN
-echo "" # Nueva línea después de la entrada del token
-
-# --- Extraer el nombre del repositorio de la URL remota ---
-REMOTE_URL=$(git config --get remote.origin.url)
-# Asumimos formato https://github.com/usuario/repo.git
-REPO_NAME=$(echo $REMOTE_URL | sed 's|https://github.com/||' | sed 's|\.git||')
-
-# --- Construir la URL con autenticación ---
-AUTH_URL="https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/${REPO_NAME}.git"
 
 # 1. Añadir todos los cambios al área de preparación (staging)
 git add .
@@ -52,7 +37,7 @@ COMMIT_MESSAGE="Respaldo manual: $TIMESTAMP"
 if ! git diff --cached --quiet; then
     git commit -m "$COMMIT_MESSAGE"
     if [ $? -ne 0 ]; then
-        echo "⚠️  Error al crear el commit. Abortando."
+        echo "⚠️  No se creó un nuevo commit. Probablemente no había cambios nuevos que guardar."
     else
         echo "    => Commit creado con el mensaje: '$COMMIT_MESSAGE'"
     fi
@@ -63,10 +48,9 @@ fi
 
 # 3. Subir los cambios a GitHub (rama main)
 echo "    => Subiendo todos los cambios pendientes a GitHub..."
-# Usamos la URL con el token para el push
-git push $AUTH_URL main
+git push origin main
 if [ $? -ne 0 ]; then
-    echo "❌ Error: 'git push' falló. Revisa tu conexión y que el token tenga los permisos 'repo' correctos."
+    echo "❌ Error: 'git push' falló. Revisa tu conexión, los permisos del repositorio o si necesitas hacer 'git pull' primero."
     exit 1
 fi
 
