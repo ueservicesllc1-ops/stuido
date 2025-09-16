@@ -13,8 +13,6 @@
 #    ./save_to_github.sh
 # ==============================================================================
 
-chmod +x src/save_to_github.sh
-
 echo "✅ Iniciando respaldo a GitHub..."
 
 # 1. Añadir todos los cambios al área de preparación (staging)
