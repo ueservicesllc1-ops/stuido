@@ -208,27 +208,27 @@ const DawPage = () => {
 
         let maxDuration = 0;
     
+        // Dispose existing players before loading new ones
+        Object.values(trackNodesRef.current).forEach(node => node.player.dispose());
+        trackNodesRef.current = {};
+
         const loadPromises = tracksForCurrentSong.map(async (track) => {
             try {
-                if (trackNodesRef.current[track.id]) {
-                    trackNodesRef.current[track.id].player.dispose();
-                }
-    
                 const player = new Tone.Player();
                 
                 if (playbackMode === 'offline') {
                     const cachedData = await getCachedArrayBuffer(track.url);
                     if (cachedData) {
                         const audioBuffer = await Tone.context.decodeAudioData(cachedData);
-                        await player.buffer.load(audioBuffer);
+                        await player.load(audioBuffer); // Use the buffer directly
                     } else {
                         console.error(`Offline mode: Track ${track.name} not in cache.`);
-                        throw new Error("Track not cached for offline use");
+                        throw new Error(`Track ${track.name} not cached for offline use`);
                     }
                 } else { // Online mode
                     const proxyUrl = `/api/download?url=${encodeURIComponent(track.url)}`;
                     await player.load(proxyUrl);
-                    // Also cache for future offline use
+                    // After successful online load, cache it for future offline use.
                     const response = await fetch(proxyUrl);
                     const arrayBuffer = await response.arrayBuffer();
                     await cacheArrayBuffer(track.url, arrayBuffer);
@@ -644,5 +644,3 @@ const DawPage = () => {
 };
 
 export default DawPage;
-
-    
