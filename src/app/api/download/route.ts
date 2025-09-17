@@ -1,9 +1,8 @@
 
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const fileUrl = searchParams.get('url');
+export async function GET(req: NextRequest) {
+  const fileUrl = req.nextUrl.searchParams.get('url');
 
   if (!fileUrl) {
     return NextResponse.json({ success: false, error: 'URL del archivo no proporcionada' }, { status: 400 });
@@ -14,7 +13,8 @@ export async function GET(req: Request) {
     const response = await fetch(fileUrl);
 
     if (!response.ok) {
-      throw new Error(`Error en el servidor al obtener el archivo: ${response.statusText}`);
+      console.error(`Error en el proxy al obtener el archivo: ${response.status} ${response.statusText}`, await response.text());
+      return NextResponse.json({ success: false, error: `Error en el servidor al obtener el archivo: ${response.statusText}` }, { status: response.status });
     }
 
     // Obtenemos el archivo como un Blob
@@ -22,15 +22,16 @@ export async function GET(req: Request) {
 
     // Devolvemos el blob directamente.
     // El navegador lo interpretará como un archivo para descargar/cachear.
+    const headers = new Headers();
+    headers.set('Content-Type', response.headers.get('Content-Type') || 'application/octet-stream');
+
     return new NextResponse(blob, {
       status: 200,
-      headers: {
-        'Content-Type': response.headers.get('Content-Type') || 'application/octet-stream',
-      },
+      headers: headers,
     });
 
   } catch (error: any) {
-    console.error('Error en el proxy de descarga:', error);
+    console.error('Error catastrófico en el proxy de descarga:', error);
     return NextResponse.json({ success: false, error: error.message || 'Error del servidor' }, { status: 500 });
   }
 }
