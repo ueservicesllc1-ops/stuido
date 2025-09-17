@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useMemo } from 'react';
 import { Button } from './ui/button';
@@ -48,7 +47,7 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
   return (
     <div 
         className={cn(
-            "relative flex flex-col items-center gap-2 rounded-lg border border-black/50 transition-colors h-48 justify-between p-1",
+            "relative flex flex-col items-center gap-2 rounded-lg border border-black/50 transition-colors h-64 justify-between p-1",
             isPlaying ? "bg-primary/5" : "bg-input"
         )}
     >
@@ -96,7 +95,3 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
 TrackPad.displayName = 'TrackPad';
 
 export default TrackPad;
-
-    
-
-    
