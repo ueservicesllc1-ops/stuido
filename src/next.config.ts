@@ -2,6 +2,7 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
+  output: 'export',
   /* config options here */
   typescript: {
     ignoreBuildErrors: true,
@@ -10,6 +11,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
@@ -24,7 +26,7 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
        {
-        protocol: 'https',
+        protocol: 'https' ,
         hostname: 'i.imgur.com',
         port: '',
         pathname: '/**',
