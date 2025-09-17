@@ -33,7 +33,7 @@ const MixerGrid: React.FC<MixerGridProps> = ({
   const tempo = activeSong?.tempo ?? 120;
 
   return (
-    <div className="grid grid-cols-7 gap-2 items-start">
+    <div className="grid grid-cols-8 gap-4 items-start">
       {tracks.map(track => {
         const isMuted = mutedTracks.includes(track.id);
         const isSolo = soloTracks.includes(track.id);
