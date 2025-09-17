@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useMemo } from 'react';
 import { Button } from './ui/button';
@@ -10,6 +11,7 @@ interface TrackPadProps {
   isMuted: boolean;
   isSolo: boolean;
   volume: number;
+  vuLevel: number;
   onVolumeChange: (volume: number) => void;
   onMuteToggle: () => void;
   onSoloToggle: () => void;
@@ -20,14 +22,28 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
   isMuted,
   isSolo,
   volume,
+  vuLevel,
   onVolumeChange,
   onMuteToggle,
   onSoloToggle,
 }) => {
   const volumeSliderValue = useMemo(() => [volume], [volume]);
+  const isClipping = vuLevel >= 0;
 
   return (
     <div className="flex flex-col items-center gap-2">
+      <div className="flex items-center justify-center gap-1.5 mb-1 h-3">
+        {/* Signal LED */}
+        <div className={cn(
+            "w-2 h-2 rounded-full bg-input transition-colors",
+            !isMuted && "bg-blue-500 shadow-[0_0_4px_1px] shadow-blue-500/70"
+        )} />
+        {/* Clip LED */}
+        <div className={cn(
+            "w-2 h-2 rounded-full bg-input transition-colors",
+            isClipping && "bg-destructive shadow-[0_0_4px_1px] shadow-destructive/70 animate-pulse"
+        )} />
+      </div>
       {/* Marco del Fader */}
       <div className="relative h-40 w-16 rounded-md border border-border/50 bg-black/30 p-2 pt-3 pb-3">
         <Slider

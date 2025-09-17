@@ -23,6 +23,7 @@ type TrackNodes = Record<string, {
     panner: import('tone').Panner;
     pitchShift: import('tone').PitchShift;
     volume: import('tone').Volume;
+    meter: import('tone').Meter;
 }>;
 
 
@@ -54,6 +55,7 @@ const DawPage = () => {
   const [pitch, setPitch] = useState(0);
 
   const [volumes, setVolumes] = useState<{ [key: string]: number }>({});
+  const [vuLevels, setVuLevels] = useState<Record<string, number>>({});
   const [eqBands, setEqBands] = useState([50, 50, 50, 50, 50]);
   const [fadeOutDuration, setFadeOutDuration] = useState(0.5);
   const [isPanVisible, setIsPanVisible] = useState(true);
@@ -223,8 +225,9 @@ const DawPage = () => {
                 const volume = new Tone.Volume(0);
                 const pitchShift = new Tone.PitchShift({ pitch: pitch });
                 const panner = new Tone.Panner(0);
+                const meter = new Tone.Meter();
                 
-                player.chain(volume, panner, pitchShift);
+                player.chain(volume, panner, pitchShift, meter);
                 
                 if (eqNodesRef.current.length > 0) {
                   pitchShift.connect(eqNodesRef.current[0]);
@@ -232,7 +235,7 @@ const DawPage = () => {
                   pitchShift.toDestination();
                 }
                 
-                trackNodesRef.current[track.id] = { player, panner, pitchShift, volume };
+                trackNodesRef.current[track.id] = { player, panner, pitchShift, volume, meter };
                 setLoadedTracksCount(prev => prev + 1);
 
             } catch (error) {
@@ -276,6 +279,16 @@ const DawPage = () => {
     if (isPlaying && Tone) {
       const update = () => {
         setCurrentTime(Tone.Transport.seconds);
+
+        const newVuLevels: Record<string, number> = {};
+        activeTracks.forEach(track => {
+            const node = trackNodesRef.current[track.id];
+            if (node && node.meter) {
+                newVuLevels[track.id] = node.meter.getValue() as number;
+            }
+        });
+        setVuLevels(newVuLevels);
+
         animationFrameId = requestAnimationFrame(update);
       };
       update();
@@ -289,7 +302,7 @@ const DawPage = () => {
         cancelAnimationFrame(animationFrameId);
       }
     };
-  }, [isPlaying]);
+  }, [isPlaying, activeTracks]);
 
   const getIsMuted = useCallback((trackId: string) => {
     const isMuted = mutedTracks.includes(trackId);
@@ -490,6 +503,7 @@ const DawPage = () => {
               onSoloToggle={handleSoloToggle}
               onVolumeChange={handleVolumeChange}
               isPlaying={isPlaying}
+              vuLevels={vuLevels}
             />
         ) : (
           <div className="flex justify-center items-center h-full">
@@ -528,5 +542,3 @@ const DawPage = () => {
 };
 
 export default DawPage;
-
-    
