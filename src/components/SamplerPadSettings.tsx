@@ -11,7 +11,7 @@ import { useToast } from './ui/use-toast';
 import { uploadFileToB2 } from '@/actions/upload';
 import { Progress } from './ui/progress';
 
-const topRowKeys = ['A', 'B', 'C', 'D'];
+const topRowKeys = ['X', 'B', 'C', 'D'];
 const bottomRowKeys = ['1', '2', '3', '4'];
 
 type PadStatus = 'idle' | 'uploading' | 'saving' | 'success' | 'error';
@@ -24,7 +24,7 @@ interface PadState {
 }
 
 const SamplerPadSettings = () => {
-    const [selectedGroup, setSelectedGroup] = useState<string>('A');
+    const [selectedGroup, setSelectedGroup] = useState<string>('X');
     const [isLoading, setIsLoading] = useState(false);
     const [pads, setPads] = useState<Record<string, PadState>>({});
     const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -167,7 +167,7 @@ const SamplerPadSettings = () => {
             <CardHeader>
                 <CardTitle>Configuración del Sampler Pad</CardTitle>
                 <CardDescription>
-                    Sube y asigna archivos de audio a cada uno de los pads. Organiza tus sonidos en 4 grupos (A-D), cada uno con 4 pads (1-4).
+                    Sube y asigna archivos de audio a cada uno de los pads. Organiza tus sonidos en 4 grupos (X-D), cada uno con 4 pads (1-4).
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -253,5 +253,3 @@ const SamplerPadSettings = () => {
 };
 
 export default SamplerPadSettings;
-
-    

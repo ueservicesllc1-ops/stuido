@@ -46,9 +46,9 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <div className="w-full text-center bg-black/80 border border-amber-400/20 rounded-md px-1 py-1 h-8 flex items-center justify-center">
-        <span className="font-mono text-sm text-amber-400 [text-shadow:0_0_8px_theme(colors.amber.400)] truncate block w-full">
-            {track.name}
+      <div className="w-full text-center bg-black/80 border border-blue-500/20 rounded-md px-1 py-1 h-8 flex items-center justify-center">
+        <span className="font-mono text-sm text-blue-400 [text-shadow:0_0_8px_theme(colors.blue.500)] truncate block w-full">
+            {!isClickTrack ? track.name : ''}
         </span>
       </div>
         
@@ -58,7 +58,7 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
             max={100}
             step={1}
             orientation="vertical"
-            onValueChange={(val) => onValueChange(val[0])}
+            onValueChange={(val) => onVolumeChange(val[0])}
         />
         <div className="absolute right-2 top-0 bottom-0 flex items-center">
             {isClickTrack ? (
