@@ -36,7 +36,7 @@ const TonicPad = () => {
         await Tone.start();
     }
     if (!masterVolumeNodeRef.current) {
-        masterVolumeNodeRef.current = new Tone.Volume().toDestination();
+        masterVolumeNodeRef.current = new Tone.Volume(0).toDestination(); // Default volume 0dB
     }
   }, []);
 
@@ -202,3 +202,5 @@ const TonicPad = () => {
 };
 
 export default TonicPad;
+
+    

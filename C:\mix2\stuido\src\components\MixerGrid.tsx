@@ -1,3 +1,4 @@
+
 'use client';
 import React from 'react';
 import TrackPad from './TrackPad';
@@ -54,3 +55,5 @@ const MixerGrid: React.FC<MixerGridProps> = ({
 };
 
 export default MixerGrid;
+
+    
