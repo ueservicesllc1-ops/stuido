@@ -115,13 +115,6 @@ const Header: React.FC<HeaderProps> = ({
     <header className="flex flex-col bg-card/50 border-b border-border p-2 gap-2 rounded-lg">
       <div className="flex items-center justify-between gap-6">
          <div className="w-64">
-            <VolumeSlider
-                label="Master"
-                volume={masterVolume}
-                onVolumeChange={onMasterVolumeChange}
-                vuLevel={masterVuLevel}
-                disabled={true}
-            />
         </div>
         
         <div className="flex items-center gap-2">
