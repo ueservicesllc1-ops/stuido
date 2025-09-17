@@ -348,6 +348,7 @@ const DawPage = () => {
                 }
                 return newLevels;
             });
+            setMasterVuLevel(prev => prev > -60 ? prev -2 : -Infinity);
         };
         decay();
     }
@@ -559,6 +560,7 @@ const DawPage = () => {
         {activeSongId ? (
             <MixerGrid
               tracks={activeTracks}
+              activeSong={activeSong}
               soloTracks={soloTracks}
               mutedTracks={mutedTracks}
               volumes={volumes}

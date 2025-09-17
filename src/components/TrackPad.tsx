@@ -5,6 +5,7 @@ import { Slider } from './ui/slider';
 import { cn } from '@/lib/utils';
 import { SetlistSong } from '@/actions/setlists';
 import VuMeter from './VuMeter';
+import TempoLed from './TempoLed';
 
 interface TrackPadProps {
   track: SetlistSong;
@@ -12,6 +13,8 @@ interface TrackPadProps {
   isSolo: boolean;
   volume: number;
   vuLevel: number;
+  tempo: number;
+  isPlaying: boolean;
   onVolumeChange: (volume: number) => void;
   onSoloToggle: () => void;
   onMuteToggle: () => void;
@@ -23,12 +26,16 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
   isSolo,
   volume,
   vuLevel,
+  tempo,
+  isPlaying,
   onVolumeChange,
   onSoloToggle,
   onMuteToggle
 }) => {
   const volumeSliderValue = useMemo(() => [volume], [volume]);
   
+  const isClickTrack = useMemo(() => track.name.trim().toUpperCase() === 'CLICK', [track.name]);
+
   const vuMeterLevel = useMemo(() => {
     // El nivel de vuLevel viene en dB (-Infinity a ~0).
     // Lo mapeamos a un porcentaje (0-100) para el vúmetro.
@@ -47,9 +54,13 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
             orientation="vertical"
             onValueChange={(val) => onVolumeChange(val[0])}
         />
-        <div className="absolute right-2 top-0 bottom-0 flex items-center">
+        {isClickTrack ? (
+          <TempoLed tempo={tempo} isPlaying={isPlaying} />
+        ) : (
+          <div className="absolute right-2 top-0 bottom-0 flex items-center">
             <VuMeter level={vuMeterLevel} orientation="vertical" />
-        </div>
+          </div>
+        )}
       </div>
 
        <div className="w-full text-center mt-1">
