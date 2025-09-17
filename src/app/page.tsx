@@ -162,7 +162,7 @@ const DawPage = () => {
     if (!Tone) return;
     
     Tone.Transport.stop();
-    // Don't dispose players, just stop them
+    // Stop all players just in case
     Object.values(trackNodesRef.current).forEach(node => {
       if (node.player.state === 'started') {
         node.player.stop();
@@ -171,11 +171,10 @@ const DawPage = () => {
 
     setIsPlaying(false);
     setCurrentTime(0);
-    setVuData({});
   }, []);
 
 
-  useEffect(() => {
+   useEffect(() => {
       if (!activeSongId) {
           stopAllTracks();
           setLoadingTracks(new Set());
@@ -189,16 +188,16 @@ const DawPage = () => {
           if (!Tone || !eqNodesRef.current.length) return;
 
           const tracksForCurrentSong = tracks.filter(t => t.songId === activeSongId);
-          
           const tracksToLoad = tracksForCurrentSong.filter(t => !trackNodesRef.current[t.id]);
-          
+          const tracksAlreadyLoaded = tracksForCurrentSong.filter(t => trackNodesRef.current[t.id]);
+
           if (tracksToLoad.length === 0) {
               setLoadingTracks(new Set());
               setLoadedTracksCount(tracksForCurrentSong.length);
               return;
           }
           
-          setLoadedTracksCount(tracksForCurrentSong.length - tracksToLoad.length);
+          setLoadedTracksCount(tracksAlreadyLoaded.length);
           setLoadingTracks(new Set(tracksToLoad.map(t => t.id)));
 
           const loadPromises = tracksToLoad.map(async (track) => {
@@ -209,7 +208,7 @@ const DawPage = () => {
                   const arrayBuffer = await response.arrayBuffer();
                   const buffer = await Tone.context.decodeAudioData(arrayBuffer);
 
-                  const player = new Tone.Player(buffer).toDestination();
+                  const player = new Tone.Player(buffer);
                   player.loop = true;
                   const pitchShift = new Tone.PitchShift({ pitch: pitch });
                   const panner = new Tone.Panner(0);
@@ -228,11 +227,6 @@ const DawPage = () => {
 
               } catch (error) {
                   console.error(`Error loading track ${track.name}:`, error);
-                  setLoadingTracks(prev => {
-                    const newSet = new Set(prev);
-                    newSet.delete(track.id);
-                    return newSet;
-                  });
               }
           });
       
@@ -242,11 +236,7 @@ const DawPage = () => {
 
       loadAudioData();
 
-      return () => {
-          stopAllTracks();
-      };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSongId, pitch]);
+  }, [activeSongId, tracks, initAudio, pitch]);
 
   useEffect(() => {
     if (activeSongId) {
@@ -377,29 +367,30 @@ const DawPage = () => {
     }
 
     if (Tone.Transport.state !== 'started') {
-      // Sync and start only the players for the currently active song
+      // UNSYNC all players first to be safe
+      Object.values(trackNodesRef.current).forEach(node => {
+        if (node.player) {
+          node.player.unsync();
+        }
+      });
+      // SYNC and START only the players for the currently active song
       activeTracks.forEach(track => {
         const node = trackNodesRef.current[track.id];
         if (node && node.player) {
           node.player.sync().start(0);
         }
       });
+
       Tone.Transport.start();
       setIsPlaying(true);
       requestAnimationFrame(updateVuMeters);
     }
   }, [loadingTracks.size, activeSong, initAudio, updateVuMeters, activeTracks]);
 
+
   const handlePause = useCallback(() => {
     const Tone = toneRef.current;
     if (!Tone) return;
-    
-    // Stop all players before pausing the transport to avoid audio glitches
-    Object.values(trackNodesRef.current).forEach(({ player }) => {
-      if(player.state === 'started') {
-        player.stop();
-      }
-    });
     
     Tone.Transport.pause();
     setIsPlaying(false);
