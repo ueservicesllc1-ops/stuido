@@ -29,7 +29,7 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
   return (
     <div className="flex flex-col items-center gap-2">
       {/* Marco del Fader */}
-      <div className="relative h-52 w-16 rounded-md border border-border/50 bg-black/30 p-2 pt-3 pb-3">
+      <div className="relative h-40 w-16 rounded-md border border-border/50 bg-black/30 p-2 pt-3 pb-3">
         <Slider
             value={volumeSliderValue}
             max={100}
