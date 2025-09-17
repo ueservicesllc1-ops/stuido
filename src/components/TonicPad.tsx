@@ -137,25 +137,9 @@ const TonicPad = () => {
        toast({ title: "Sin sonido", description: `No hay un sample asignado al pad ${padKey}.`, variant: "destructive" });
    }
   };
-  
-  const getDisplayName = () => {
-    if (activePad) {
-      return samplesRef.current[activePad]?.name || 'PLAYING...';
-    }
-    if (selectedGroup) {
-      return `GROUP ${selectedGroup}`;
-    }
-    return 'STANDBY';
-  }
-
 
   return (
     <div className="bg-card/50 rounded-lg p-3 flex flex-col gap-3">
-        <div className="bg-black/80 border border-amber-400/20 rounded-md p-2 h-12 flex items-center justify-center">
-            <span className="font-mono text-xl text-amber-400 uppercase [text-shadow:0_0_8px_theme(colors.amber.400)] truncate">
-                {getDisplayName()}
-            </span>
-        </div>
         <div className="grid grid-cols-4 gap-2">
             {topRowKeys.map((key) => (
                 <Button 
@@ -173,24 +157,40 @@ const TonicPad = () => {
                 </Button>
             ))}
         </div>
-      <div className="grid grid-cols-4 gap-2 h-20">
-        {bottomRowKeys.map((key) => (
-            <Button 
-                key={key} 
-                variant="secondary"
-                className={cn(
-                    "w-full h-full text-lg font-bold transition-colors relative",
-                    !selectedGroup && "opacity-50 cursor-not-allowed",
-                    activePad === key
-                        ? "bg-yellow-500 text-black hover:bg-yellow-500/90"
-                        : "bg-secondary hover:bg-accent"
-                )}
-                onClick={() => playSound(key)}
-                disabled={!selectedGroup || isLoading}
-            >
-                {isLoading && selectedGroup ? <Loader2 className="w-5 h-5 animate-spin" /> : key}
-            </Button>
-        ))}
+      <div className="grid grid-cols-4 gap-2">
+        {bottomRowKeys.map((key) => {
+            const sampleName = samplesRef.current[key]?.name || '';
+            const isPadActive = activePad === key;
+            return (
+                <div key={key} className="flex flex-col gap-1">
+                    <div className={cn(
+                        "bg-black/80 border border-amber-400/20 rounded-md h-8 flex items-center justify-center px-1 transition-all",
+                        isPadActive && "border-amber-400 [box-shadow:0_0_8px_0px_theme(colors.amber.400)]"
+                    )}>
+                        <span className={cn(
+                            "font-mono text-xs text-amber-400/60 uppercase truncate transition-all",
+                            isPadActive && "text-amber-400 [text-shadow:0_0_8px_theme(colors.amber.400)]"
+                        )}>
+                            {isLoading && selectedGroup ? <Loader2 className="w-4 h-4 animate-spin"/> : (sampleName || '-')}
+                        </span>
+                    </div>
+                    <Button 
+                        variant="secondary"
+                        className={cn(
+                            "w-full h-20 text-lg font-bold transition-colors relative",
+                            !selectedGroup && "opacity-50 cursor-not-allowed",
+                            isPadActive
+                                ? "bg-yellow-500 text-black hover:bg-yellow-500/90"
+                                : "bg-secondary hover:bg-accent"
+                        )}
+                        onClick={() => playSound(key)}
+                        disabled={!selectedGroup || isLoading}
+                    >
+                        {key}
+                    </Button>
+                </div>
+            )
+        })}
       </div>
       <div className="flex items-center gap-1.5 pt-2">
         <Slider
@@ -220,4 +220,3 @@ const TonicPad = () => {
 };
 
 export default TonicPad;
-
