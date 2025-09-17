@@ -3,7 +3,6 @@ require('dotenv').config();
 
 const nextConfig: NextConfig = {
   /* config options here */
-  distDir: 'out',
   typescript: {
     ignoreBuildErrors: true,
   },
