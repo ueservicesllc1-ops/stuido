@@ -5,7 +5,7 @@ import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, query, where, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 export interface Sample {
-  id?: string;
+  id: string;
   name: string;
   url: string;
   fileKey: string;
@@ -36,7 +36,7 @@ export async function getSamplesByGroup(groupKey: string): Promise<{ success: bo
 // Guarda o actualiza un sample.
 // Si el sample tiene un ID, lo actualiza.
 // Si no, busca si ya existe un pad para ese grupo/tecla y lo actualiza, o crea uno nuevo.
-export async function saveSample(data: Sample): Promise<{ success: boolean, sample?: Sample, error?: string }> {
+export async function saveSample(data: Partial<Sample>): Promise<{ success: boolean, sample?: Sample, error?: string }> {
   try {
     const samplesCollection = collection(db, 'samples');
     
@@ -48,7 +48,7 @@ export async function saveSample(data: Sample): Promise<{ success: boolean, samp
       const sampleRef = doc(db, 'samples', dataToSave.id);
       const { id, ...updateData } = dataToSave; // Extraemos el id para no guardarlo en el documento
       await updateDoc(sampleRef, updateData);
-      return { success: true, sample: dataToSave };
+      return { success: true, sample: dataToSave as Sample };
     } else {
       // Buscar si ya existe un pad para este group/pad
       const q = query(samplesCollection, where('groupKey', '==', dataToSave.groupKey), where('padKey', '==', dataToSave.padKey));
@@ -60,14 +60,14 @@ export async function saveSample(data: Sample): Promise<{ success: boolean, samp
         const sampleRef = doc(db, 'samples', existingDoc.id);
         const { id, ...updateData } = dataToSave;
         await updateDoc(sampleRef, updateData);
-        const updatedSample = { ...dataToSave, id: existingDoc.id };
+        const updatedSample = { ...dataToSave, id: existingDoc.id } as Sample;
         return { success: true, sample: updatedSample };
       } else {
         // Si no existe, crear un nuevo documento
         const { id, ...newDocData } = dataToSave; // Quitamos el id por si viene como undefined
         const finalDocData = { ...newDocData, createdAt: serverTimestamp() };
         const newDoc = await addDoc(samplesCollection, finalDocData);
-        const newSample = { ...dataToSave, id: newDoc.id };
+        const newSample = { ...dataToSave, id: newDoc.id } as Sample;
         return { success: true, sample: newSample };
       }
     }

@@ -20,7 +20,7 @@ interface PadState {
     status: PadStatus;
     progress: number;
     error?: string;
-    sample: Sample | null;
+    sample: Partial<Sample> | null;
 }
 
 const SamplerPadSettings = () => {
@@ -68,21 +68,29 @@ const SamplerPadSettings = () => {
     };
     
     const handleNameChange = (padKey: string, newName: string) => {
-        setPads(prev => ({
-            ...prev,
-            [padKey]: {
-                ...prev[padKey],
-                sample: prev[padKey].sample ? { ...prev[padKey].sample!, name: newName } : null
-            }
-        }));
+        setPads(prev => {
+            const currentPad = prev[padKey];
+            const newSample = currentPad.sample
+                ? { ...currentPad.sample, name: newName }
+                : { name: newName, groupKey: selectedGroup, padKey: padKey };
+    
+            return {
+                ...prev,
+                [padKey]: {
+                    ...currentPad,
+                    sample: newSample
+                }
+            };
+        });
     };
 
     const handleNameBlur = async (padKey: string) => {
         const padState = pads[padKey];
-        if (!padState.sample || !padState.sample.id) return;
+        // Guardar solo si existe un ID (es un sample ya guardado) y tiene un nombre
+        if (!padState.sample || !padState.sample.id || !padState.sample.name) return;
 
         try {
-            await saveSample({ ...padState.sample, groupKey: selectedGroup, padKey });
+            await saveSample(padState.sample as Sample);
             toast({ title: "Nombre actualizado", description: `Se guardó el nombre para el Pad ${padKey}.` });
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: (error as Error).message });
@@ -224,7 +232,7 @@ const SamplerPadSettings = () => {
                                                 disabled={isProcessing}
                                             >
                                                 {isProcessing ? <Loader2 className="w-4 h-4 animate-spin"/> : <Upload className="w-4 h-4" />}
-                                                {isProcessing ? 'Procesando...' : (padState.sample ? 'Reemplazar' : 'Subir Audio')}
+                                                {isProcessing ? 'Procesando...' : (padState.sample?.url ? 'Reemplazar' : 'Subir Audio')}
                                             </Button>
                                             {padState.status === 'uploading' && (
                                                 <Progress value={padState.progress} className="h-1.5" />
