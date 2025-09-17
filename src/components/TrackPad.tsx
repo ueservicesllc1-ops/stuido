@@ -54,17 +54,19 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
             orientation="vertical"
             onValueChange={(val) => onVolumeChange(val[0])}
         />
-        {isClickTrack ? (
-          <TempoLed tempo={tempo} isPlaying={isPlaying} />
-        ) : (
-          <div className="absolute right-2 top-0 bottom-0 flex items-center">
-            <VuMeter level={vuMeterLevel} orientation="vertical" />
-          </div>
-        )}
+        <div className="absolute right-2 top-0 bottom-0 flex items-center">
+            {isClickTrack ? (
+                <TempoLed tempo={tempo} isPlaying={isPlaying} />
+            ) : (
+                <VuMeter level={vuMeterLevel} orientation="vertical" />
+            )}
+        </div>
       </div>
 
-       <div className="w-full text-center mt-1">
-        <span className="text-xs font-mono text-foreground truncate block w-full">{track.name}</span>
+       <div className="w-full text-center mt-1 bg-black/80 border border-amber-400/20 rounded-md px-1 py-1">
+        <span className="font-mono text-sm text-amber-400 [text-shadow:0_0_8px_theme(colors.amber.400)] truncate block w-full">
+            {track.name}
+        </span>
       </div>
 
       {/* Contenedor de Botones */}
