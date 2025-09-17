@@ -42,8 +42,8 @@ const TrackPad: React.FC<TrackPadProps> = ({
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <div className="w-full text-center bg-black/80 border border-amber-400/20 rounded-md px-1 py-1 h-8 flex items-center justify-center">
-        <span className="font-mono text-sm text-amber-400 [text-shadow:0_0_8px_theme(colors.amber.400)] truncate block w-full">
+      <div className="w-full text-center bg-black/80 border border-blue-500/20 rounded-md px-1 py-1 h-8 flex items-center justify-center">
+        <span className="font-mono text-sm text-blue-400 [text-shadow:0_0_8px_theme(colors.blue.500)] truncate block w-full">
             {track.name}
         </span>
       </div>
