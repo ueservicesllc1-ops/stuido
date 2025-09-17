@@ -52,7 +52,7 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({
                     </div>
                 </button>
             </PopoverTrigger>
-            <PopoverContent className="w-[300px] h-[150px] bg-card/80 backdrop-blur-sm border-border">
+            <PopoverContent className="w-[400px] h-[300px] bg-card/80 backdrop-blur-sm border-border">
                 <GraphicEq bands={eqBands} onBandChange={onEqChange} onReset={onReset} />
             </PopoverContent>
         </Popover>
