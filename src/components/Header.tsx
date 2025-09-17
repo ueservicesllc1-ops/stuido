@@ -171,10 +171,12 @@ const Header: React.FC<HeaderProps> = ({
                         onClick={isPlaying ? onPause : onPlay}
                         disabled={!isReadyToPlay}
                     >
-                        {isReadyToPlay ? (
-                        isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8" />
+                        {!isReadyToPlay ? (
+                            <Loader2 className="w-8 h-8 animate-spin" />
+                        ) : isPlaying ? (
+                            <Pause className="w-8 h-8" />
                         ) : (
-                        <Loader2 className="w-8 h-8 animate-spin" />
+                            <Play className="w-8 h-8" />
                         )}
                     </Button>
                 </div>
@@ -233,5 +235,3 @@ const Header: React.FC<HeaderProps> = ({
 };
 
 export default Header;
-
-    

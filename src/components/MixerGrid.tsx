@@ -8,30 +8,28 @@ interface MixerGridProps {
   tracks: SetlistSong[];
   soloTracks: string[];
   mutedTracks: string[];
-  playingTracks: Set<string>;
   pans: { [key: string]: number };
   loadingTracks: Set<string>;
   onMuteToggle: (trackId: string) => void;
   onSoloToggle: (trackId: string) => void;
   onPanChange: (trackId: string, newPan: number) => void;
-  onTrackPlayToggle: (trackId: string) => void;
   vuData: Record<string, number>;
   isPanVisible: boolean;
+  isPlaying: boolean;
 }
 
 const MixerGrid: React.FC<MixerGridProps> = ({ 
   tracks, 
   soloTracks, 
   mutedTracks,
-  playingTracks,
   pans,
   loadingTracks,
   onMuteToggle, 
   onSoloToggle,
   onPanChange,
-  onTrackPlayToggle,
   vuData,
   isPanVisible,
+  isPlaying,
 }) => {
   const isSoloActive = soloTracks.length > 0;
 
@@ -41,7 +39,6 @@ const MixerGrid: React.FC<MixerGridProps> = ({
         const isMuted = mutedTracks.includes(track.id);
         const isSolo = soloTracks.includes(track.id);
         const isLoading = loadingTracks.has(track.id);
-        const isPlaying = playingTracks.has(track.id);
         const isDisabled = isLoading;
 
         const isAudible = isPlaying && !isDisabled && !isMuted && (!isSoloActive || isSolo);
@@ -56,7 +53,6 @@ const MixerGrid: React.FC<MixerGridProps> = ({
             isSolo={isSolo}
             isAudible={isAudible}
             pan={pans[track.id] ?? 0}
-            onPlayToggle={() => onTrackPlayToggle(track.id)}
             onMuteToggle={() => onMuteToggle(track.id)}
             onSoloToggle={() => onSoloToggle(track.id)}
             onPanChange={(newPan) => onPanChange(track.id, newPan)}

@@ -47,8 +47,8 @@ const DawPage = () => {
   const [vuData, setVuData] = useState<Record<string, number>>({});
   const [loadingTracks, setLoadingTracks] = useState(new Set<string>());
   
-  const [playingTracks, setPlayingTracks] = useState(new Set<string>());
-
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [pitch, setPitch] = useState(0);
 
@@ -159,14 +159,16 @@ const DawPage = () => {
   const stopAllTracks = useCallback(() => {
     const Tone = toneRef.current;
     if (!Tone) return;
-
-    Object.keys(trackNodesRef.current).forEach(trackId => {
-        const node = trackNodesRef.current[trackId];
-        if (node?.player.state === 'started') {
-            node.player.stop();
-        }
+    
+    Tone.Transport.stop();
+    Object.values(trackNodesRef.current).forEach(node => {
+      if (node.player.state === 'started') {
+        node.player.stop();
+      }
     });
-    setPlayingTracks(new Set());
+
+    setIsPlaying(false);
+    setCurrentTime(0);
     setVuData({});
   }, []);
 
@@ -231,8 +233,6 @@ const DawPage = () => {
 
               } catch (error) {
                   console.error(`Error loading track ${track.name}:`, error);
-                  // The track will remain in the loading set, which is desired behavior
-                  // to indicate that it failed. We can add specific error handling UI later.
               }
           });
       
@@ -270,39 +270,61 @@ const DawPage = () => {
 
 
   const updateVuMeters = useCallback(() => {
-    const Tone = toneRef.current;
-    if (!Tone || playingTracks.size === 0) return;
+    if (!isPlaying) {
+      setVuData({});
+      return;
+    }
 
     const newVuData: Record<string, number> = {};
-    let isAnyTrackPlaying = false;
-
-    playingTracks.forEach(trackId => {
-        const node = trackNodesRef.current[trackId];
-        if (node?.player.state === 'started') {
-            isAnyTrackPlaying = true;
-            if (node.analyser) {
-                const values = node.analyser.getValue();
-                if(values instanceof Float32Array) {
-                    let peak = 0;
-                    for (let i = 0; i < values.length; i++) {
-                        peak = Math.max(peak, Math.abs(values[i]));
-                    }
-                    const dbfs = peak > 0 ? 20 * Math.log10(peak) : -60;
-                    const meterScale = (dbfs + 60) / 60 * 100;
-                    newVuData[trackId] = Math.max(0, meterScale);
-                }
-            }
+    let activeNodes = false;
+    
+    Object.keys(trackNodesRef.current).forEach(trackId => {
+      const node = trackNodesRef.current[trackId];
+      // Check if the track belongs to the active song
+      if (node && tracks.some(t => t.id === trackId && t.songId === activeSongId)) {
+        activeNodes = true;
+        if (node.analyser) {
+          const values = node.analyser.getValue();
+          if(values instanceof Float32Array) {
+              let peak = 0;
+              for (let i = 0; i < values.length; i++) {
+                  peak = Math.max(peak, Math.abs(values[i]));
+              }
+              const dbfs = peak > 0 ? 20 * Math.log10(peak) : -60;
+              const meterScale = (dbfs + 60) / 60 * 100;
+              newVuData[trackId] = Math.max(0, meterScale);
+          }
         }
+      }
     });
 
     setVuData(newVuData);
     
-    if (isAnyTrackPlaying) {
+    if (activeNodes) {
       requestAnimationFrame(updateVuMeters);
-    } else {
-      setVuData({}); // Clear meters if nothing is playing
     }
-  }, [playingTracks]);
+  }, [isPlaying, activeSongId, tracks]);
+
+  useEffect(() => {
+    let animationFrameId: number;
+    const Tone = toneRef.current;
+    if (isPlaying && Tone) {
+      const update = () => {
+        setCurrentTime(Tone.Transport.seconds);
+        animationFrameId = requestAnimationFrame(update);
+      };
+      update();
+    } else {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    }
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
+  }, [isPlaying]);
 
   const getIsMuted = useCallback((trackId: string) => {
     const isMuted = mutedTracks.includes(trackId);
@@ -344,34 +366,35 @@ const DawPage = () => {
   }, [playbackRate, activeSong]);
 
 
-  const handleTrackPlayToggle = useCallback(async (trackId: string) => {
+  const handlePlay = useCallback(async () => {
     const Tone = toneRef.current;
-    if (!Tone) return;
+    if (!Tone || loadingTracks.size > 0 || !activeSong) return;
 
     await initAudio();
+    
     if (Tone.context.state === 'suspended') {
       await Tone.context.resume();
     }
-    
-    const node = trackNodesRef.current[trackId];
-    if (!node) return;
 
-    const newPlayingTracks = new Set(playingTracks);
-    if (newPlayingTracks.has(trackId)) {
-        node.player.stop();
-        newPlayingTracks.delete(trackId);
-    } else {
-        node.player.start();
-        newPlayingTracks.add(trackId);
+    if (Tone.Transport.state !== 'started') {
+      Object.values(trackNodesRef.current).forEach(({ player }) => player.sync().start(0));
+      Tone.Transport.start();
+      setIsPlaying(true);
+      requestAnimationFrame(updateVuMeters);
     }
-    
-    setPlayingTracks(newPlayingTracks);
+  }, [loadingTracks.size, activeSong, initAudio, updateVuMeters]);
 
-    // Start VU meter updates if any track is playing
-    if (newPlayingTracks.size > 0 && playingTracks.size === 0) {
-        requestAnimationFrame(updateVuMeters);
-    }
-  }, [playingTracks, updateVuMeters, initAudio]);
+  const handlePause = useCallback(() => {
+    const Tone = toneRef.current;
+    if (!Tone) return;
+
+    Tone.Transport.pause();
+    setIsPlaying(false);
+  }, []);
+
+  const handleStop = useCallback(() => {
+    stopAllTracks();
+  }, [stopAllTracks]);
 
   const handleMuteToggle = (trackId: string) => {
     setMutedTracks(prev => prev.includes(trackId) ? prev.filter(id => id !== trackId) : [...prev, trackId]);
@@ -421,10 +444,26 @@ const DawPage = () => {
       setPlaybackRate(clampedRate);
   };
   
+  const handleSeek = (newTime: number) => {
+    const Tone = toneRef.current;
+    if (!Tone || !activeSong) return;
+    
+    Tone.Transport.seconds = newTime;
+    setCurrentTime(newTime);
+  };
+
   return (
     <div className="grid grid-cols-[1fr_384px] grid-rows-[auto_auto_1fr] h-screen w-screen p-4 gap-4">
       <div className="col-span-2 row-start-1">
         <Header 
+            isPlaying={isPlaying}
+            onPlay={handlePlay}
+            onPause={handlePause}
+            onStop={handleStop}
+            currentTime={currentTime}
+            duration={activeSong?.tracks.length ? (trackNodesRef.current[activeTracks[0]?.id]?.player.buffer.duration || 0) : 0}
+            onSeek={handleSeek}
+            isReadyToPlay={loadingTracks.size === 0 && !!activeSong}
             fadeOutDuration={fadeOutDuration}
             onFadeOutDurationChange={setFadeOutDuration}
             isPanVisible={isPanVisible}
@@ -435,7 +474,6 @@ const DawPage = () => {
             onBpmChange={handleBpmChange}
             pitch={pitch}
             onPitchChange={setPitch}
-            isReadyToPlay={loadingTracks.size === 0}
         />
       </div>
 
@@ -457,15 +495,14 @@ const DawPage = () => {
               tracks={activeTracks}
               soloTracks={soloTracks}
               mutedTracks={mutedTracks}
-              playingTracks={playingTracks}
               pans={pans}
               loadingTracks={loadingTracks}
               onMuteToggle={handleMuteToggle}
               onSoloToggle={handleSoloToggle}
               onPanChange={handlePanChange}
-              onTrackPlayToggle={handleTrackPlayToggle}
               vuData={vuData}
               isPanVisible={isPanVisible}
+              isPlaying={isPlaying}
             />
         ) : (
           <div className="flex justify-center items-center h-full">
@@ -504,5 +541,3 @@ const DawPage = () => {
 };
 
 export default DawPage;
-
-    

@@ -19,7 +19,6 @@ interface TrackPadProps {
   onPanChange: (pan: number) => void;
   onMuteToggle: () => void;
   onSoloToggle: () => void;
-  onPlayToggle: () => void;
   vuMeterLevel: number;
   isPanVisible: boolean;
 }
@@ -35,7 +34,6 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
   onPanChange,
   onSoloToggle,
   onMuteToggle,
-  onPlayToggle,
   vuMeterLevel,
   isPanVisible,
 }) => {
@@ -58,24 +56,16 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
             isPlaying ? "bg-primary/5" : "bg-input"
         )}
     >
-      {/* LEDs & Play Button */}
+      {/* LEDs & Name */}
        <div className="flex justify-between items-center w-full px-1 pt-1">
         <div className="flex gap-1.5">
           <div className={cn("w-2 h-2 rounded-full transition-colors", isAudible ? ledColorClass : "bg-background/50")} />
         </div>
-        <Button 
-            onClick={onPlayToggle}
-            disabled={isDisabled}
-            variant={isPlaying ? 'default' : 'secondary'}
-            size="sm"
-            className={cn(
-                "w-12 h-5 text-xs font-bold rounded-sm",
-                isPlaying && "bg-primary text-primary-foreground",
-                isDisabled && '!bg-secondary/30 !text-muted-foreground'
-            )}
-        >
-            {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'PLAY'}
-        </Button>
+        <div className={cn("w-12 h-5 text-xs flex items-center justify-center font-bold rounded-sm",
+            isLoading && 'text-muted-foreground'
+        )}>
+             {isLoading && <Loader2 className="w-3 h-3 animate-spin" />}
+        </div>
       </div>
 
        <VuMeter level={vuMeterLevel} />
