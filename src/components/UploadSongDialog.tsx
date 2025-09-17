@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -38,15 +37,17 @@ const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
 const trackSchema = z.object({
   file: z
-    .instanceof(File)
+    .instanceof(File, { message: 'Se requiere un archivo.' })
     .refine((file) => file.size > 0, 'Se requiere un archivo.')
     .refine((file) => file.size <= MAX_FILE_SIZE, `El tamaño máximo es 100MB.`)
     .refine(
-      (file) => ACCEPTED_MIME_TYPES.includes(file.type),
+      (file) => file.type ? ACCEPTED_MIME_TYPES.includes(file.type) : true,
       'Formato de audio no soportado.'
     ),
   name: z.string().min(1, { message: 'El nombre de la pista es requerido.' }),
+  handle: z.any().optional(),
 });
+
 
 const songFormSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -91,7 +92,7 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: 'tracks',
   });
@@ -114,41 +115,77 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
     setUploadProgress({});
   }
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files) return;
-
-    for (const file of Array.from(files)) {
-      // Basic client-side validation
-      if (!ACCEPTED_MIME_TYPES.includes(file.type)) {
-        toast({
-          variant: 'destructive',
-          title: 'Formato no soportado',
-          description: `El archivo "${file.name}" tiene un formato no válido.`,
-        });
-        continue; // Skip this file
-      }
-      if (file.size > MAX_FILE_SIZE) {
-         toast({
-          variant: 'destructive',
-          title: 'Archivo demasiado grande',
-          description: `El archivo "${file.name}" excede los 100MB.`,
-        });
-        continue; // Skip this file
-      }
-
-      let trackName = file.name.split('.').slice(0, -1).join('.') || file.name;
-      const newIndex = fields.length;
-      append({ file, name: trackName });
-      setTrackStatuses(prev => ({...prev, [newIndex]: 'pending'}));
-      setUploadProgress(prev => ({...prev, [newIndex]: 0}));
+  const handleFilePicker = async () => {
+    if (!window.showOpenFilePicker) {
+        console.warn('File System Access API no es soportada o está bloqueada. Usando input de archivo como fallback.');
+        document.getElementById('file-picker-input-fallback')?.click();
+        return;
     }
 
-    if (!form.getValues('name') && files.length > 0) {
-      form.setValue('name', files[0].name.split('.').slice(0, -1).join('.'));
-    }
+    try {
+        const handles = await window.showOpenFilePicker({
+            multiple: true,
+            types: [{ description: 'Audio Files', accept: { 'audio/*': ACCEPTED_AUDIO_TYPES } }],
+        });
 
-    event.target.value = '';
+        const newTracks = [];
+        for (const handle of handles) {
+            const file = await handle.getFile();
+            // Validar aquí también por si el usuario cambia a "Todos los archivos"
+            if (!ACCEPTED_MIME_TYPES.includes(file.type)) {
+                toast({ variant: "destructive", title: "Archivo no soportado", description: `El archivo "${file.name}" fue ignorado.`});
+                continue;
+            }
+             if (file.size > MAX_FILE_SIZE) {
+                toast({ variant: "destructive", title: "Archivo demasiado grande", description: `El archivo "${file.name}" excede 100MB y fue ignorado.`});
+                continue;
+            }
+            const trackName = file.name.split('.').slice(0, -1).join('.') || file.name;
+            newTracks.push({ file, name: trackName, handle });
+        }
+        
+        if (newTracks.length > 0) {
+            replace(newTracks); // Reemplaza todas las pistas para evitar duplicados
+             if (!form.getValues('name')) {
+                form.setValue('name', newTracks[0].name.split('.').slice(0, -1).join('.'));
+            }
+        }
+    } catch (err: any) {
+        if (err.name === 'AbortError') {
+            // El usuario canceló el selector de archivos, no hacer nada.
+            console.log("Selector de archivos cancelado por el usuario.");
+        } else if (err.name === 'SecurityError') {
+            console.warn("SecurityError con showOpenFilePicker. Usando fallback.", err);
+            document.getElementById('file-picker-input-fallback')?.click();
+        } else {
+            console.error("Error al usar File System Access API:", err);
+            toast({ variant: 'destructive', title: 'Error', description: 'No se pudieron seleccionar los archivos. Reintentando con el método clásico.' });
+            document.getElementById('file-picker-input-fallback')?.click();
+        }
+    }
+  };
+  
+  const handleFallbackFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const files = event.target.files;
+      if (!files) return;
+
+      const newTracks = [];
+      for (const file of Array.from(files)) {
+          if (!ACCEPTED_MIME_TYPES.includes(file.type) || file.size > MAX_FILE_SIZE) {
+              toast({ variant: "destructive", title: "Archivo no válido", description: `El archivo "${file.name}" es demasiado grande o su formato no es soportado.`});
+              continue;
+          }
+          const trackName = file.name.split('.').slice(0, -1).join('.') || file.name;
+          newTracks.push({ file, name: trackName, handle: undefined }); // No handle in fallback
+      }
+
+      if (newTracks.length > 0) {
+        replace(newTracks);
+        if (!form.getValues('name')) {
+            form.setValue('name', newTracks[0].name.split('.').slice(0, -1).join('.'));
+        }
+      }
+      event.target.value = ''; // Reset input
   };
 
 
@@ -210,8 +247,13 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
             if (!result.success || !result.track) {
                 throw new Error(result.error || `Error desconocido al subir ${track.name}.`);
             }
+            
+            const finalTrack: TrackFile = {
+              ...result.track,
+              handle: track.handle
+            };
 
-            uploadedTracks.push(result.track);
+            uploadedTracks.push(finalTrack);
             setTrackStatuses(prev => ({ ...prev, [i]: 'success' }));
 
         } catch (error) {
@@ -292,6 +334,7 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
     }
   }
 
+  const tracksError = form.formState.errors.tracks;
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => {
@@ -317,143 +360,91 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <ScrollArea className="h-[450px] pr-6">
               <div className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nombre de la canción</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ej: Gracia Sublime es" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="artist"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Artista</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ej: Elevation Worship" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="albumImageUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>URL de la carátula (opcional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="https://ejemplo.com/imagen.jpg" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <FormField control={form.control} name="name" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nombre de la canción</FormLabel>
+                    <FormControl><Input placeholder="Ej: Gracia Sublime es" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}/>
+                <FormField control={form.control} name="artist" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Artista</FormLabel>
+                    <FormControl><Input placeholder="Ej: Elevation Worship" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}/>
+                <FormField control={form.control} name="albumImageUrl" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>URL de la carátula (opcional)</FormLabel>
+                    <FormControl><Input placeholder="https://ejemplo.com/imagen.jpg" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}/>
                 <div className="grid grid-cols-3 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="tempo"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tempo (BPM)</FormLabel>
-                        <FormControl>
-                          <Input type="number" placeholder="120" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="key"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tonalidad</FormLabel>
-                        <FormControl>
-                          <Input placeholder="C" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="timeSignature"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Compás</FormLabel>
-                        <FormControl>
-                          <Input placeholder="4/4" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <FormField control={form.control} name="tempo" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tempo (BPM)</FormLabel>
+                      <FormControl><Input type="number" placeholder="120" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}/>
+                  <FormField control={form.control} name="key" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tonalidad</FormLabel>
+                      <FormControl><Input placeholder="C" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}/>
+                  <FormField control={form.control} name="timeSignature" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Compás</FormLabel>
+                      <FormControl><Input placeholder="4/4" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}/>
                 </div>
                 
-                 <FormField
-                  control={form.control}
-                  name="lyrics"
-                  render={({ field }) => (
+                 <FormField control={form.control} name="lyrics" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Letra de la canción (opcional)</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="[Intro]&#10;[Verso 1]&#10;..." {...field} rows={6} className="bg-input" />
-                      </FormControl>
+                      <FormControl><Textarea placeholder="[Intro]&#10;[Verso 1]&#10;..." {...field} rows={6} className="bg-input" /></FormControl>
                       <FormMessage />
                     </FormItem>
-                  )}
-                />
+                  )}/>
 
-                <FormField
-                  control={form.control}
-                  name="youtubeUrl"
-                  render={({ field }) => (
+                <FormField control={form.control} name="youtubeUrl" render={({ field }) => (
                     <FormItem>
                       <FormLabel>URL de YouTube (opcional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="https://www.youtube.com/watch?v=..." {...field} />
-                      </FormControl>
+                      <FormControl><Input placeholder="https://www.youtube.com/watch?v=..." {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
-                  )}
-                />
+                  )}/>
                 
                 <FormItem>
-                  <FormLabel className={form.formState.errors.tracks ? 'text-destructive' : ''}>
+                  <FormLabel className={tracksError ? 'text-destructive' : ''}>
                     Archivos de Pistas
                   </FormLabel>
                   <FormControl>
                     <Button 
                       type="button"
                       variant="outline"
-                      onClick={() => (document.getElementById('file-picker-input') as HTMLInputElement).click()}
+                      onClick={handleFilePicker}
                       disabled={isUploading}
                       className="w-full"
                     >
                       Seleccionar Archivos de Pistas
                     </Button>
                   </FormControl>
-                  <input
-                    id="file-picker-input"
+                   <input
+                    id="file-picker-input-fallback"
                     type="file"
                     multiple
                     className="hidden"
-                    onChange={handleFileChange}
+                    onChange={handleFallbackFileChange}
                     accept={ACCEPTED_AUDIO_TYPES.join(',')}
                   />
-                  {form.formState.errors.tracks?.message && (
-                    <p className="text-sm font-medium text-destructive">
-                      {form.formState.errors.tracks.message}
-                    </p>
-                  )}
+                  {tracksError && <p className="text-sm font-medium text-destructive">{tracksError.message}</p>}
                 </FormItem>
 
                 {fields.length > 0 && (
@@ -464,18 +455,12 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
                         <div className="flex items-center gap-2 p-2 border rounded-md">
                           <StatusIcon status={trackStatuses[index] || 'pending'} />
                           <div className="flex-grow space-y-1.5">
-                             <FormField
-                              control={form.control}
-                              name={`tracks.${index}.name`}
-                              render={({ field }) => (
+                             <FormField control={form.control} name={`tracks.${index}.name`} render={({ field }) => (
                                 <FormItem>
-                                  <FormControl>
-                                    <Input {...field} className="h-8 text-sm" disabled={isUploading}/>
-                                  </FormControl>
+                                  <FormControl><Input {...field} className="h-8 text-sm" disabled={isUploading}/></FormControl>
                                   <FormMessage />
                                 </FormItem>
-                              )}
-                            />
+                              )}/>
                             {trackStatuses[index] === 'uploading' && (
                                 <Progress value={uploadProgress[index]} className="h-1.5" />
                             )}
@@ -511,6 +496,3 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
 };
 
 export default UploadSongDialog;
-    
-
-    

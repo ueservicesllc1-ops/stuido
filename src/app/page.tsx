@@ -208,10 +208,10 @@ const DawPage = () => {
     const loadAudioData = async () => {
         await initAudio();
         const Tone = toneRef.current;
-        if (!Tone || !eqNodesRef.current.length) return;
+        if (!Tone || !eqNodesRef.current.length || !activeSong) return;
 
-        const tracksForCurrentSong = tracks.filter(t => t.songId === activeSongId);
-        const tracksToLoad = tracksForCurrentSong.filter(track => !trackNodesRef.current[track.id]);
+        const tracksForCurrentSong = activeSong.tracks;
+        const tracksToLoad = tracksForCurrentSong.filter(track => !trackNodesRef.current[track.fileKey]);
 
         if (tracksToLoad.length === 0) {
             setLoadingTracks(new Set());
@@ -219,30 +219,41 @@ const DawPage = () => {
             return;
         }
 
-        setLoadingTracks(new Set(tracksToLoad.map(t => t.id)));
+        setLoadingTracks(new Set(tracksToLoad.map(t => t.fileKey)));
         setLoadedTracksCount(tracksForCurrentSong.length - tracksToLoad.length);
 
         const loadPromises = tracksToLoad.map(async (track) => {
             let buffer: ArrayBuffer | undefined;
             try {
-                // 1. Intentar desde el caché de audio
-                const cachedBuffer = await getCachedArrayBuffer(track.url);
-                if (cachedBuffer) {
-                    buffer = cachedBuffer;
+                // 1. Intentar desde el handle local si existe
+                if (track.handle) {
+                    try {
+                        const file = await track.handle.getFile();
+                        buffer = await file.arrayBuffer();
+                        console.log(`Local file handle SUCCESS for: ${track.name}`);
+                    } catch (e) {
+                        console.warn(`Local file handle for ${track.name} failed. Will fallback to B2.`, e);
+                    }
+                }
+
+                // 2. Si no hay buffer, intentar desde el caché de audio
+                if (!buffer) {
+                    const cachedBuffer = await getCachedArrayBuffer(track.url);
+                    if (cachedBuffer) buffer = cachedBuffer;
                 }
                 
-                // 2. Si no está en caché, descargar desde B2
+                // 3. Si sigue sin haber buffer, descargar desde B2
                 if (!buffer) {
-                    console.log(`Local file/cache MISS for: ${track.name}. Fetching from B2.`);
+                    console.log(`Cache MISS for: ${track.name}. Fetching from B2.`);
                     const proxyUrl = `/api/download?url=${encodeURIComponent(track.url)}`;
                     const response = await fetch(proxyUrl);
                     if (!response.ok) throw new Error(`Failed to fetch ${track.url}: ${response.statusText}`);
                     buffer = await response.arrayBuffer();
-                    await cacheArrayBuffer(track.url, buffer.slice(0)); // Cachear el buffer descargado
+                    await cacheArrayBuffer(track.url, buffer.slice(0));
                 }
 
                 const audioBuffer = await Tone.context.decodeAudioData(buffer.slice(0));
-
+                
                 const player = new Tone.Player(audioBuffer);
                 player.loop = true;
                 const volume = new Tone.Volume(0);
@@ -258,7 +269,11 @@ const DawPage = () => {
                   pitchShift.toDestination();
                 }
                 
-                trackNodesRef.current[track.id] = { player, panner, pitchShift, volume, waveform };
+                const trackIdInSetlist = tracks.find(t => t.songId === activeSongId && t.fileKey === track.fileKey)?.id;
+                if (trackIdInSetlist) {
+                    trackNodesRef.current[trackIdInSetlist] = { player, panner, pitchShift, volume, waveform };
+                }
+                
                 setLoadedTracksCount(prev => prev + 1);
 
             } catch (error) {
@@ -273,7 +288,7 @@ const DawPage = () => {
     loadAudioData();
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSongId, tracks, initAudio]);
+  }, [activeSongId, tracks, activeSong]);
 
   useEffect(() => {
     if (activeSongId) {
