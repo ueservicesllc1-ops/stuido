@@ -38,8 +38,6 @@ interface HeaderProps {
   onBpmChange: (bpm: number) => void;
   pitch: number;
   onPitchChange: (pitch: number) => void;
-  masterVolume: number;
-  onMasterVolumeChange: (volume: number) => void;
   masterVuLevel: number;
 }
 
@@ -66,8 +64,6 @@ const Header: React.FC<HeaderProps> = ({
   onBpmChange,
   pitch,
   onPitchChange,
-  masterVolume,
-  onMasterVolumeChange,
   masterVuLevel,
 }) => {
   

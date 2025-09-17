@@ -54,7 +54,6 @@ const DawPage = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [pitch, setPitch] = useState(0);
-  const [masterVolume, setMasterVolume] = useState(100);
 
   const [volumes, setVolumes] = useState<{ [key: string]: number }>({});
   const [vuLevels, setVuLevels] = useState<Record<string, number>>({});
@@ -102,14 +101,6 @@ const DawPage = () => {
     initAudio();
   }, [initAudio]);
 
-  useEffect(() => {
-    const Tone = toneRef.current;
-    if (!Tone) return;
-
-    const newDb = masterVolume > 0 ? (masterVolume / 100) * 40 - 40 : -Infinity;
-    Tone.Destination.volume.value = newDb;
-
-  }, [masterVolume]);
 
   useEffect(() => {
     if (!toneRef.current || eqNodesRef.current.length === 0) return;
@@ -474,9 +465,6 @@ const DawPage = () => {
     }
   }, []);
 
-  const handleMasterVolumeChange = (newVol: number) => {
-    setMasterVolume(newVol);
-  }
 
 
   const handleEqChange = (bandIndex: number, newValue: number) => {
@@ -535,8 +523,6 @@ const DawPage = () => {
             onBpmChange={handleBpmChange}
             pitch={pitch}
             onPitchChange={setPitch}
-            masterVolume={masterVolume}
-            onMasterVolumeChange={handleMasterVolumeChange}
             masterVuLevel={masterVuLevel}
         />
       </div>
