@@ -39,31 +39,33 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <div className="relative h-40 w-16 rounded-md border border-border/50 bg-black/30 p-2 pt-3 pb-3">
-        <div className="absolute top-1 right-1 flex items-center justify-center gap-1.5 h-3">
-            {/* Active (Blue) LED */}
-            <div className={cn(
-                "w-2 h-2 rounded-full bg-input transition-colors",
-                !isMuted && "bg-blue-500 shadow-[0_0_4px_1px] shadow-blue-500/70"
-            )} />
-            {/* Clip (Red) LED */}
-            <div className={cn(
-                "w-2 h-2 rounded-full bg-input transition-colors",
-                isClipping && !isMuted && "bg-destructive shadow-[0_0_4px_1px] shadow-destructive/70 animate-pulse"
-            )} />
+      <div className="relative h-40 w-16 rounded-md border border-border/50 bg-black/30 p-2 flex gap-2">
+        <div className="relative flex-grow h-full w-4">
+            <div className="absolute top-0 right-0 flex items-center justify-center gap-1.5 h-3">
+                {/* Active (Blue) LED */}
+                <div className={cn(
+                    "w-2 h-2 rounded-full bg-input transition-colors",
+                    !isMuted && "bg-blue-500 shadow-[0_0_4px_1px] shadow-blue-500/70"
+                )} />
+                {/* Clip (Red) LED */}
+                <div className={cn(
+                    "w-2 h-2 rounded-full bg-input transition-colors",
+                    isClipping && !isMuted && "bg-destructive shadow-[0_0_4px_1px] shadow-destructive/70 animate-pulse"
+                )} />
+            </div>
+            <Slider
+                value={volumeSliderValue}
+                max={100}
+                step={1}
+                orientation="vertical"
+                onValueChange={(val) => onVolumeChange(val[0])}
+                className="h-full w-full"
+                trackClassName="bg-input w-1 mx-auto"
+                rangeClassName="bg-gradient-to-t from-blue-500 to-green-500"
+                thumbClassName="h-1 w-5 rounded-sm bg-foreground border-none cursor-pointer"
+            />
         </div>
-        <Slider
-            value={volumeSliderValue}
-            max={100}
-            step={1}
-            orientation="vertical"
-            onValueChange={(val) => onVolumeChange(val[0])}
-            className="h-full w-full"
-            trackClassName="bg-input w-1 mx-auto"
-            rangeClassName="bg-gradient-to-t from-blue-500 to-green-500"
-            thumbClassName="h-1 w-5 rounded-sm bg-foreground border-none cursor-pointer"
-        />
-        <VuMeter level={vuMeterLevel} />
+        <VuMeter level={vuMeterLevel} orientation="vertical" />
       </div>
 
        <div className="w-full text-center mt-1">

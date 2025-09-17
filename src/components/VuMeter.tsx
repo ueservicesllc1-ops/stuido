@@ -6,16 +6,17 @@ import { cn } from '@/lib/utils';
 
 interface VuMeterProps {
   level: number; // Nivel de 0 a 100
+  orientation?: 'horizontal' | 'vertical';
 }
 
 const NUM_DOTS = 18; // Número total de "LEDs" en el vúmetro
 
-const VuMeter: React.FC<React.memoExoticComponent<any>> = React.memo(({ level }) => {
+const VuMeter: React.FC<React.memoExoticComponent<any>> = React.memo(({ level, orientation = 'horizontal' }) => {
   // Calcula cuántos puntos deben estar encendidos
   const litDots = Math.ceil((level / 100) * NUM_DOTS);
 
   const dots = Array.from({ length: NUM_DOTS }, (_, i) => {
-    const dotIndex = i;
+    const dotIndex = orientation === 'vertical' ? (NUM_DOTS - 1 - i) : i;
     const isLit = dotIndex < litDots;
 
     // Determina el color del punto
@@ -32,14 +33,23 @@ const VuMeter: React.FC<React.memoExoticComponent<any>> = React.memo(({ level })
 
     return (
       <div
-        key={dotIndex}
-        className={cn('h-[3px] w-full rounded-sm transition-colors duration-75', colorClass)}
+        key={i}
+        className={cn(
+            'transition-colors duration-75', 
+            orientation === 'horizontal' ? 'h-[3px] w-full rounded-sm' : 'h-full w-[3px] rounded-sm',
+            colorClass
+        )}
       />
     );
   });
 
   return (
-    <div className="absolute bottom-2 left-2 right-2 h-1.5 flex justify-between items-center pointer-events-none gap-x-0.5">
+    <div className={cn(
+        "pointer-events-none",
+        orientation === 'horizontal' 
+            ? "h-1.5 flex items-center justify-between gap-x-0.5"
+            : "w-1.5 flex flex-col items-center justify-between gap-y-0.5"
+    )}>
       {dots}
     </div>
   );
