@@ -55,7 +55,7 @@ const DawPage = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [pitch, setPitch] = useState(0);
-  const [masterVolume, setMasterVolume] = useState(75);
+  const [masterVolume, setMasterVolume] = useState(100);
 
   const [volumes, setVolumes] = useState<{ [key: string]: number }>({});
   const [vuLevels, setVuLevels] = useState<Record<string, number>>({});
@@ -285,7 +285,7 @@ const DawPage = () => {
   useEffect(() => {
     const newVolumes: { [key: string]: number } = {};
     activeTracks.forEach(track => {
-      newVolumes[track.id] = volumes[track.id] ?? 75;
+      newVolumes[track.id] = volumes[track.id] ?? 100;
     });
     setVolumes(newVolumes);
   // eslint-disable-next-line react-hooks/exhaustive-deps
