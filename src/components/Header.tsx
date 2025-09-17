@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
-import { Rewind, Play, Pause, Square, FastForward, Settings, RadioTower, Disc, Loader2, DownloadCloud, Timer, Volume2, Plus, Minus, RotateCcw } from 'lucide-react';
+import { Rewind, Play, Pause, Square, FastForward, Settings, RadioTower, Disc, Loader2, DownloadCloud, Timer, Plus, Minus, RotateCcw } from 'lucide-react';
 import { Circle } from './icons';
 import PlaybackModeToggle from './PlaybackModeToggle';
 import type { PlaybackMode } from '@/app/page';
@@ -18,23 +18,21 @@ import type { Song } from '@/actions/songs';
 
 
 interface HeaderProps {
-  isPlaying: boolean;
-  onPlay: () => void;
-  onPause: () => void;
-  onStop: () => void;
-  onRewind: () => void;
-  onFastForward: () => void;
-  onSeek: (position: number) => void;
-  currentTime: number;
-  duration: number;
+  isPlaying?: boolean;
+  onPlay?: () => void;
+  onPause?: () => void;
+  onStop?: () => void;
+  onRewind?: () => void;
+  onFastForward?: () => void;
+  onSeek?: (position: number) => void;
+  currentTime?: number;
+  duration?: number;
   playbackMode: PlaybackMode;
   onPlaybackModeChange: (mode: PlaybackMode) => void;
-  loadingProgress: number;
-  showLoadingBar: boolean;
-  isReadyToPlay: boolean;
-  songStructure: SongStructure | null;
-  masterVolume: number;
-  onMasterVolumeChange: (volume: number) => void;
+  loadingProgress?: number;
+  showLoadingBar?: boolean;
+  isReadyToPlay?: boolean;
+  songStructure?: SongStructure | null;
   fadeOutDuration: number;
   onFadeOutDurationChange: (duration: number) => void;
   isPanVisible: boolean;
@@ -55,23 +53,20 @@ const Header: React.FC<HeaderProps> = ({
   onRewind,
   onFastForward,
   onSeek,
-  currentTime,
-  duration,
+  currentTime = 0,
+  duration = 0,
   playbackMode,
   onPlaybackModeChange,
   loadingProgress,
   showLoadingBar,
   isReadyToPlay,
   songStructure,
-  masterVolume,
-  onMasterVolumeChange,
   fadeOutDuration,
   onFadeOutDurationChange,
   isPanVisible,
   onPanVisibilityChange,
   activeSong,
   playbackRate,
-  onPlaybackRateChange,
   onBpmChange,
   pitch,
   onPitchChange
@@ -120,23 +115,7 @@ const Header: React.FC<HeaderProps> = ({
   return (
     <header className="flex flex-col bg-card/50 border-b border-border p-2 gap-2 rounded-lg">
       <div className="flex items-center justify-between gap-6">
-        <div className="flex items-center gap-2">
-            <Volume2 className="w-5 h-5 text-muted-foreground ml-1 flex-shrink-0" />
-            <Slider
-                value={[masterVolume]}
-                onValueChange={(vals) => onMasterVolumeChange(vals[0])}
-                max={100}
-                step={1}
-                className="w-32"
-                rangeClassName="bg-amber-400"
-                thumbClassName="bg-amber-400 border-amber-600 h-5 w-5"
-            />
-            <div className="bg-black/80 border border-amber-400/20 rounded-md px-2 py-1 w-16 text-center">
-                <span className="font-mono text-lg text-amber-400 [text-shadow:0_0_8px_theme(colors.amber.400)]">
-                    {masterVolume}
-                </span>
-            </div>
-        </div>
+        <div className="w-64" />
         
         <div className="flex items-center gap-2">
             <div className="flex items-center bg-black/80 border border-amber-400/20 rounded-md h-12">

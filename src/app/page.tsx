@@ -23,7 +23,6 @@ type ToneModule = typeof import('tone');
 type TrackNodes = Record<string, {
     player: import('tone').Player;
     panner: import('tone').Panner;
-    volume: import('tone').Volume;
     analyser: import('tone').Analyser;
     pitchShift: import('tone').PitchShift;
 }>;
@@ -47,7 +46,6 @@ const DawPage = () => {
   const trackNodesRef = useRef<TrackNodes>({});
   
   const toneRef = useRef<ToneModule | null>(null);
-  const masterVolumeNodeRef = useRef<import('tone').Volume | null>(null);
   const eqNodesRef = useRef<import('tone').Filter[]>([]);
   const [vuData, setVuData] = useState<Record<string, number>>({});
   const [loadingTracks, setLoadingTracks] = useState(new Set<string>());
@@ -57,9 +55,7 @@ const DawPage = () => {
   const [playbackRate, setPlaybackRate] = useState(1);
   const [pitch, setPitch] = useState(0);
 
-  const volumesRef = useRef<{ [key: string]: number }>({});
   const [pans, setPans] = useState<{ [key: string]: number }>({});
-  const [masterVolume, setMasterVolume] = useState(100);
   const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('online');
 
   const [eqBands, setEqBands] = useState([50, 50, 50, 50, 50]);
@@ -79,20 +75,20 @@ const DawPage = () => {
         audioContextStarted.current = true;
         console.log("Audio context started with Tone.js");
 
-        if (!masterVolumeNodeRef.current) {
+        if (eqNodesRef.current.length === 0) {
             const Tone = toneRef.current;
-            masterVolumeNodeRef.current = new Tone.Volume(0).toDestination();
-            
-            let lastNode: import('tone').InputNode = masterVolumeNodeRef.current;
-            eqNodesRef.current = eqFrequencies.map((freq) => {
+            let lastNode: import('tone').InputNode = Tone.getDestination();
+
+            // Create EQ chain that connects to destination
+            const eqChain = eqFrequencies.map((freq) => {
                 const filter = new Tone.Filter(freq, 'peaking');
                 filter.Q.value = 1.5;
-                lastNode.connect(filter);
-                lastNode = filter;
                 return filter;
             });
-            
-            lastNode.connect(Tone.getDestination());
+
+            // Chain the filters together and connect the last one to the destination
+            Tone.Chain(...eqChain, lastNode);
+            eqNodesRef.current = eqChain;
         }
     }
   }, []);
@@ -100,12 +96,6 @@ const DawPage = () => {
   useEffect(() => {
     initAudio();
   }, [initAudio]);
-
-
-  useEffect(() => {
-    if (!toneRef.current || !masterVolumeNodeRef.current) return;
-    masterVolumeNodeRef.current.volume.value = toneRef.current.gainToDb(masterVolume / 100);
-  }, [masterVolume]);
 
   useEffect(() => {
     if (!toneRef.current || eqNodesRef.current.length === 0) return;
@@ -186,90 +176,91 @@ const DawPage = () => {
   }, []);
 
 
-useEffect(() => {
-    if (!activeSongId) return;
+  useEffect(() => {
+      if (!activeSongId) {
+          stopAllTracks();
+          setLoadingTracks(new Set());
+          return;
+      }
 
-    stopAllTracks();
+      const loadAudioData = async () => {
+          await initAudio();
+          const Tone = toneRef.current;
+          if (!Tone || !eqNodesRef.current.length) return;
 
-    const tracksForCurrentSong = tracks.filter(t => t.songId === activeSongId);
-    if (tracksForCurrentSong.length === 0) {
-        setLoadingTracks(new Set());
-        return;
-    }
+          const tracksForCurrentSong = tracks.filter(t => t.songId === activeSongId);
+          
+          const tracksToLoad = tracksForCurrentSong.filter(t => !trackNodesRef.current[t.id]);
+          const currentTrackIds = new Set(tracksForCurrentSong.map(t => t.id));
 
-    const loadAudioData = async () => {
-        await initAudio();
-        const Tone = toneRef.current;
-        if (!Tone) return;
-        
-        const tracksToLoad = tracksForCurrentSong.filter(t => !trackNodesRef.current[t.id]);
+          // Dispose of nodes for tracks that are no longer active for this song
+          Object.keys(trackNodesRef.current).forEach(trackId => {
+              if (!currentTrackIds.has(trackId)) {
+                  const node = trackNodesRef.current[trackId];
+                  node.player.dispose();
+                  node.panner.dispose();
+                  node.analyser.dispose();
+                  node.pitchShift.dispose();
+                  delete trackNodesRef.current[trackId];
+              }
+          });
 
-        if (tracksToLoad.length === 0) {
-            setLoadingTracks(new Set());
-            return;
-        }
+          if (tracksToLoad.length === 0) {
+              setLoadingTracks(new Set());
+              return;
+          }
 
-        const trackIdsToLoad = new Set(tracksToLoad.map(t => t.id));
-        setLoadingTracks(trackIdsToLoad);
+          setLoadingTracks(new Set(tracksToLoad.map(t => t.id)));
 
-        // Dispose existing players for tracks that are no longer active
-        const currentTrackIds = new Set(tracksForCurrentSong.map(t => t.id));
-        Object.keys(trackNodesRef.current).forEach(trackId => {
-            if (!currentTrackIds.has(trackId)) {
-                const node = trackNodesRef.current[trackId];
-                node.player.dispose();
-                node.panner.dispose();
-                node.volume.dispose();
-                node.analyser.dispose();
-                node.pitchShift.dispose();
-                delete trackNodesRef.current[trackId];
-            }
-        });
+          const loadPromises = tracksToLoad.map(async (track) => {
+              try {
+                  let buffer;
+                  if (playbackMode === 'offline') {
+                      const cachedData = await getCachedArrayBuffer(track.url);
+                      if (cachedData) {
+                          buffer = await Tone.context.decodeAudioData(cachedData);
+                      } else {
+                          throw new Error(`Track ${track.name} not cached`);
+                      }
+                  } else {
+                      const proxyUrl = `/api/download?url=${encodeURIComponent(track.url)}`;
+                      const response = await fetch(proxyUrl);
+                      if (!response.ok) throw new Error(`Failed to fetch ${track.url}: ${response.statusText}`);
+                      const arrayBuffer = await response.arrayBuffer();
+                      await cacheArrayBuffer(track.url, arrayBuffer.slice(0));
+                      buffer = await Tone.context.decodeAudioData(arrayBuffer);
+                  }
 
-        const loadPromises = tracksToLoad.map(async (track) => {
-            try {
-                let buffer;
-                if (playbackMode === 'offline') {
-                    const cachedData = await getCachedArrayBuffer(track.url);
-                    if (cachedData) {
-                        buffer = await Tone.context.decodeAudioData(cachedData);
-                    } else {
-                        throw new Error(`Track ${track.name} not cached`);
-                    }
-                } else { // Online mode
-                    const proxyUrl = `/api/download?url=${encodeURIComponent(track.url)}`;
-                    const response = await fetch(proxyUrl);
-                    const arrayBuffer = await response.arrayBuffer();
-                    await cacheArrayBuffer(track.url, arrayBuffer.slice(0)); // Cache a clone
-                    buffer = await Tone.context.decodeAudioData(arrayBuffer);
-                }
-    
-                const player = new Tone.Player(buffer);
-                player.loop = true;
-                const pitchShift = new Tone.PitchShift({ pitch: pitch }).toDestination();
-                const panner = new Tone.Panner(0).connect(pitchShift);
-                const volume = new Tone.Volume(0).connect(panner);
-                const analyser = new Tone.Analyser('waveform', 256);
-                player.connect(volume);
-                volume.connect(analyser);
-    
-                trackNodesRef.current[track.id] = { player, panner, volume, analyser, pitchShift };
-    
-            } catch (error) {
-                console.error(`Error loading track ${track.name}:`, error);
-                // We'll leave it in the loading set to indicate failure.
-                // The UI will show it as permanently loading.
-            }
-        });
-    
-        await Promise.all(loadPromises);
-        setLoadingTracks(new Set()); // All tracks finished loading (or failed)
-    };
+                  const player = new Tone.Player(buffer);
+                  player.loop = true;
+                  const pitchShift = new Tone.PitchShift({ pitch: pitch });
+                  const panner = new Tone.Panner(0).connect(pitchShift);
+                  const analyser = new Tone.Analyser('waveform', 256);
+                  
+                  // Connect player -> panner -> analyser -> eq chain
+                  player.connect(panner);
+                  panner.connect(analyser);
+                  pitchShift.connect(eqNodesRef.current[0]);
 
-    loadAudioData();
+                  trackNodesRef.current[track.id] = { player, panner, analyser, pitchShift };
 
-    // No return function needed here for cleanup, as it's handled at the start.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+              } catch (error) {
+                  console.error(`Error loading track ${track.name}:`, error);
+                  // We'll leave it in the loading set to indicate failure.
+              }
+          });
+      
+          await Promise.all(loadPromises);
+          setLoadingTracks(new Set());
+      };
+
+      loadAudioData();
+
+      // We stop tracks when activeSongId changes to avoid race conditions.
+      return () => {
+          stopAllTracks();
+      };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSongId, playbackMode, pitch]);
 
   useEffect(() => {
@@ -286,13 +277,9 @@ useEffect(() => {
   useEffect(() => {
     const newPans: { [key: string]: number } = {};
     tracks.forEach(track => {
-      if (volumesRef.current[track.id] === undefined) {
-        volumesRef.current[track.id] = 75;
-      }
       newPans[track.id] = pans[track.id] ?? 0;
     });
     setPans(newPans);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tracks]);
 
 
@@ -331,17 +318,14 @@ useEffect(() => {
     }
   }, [playingTracks]);
 
-  const getGainValue = useCallback((trackId: string) => {
+  const getIsMuted = useCallback((trackId: string) => {
     const isMuted = mutedTracks.includes(trackId);
     const isSoloActive = soloTracks.length > 0;
     const isThisTrackSolo = soloTracks.includes(trackId);
-    const trackVolume = volumesRef.current[trackId] ?? 75;
 
-    const trackVol = trackVolume / 100;
-
-    if (isMuted) return 0;
-    if (isSoloActive) return isThisTrackSolo ? trackVol : 0;
-    return trackVol;
+    if (isMuted) return true;
+    if (isSoloActive) return !isThisTrackSolo;
+    return false;
   }, [mutedTracks, soloTracks]);
 
   useEffect(() => {
@@ -350,9 +334,8 @@ useEffect(() => {
 
     Object.keys(trackNodesRef.current).forEach(trackId => {
         const node = trackNodesRef.current[trackId];
-        if (node?.volume) {
-            const finalVolume = getGainValue(trackId);
-            node.volume.volume.value = Tone.gainToDb(finalVolume);
+        if (node?.player) {
+            node.player.mute = getIsMuted(trackId);
         }
         if (node?.panner) {
             const panValue = pans[trackId] ?? 0;
@@ -362,7 +345,7 @@ useEffect(() => {
             node.pitchShift.pitch = pitch;
         }
     });
-  }, [mutedTracks, soloTracks, getGainValue, pans, pitch]);
+  }, [mutedTracks, soloTracks, getIsMuted, pans, pitch]);
   
    useEffect(() => {
       const Tone = toneRef.current;
@@ -429,21 +412,6 @@ useEffect(() => {
       setPlaybackRate(1);
       setPitch(0);
   }
-  const handleMasterVolumeChange = (newVolume: number) => {
-      setMasterVolume(newVolume);
-  };
-  const handleVolumeChange = useCallback((trackId: string, newVolume: number) => {
-    const Tone = toneRef.current;
-    if (!Tone) return;
-
-    volumesRef.current[trackId] = newVolume;
-    const node = trackNodesRef.current[trackId];
-    if (node) {
-      const gainValue = getGainValue(trackId);
-      node.volume.volume.rampTo(Tone.gainToDb(gainValue), 0.05);
-    }
-  }, [getGainValue]);
-
   const handlePanChange = useCallback((trackId: string, newPan: number) => {
     setPans(prevPans => ({ ...prevPans, [trackId]: newPan }));
   }, []);
@@ -473,8 +441,6 @@ useEffect(() => {
         <Header 
             playbackMode={playbackMode}
             onPlaybackModeChange={setPlaybackMode}
-            masterVolume={masterVolume}
-            onMasterVolumeChange={handleMasterVolumeChange}
             fadeOutDuration={fadeOutDuration}
             onFadeOutDurationChange={setFadeOutDuration}
             isPanVisible={isPanVisible}
@@ -507,12 +473,10 @@ useEffect(() => {
               soloTracks={soloTracks}
               mutedTracks={mutedTracks}
               playingTracks={playingTracks}
-              volumes={volumesRef.current}
               pans={pans}
               loadingTracks={loadingTracks}
               onMuteToggle={handleMuteToggle}
               onSoloToggle={handleSoloToggle}
-              onVolumeChange={handleVolumeChange}
               onPanChange={handlePanChange}
               onTrackPlayToggle={handleTrackPlayToggle}
               vuData={vuData}
