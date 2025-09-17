@@ -11,7 +11,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "tauri:dev": "tauri dev",
-    "tauri:build": "npm run build && tauri build"
+    "tauri:build": "tauri build"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.614.0",
