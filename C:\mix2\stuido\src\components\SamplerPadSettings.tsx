@@ -167,7 +167,7 @@ const SamplerPadSettings = () => {
             <CardHeader>
                 <CardTitle>Configuración del Sampler Pad</CardTitle>
                 <CardDescription>
-                    Sube y asigna archivos de audio a cada uno de los pads. Organiza tus sonidos en 4 grupos (A-D), cada uno con 4 pads (1-4).
+                    Sube y asigna archivos de audio a cada uno de los pads. Organiza tus sonidos en 4 grupos (X-D), cada uno con 4 pads (1-4).
                 </CardDescription>
             </CardHeader>
             <CardContent>
