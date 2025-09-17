@@ -37,11 +37,8 @@ const TrackPad: React.FC<TrackPadProps> = ({
   const isClickTrack = useMemo(() => track.name.trim().toUpperCase() === 'CLICK', [track.name]);
 
   const vuMeterLevel = useMemo(() => {
-    // El nivel de vuLevel viene en dB (-Infinity a ~0).
-    // Lo mapeamos a un porcentaje (0-100) para el vúmetro.
-    // Un rango típico es de -48dB a 0dB.
     const level = Math.max(0, (vuLevel + 48) / 48) * 100;
-    return Math.min(level, 100); // Asegurarse de que no pase de 100
+    return Math.min(level, 100);
   }, [vuLevel]);
 
   return (
@@ -69,7 +66,6 @@ const TrackPad: React.FC<TrackPadProps> = ({
         </div>
       </div>
 
-      {/* Contenedor de Botones */}
       <div className="flex gap-1.5 w-full">
         <Button
           onClick={onMuteToggle}
