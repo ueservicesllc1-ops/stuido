@@ -33,13 +33,13 @@ const VuMeter: React.FC<React.memoExoticComponent<any>> = React.memo(({ level })
     return (
       <div
         key={dotIndex}
-        className={cn('h-[3px] w-1.5 rounded-sm transition-colors duration-75', colorClass)}
+        className={cn('h-[3px] w-full rounded-sm transition-colors duration-75', colorClass)}
       />
     );
   });
 
   return (
-    <div className="absolute top-0 right-1 h-full w-2 flex flex-col-reverse justify-between items-center py-2 pointer-events-none gap-y-0.5">
+    <div className="absolute bottom-2 left-2 right-2 h-1.5 flex justify-between items-center pointer-events-none gap-x-0.5">
       {dots}
     </div>
   );

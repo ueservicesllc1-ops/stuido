@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Slider } from './ui/slider';
 import { cn } from '@/lib/utils';
 import { SetlistSong } from '@/actions/setlists';
+import VuMeter from './VuMeter';
 
 interface TrackPadProps {
   track: SetlistSong;
@@ -28,30 +29,29 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
 }) => {
   const volumeSliderValue = useMemo(() => [volume], [volume]);
   const isClipping = vuLevel >= 0;
-  // Usar un umbral realista para la señal, -48dB es un buen punto de partida.
-  const hasSignal = vuLevel > -48;
+  // Convert dB to a 0-100 scale. Assuming VU meter range starts from -48dB.
+  const vuMeterLevel = useMemo(() => {
+    if (isMuted) return 0;
+    const level = Math.max(0, (vuLevel + 48) / 48) * 100;
+    return Math.min(level, 100);
+  }, [vuLevel, isMuted]);
+
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <div className="flex items-center justify-center gap-1.5 mb-1 h-3">
-        {/* Signal Presence (Green) LED */}
-        <div className={cn(
-            "w-2 h-2 rounded-full bg-input transition-colors",
-            hasSignal && !isMuted && "bg-green-500 shadow-[0_0_4px_1px] shadow-green-500/70 animate-pulse"
-        )} />
-        {/* Active (Blue) LED */}
-        <div className={cn(
-            "w-2 h-2 rounded-full bg-input transition-colors",
-            !isMuted && "bg-blue-500 shadow-[0_0_4px_1px] shadow-blue-500/70"
-        )} />
-        {/* Clip (Red) LED */}
-        <div className={cn(
-            "w-2 h-2 rounded-full bg-input transition-colors",
-            isClipping && !isMuted && "bg-destructive shadow-[0_0_4px_1px] shadow-destructive/70 animate-pulse"
-        )} />
-      </div>
-      {/* Marco del Fader */}
       <div className="relative h-40 w-16 rounded-md border border-border/50 bg-black/30 p-2 pt-3 pb-3">
+        <div className="absolute top-1 right-1 flex items-center justify-center gap-1.5 h-3">
+            {/* Active (Blue) LED */}
+            <div className={cn(
+                "w-2 h-2 rounded-full bg-input transition-colors",
+                !isMuted && "bg-blue-500 shadow-[0_0_4px_1px] shadow-blue-500/70"
+            )} />
+            {/* Clip (Red) LED */}
+            <div className={cn(
+                "w-2 h-2 rounded-full bg-input transition-colors",
+                isClipping && !isMuted && "bg-destructive shadow-[0_0_4px_1px] shadow-destructive/70 animate-pulse"
+            )} />
+        </div>
         <Slider
             value={volumeSliderValue}
             max={100}
@@ -63,6 +63,7 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
             rangeClassName="bg-gradient-to-t from-blue-500 to-green-500"
             thumbClassName="h-1 w-5 rounded-sm bg-foreground border-none cursor-pointer"
         />
+        <VuMeter level={vuMeterLevel} />
       </div>
 
        <div className="w-full text-center mt-1">
