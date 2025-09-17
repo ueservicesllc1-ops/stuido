@@ -47,8 +47,8 @@ const VuMeter: React.FC<React.memoExoticComponent<any>> = React.memo(({ level, o
     <div className={cn(
         "pointer-events-none",
         orientation === 'horizontal' 
-            ? "h-1.5 flex items-center justify-between gap-x-0.5"
-            : "w-1.5 flex flex-col items-center justify-between gap-y-0.5"
+            ? "h-1.5 w-full flex items-center justify-between gap-x-0.5"
+            : "w-1.5 h-full flex flex-col items-center justify-between gap-y-0.5"
     )}>
       {dots}
     </div>

@@ -28,6 +28,14 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
   onMuteToggle
 }) => {
   const volumeSliderValue = useMemo(() => [volume], [volume]);
+  
+  const vuMeterLevel = useMemo(() => {
+    // El nivel de vuLevel viene en dB (-Infinity a ~0).
+    // Lo mapeamos a un porcentaje (0-100) para el vúmetro.
+    // Un rango típico es de -48dB a 0dB.
+    const level = Math.max(0, (vuLevel + 48) / 48) * 100;
+    return Math.min(level, 100); // Asegurarse de que no pase de 100
+  }, [vuLevel]);
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -39,6 +47,9 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
             orientation="vertical"
             onValueChange={(val) => onVolumeChange(val[0])}
         />
+        <div className="absolute right-2 top-0 bottom-0 flex items-center">
+            <VuMeter level={vuMeterLevel} orientation="vertical" />
+        </div>
       </div>
 
        <div className="w-full text-center mt-1">
