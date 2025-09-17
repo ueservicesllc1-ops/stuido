@@ -12,11 +12,13 @@ import LyricsDisplay from '@/components/LyricsDisplay';
 import YouTubePlayerDialog from '@/components/YouTubePlayerDialog';
 import type { LyricsSyncOutput } from '@/ai/flows/lyrics-synchronization';
 import TeleprompterDialog from '@/components/TeleprompterDialog';
+import { getCachedArrayBuffer, cacheArrayBuffer } from '@/lib/audiocache';
 
 const eqFrequencies = [60, 250, 1000, 4000, 8000];
 const MAX_EQ_GAIN = 12;
 
 type ToneModule = typeof import('tone');
+type PlaybackMode = 'online' | 'cache';
 type TrackNodes = Record<string, {
     player: import('tone').Player;
     panner: import('tone').Panner;
@@ -46,12 +48,14 @@ const DawPage = () => {
   const eqNodesRef = useRef<import('tone').Filter[]>([]);
   const [vuData, setVuData] = useState<Record<string, number>>({});
   const [loadingTracks, setLoadingTracks] = useState(new Set<string>());
+  const [loadedFrom, setLoadedFrom] = useState<Record<string, 'cache' | 'network'>>({});
   const [loadedTracksCount, setLoadedTracksCount] = useState(0);
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [pitch, setPitch] = useState(0);
+  const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('cache');
 
   const [pans, setPans] = useState<{ [key: string]: number }>({});
   const [eqBands, setEqBands] = useState([50, 50, 50, 50, 50]);
@@ -162,11 +166,12 @@ const DawPage = () => {
     if (!Tone) return;
     
     Tone.Transport.stop();
-    // Stop all players just in case
+    // Stop and unsync all players
     Object.values(trackNodesRef.current).forEach(node => {
       if (node.player.state === 'started') {
         node.player.stop();
       }
+      node.player.unsync();
     });
 
     setIsPlaying(false);
@@ -174,69 +179,87 @@ const DawPage = () => {
   }, []);
 
 
-   useEffect(() => {
-      if (!activeSongId) {
-          stopAllTracks();
-          setLoadingTracks(new Set());
-          setLoadedTracksCount(0);
-          return;
-      }
+  useEffect(() => {
+    if (!activeSongId) {
+        stopAllTracks();
+        setLoadingTracks(new Set());
+        setLoadedTracksCount(0);
+        return;
+    }
 
-      const loadAudioData = async () => {
-          await initAudio();
-          const Tone = toneRef.current;
-          if (!Tone || !eqNodesRef.current.length) return;
+    const loadAudioData = async () => {
+        await initAudio();
+        const Tone = toneRef.current;
+        if (!Tone || !eqNodesRef.current.length) return;
 
-          const tracksForCurrentSong = tracks.filter(t => t.songId === activeSongId);
-          const tracksToLoad = tracksForCurrentSong.filter(t => !trackNodesRef.current[t.id]);
-          const tracksAlreadyLoaded = tracksForCurrentSong.filter(t => trackNodesRef.current[t.id]);
+        const tracksForCurrentSong = tracks.filter(t => t.songId === activeSongId);
+        const tracksToLoad = tracksForCurrentSong.filter(track => !trackNodesRef.current[track.id]);
 
-          if (tracksToLoad.length === 0) {
-              setLoadingTracks(new Set());
-              setLoadedTracksCount(tracksForCurrentSong.length);
-              return;
-          }
-          
-          setLoadedTracksCount(tracksAlreadyLoaded.length);
-          setLoadingTracks(new Set(tracksToLoad.map(t => t.id)));
+        if (tracksToLoad.length === 0) {
+            setLoadingTracks(new Set());
+            setLoadedTracksCount(tracksForCurrentSong.length);
+            return;
+        }
 
-          const loadPromises = tracksToLoad.map(async (track) => {
-              try {
-                  const proxyUrl = `/api/download?url=${encodeURIComponent(track.url)}`;
-                  const response = await fetch(proxyUrl);
-                  if (!response.ok) throw new Error(`Failed to fetch ${track.url}: ${response.statusText}`);
-                  const arrayBuffer = await response.arrayBuffer();
-                  const buffer = await Tone.context.decodeAudioData(arrayBuffer);
+        setLoadingTracks(new Set(tracksToLoad.map(t => t.id)));
+        setLoadedTracksCount(tracksForCurrentSong.length - tracksToLoad.length);
 
-                  const player = new Tone.Player(buffer);
-                  player.loop = true;
-                  const pitchShift = new Tone.PitchShift({ pitch: pitch });
-                  const panner = new Tone.Panner(0);
-                  const analyser = new Tone.Analyser('waveform', 256);
-                  
-                  player.chain(panner, pitchShift, analyser);
-                  
-                  if (eqNodesRef.current.length > 0) {
-                    pitchShift.connect(eqNodesRef.current[0]);
-                  } else {
-                    pitchShift.toDestination();
-                  }
+        const loadPromises = tracksToLoad.map(async (track) => {
+            let buffer;
+            let loadedFromSource: 'cache' | 'network' = 'network';
+            try {
+                if (playbackMode === 'cache') {
+                    const cachedBuffer = await getCachedArrayBuffer(track.url);
+                    if (cachedBuffer) {
+                        buffer = cachedBuffer;
+                        loadedFromSource = 'cache';
+                    }
+                }
+                
+                if (!buffer) {
+                    const proxyUrl = `/api/download?url=${encodeURIComponent(track.url)}`;
+                    const response = await fetch(proxyUrl);
+                    if (!response.ok) throw new Error(`Failed to fetch ${track.url}: ${response.statusText}`);
+                    buffer = await response.arrayBuffer();
+                    loadedFromSource = 'network';
+                    if (playbackMode === 'cache') {
+                        await cacheArrayBuffer(track.url, buffer);
+                    }
+                }
 
-                  trackNodesRef.current[track.id] = { player, panner, analyser, pitchShift };
-                  setLoadedTracksCount(prev => prev + 1);
+                const audioBuffer = await Tone.context.decodeAudioData(buffer.slice(0));
 
-              } catch (error) {
-                  console.error(`Error loading track ${track.name}:`, error);
-              }
-          });
-      
-          await Promise.all(loadPromises);
-          setLoadingTracks(new Set());
-      };
+                const player = new Tone.Player(audioBuffer);
+                player.loop = true;
+                const pitchShift = new Tone.PitchShift({ pitch: pitch });
+                const panner = new Tone.Panner(0);
+                const analyser = new Tone.Analyser('waveform', 256);
+                
+                player.chain(panner, pitchShift, analyser);
+                
+                if (eqNodesRef.current.length > 0) {
+                  pitchShift.connect(eqNodesRef.current[0]);
+                } else {
+                  pitchShift.toDestination();
+                }
+                
+                trackNodesRef.current[track.id] = { player, panner, analyser, pitchShift };
+                setLoadedFrom(prev => ({...prev, [track.id]: loadedFromSource}));
+                setLoadedTracksCount(prev => prev + 1);
 
-      loadAudioData();
+            } catch (error) {
+                console.error(`Error loading track ${track.name}:`, error);
+            }
+        });
+    
+        await Promise.all(loadPromises);
+        setLoadingTracks(new Set());
+    };
 
-  }, [activeSongId, tracks, initAudio, pitch]);
+    loadAudioData();
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSongId, playbackMode, tracks, initAudio]);
 
   useEffect(() => {
     if (activeSongId) {
@@ -485,6 +508,8 @@ const DawPage = () => {
             onBpmChange={handleBpmChange}
             pitch={pitch}
             onPitchChange={setPitch}
+            playbackMode={playbackMode}
+            onPlaybackModeChange={setPlaybackMode}
         />
       </div>
 
@@ -514,6 +539,7 @@ const DawPage = () => {
               vuData={vuData}
               isPanVisible={isPanVisible}
               isPlaying={isPlaying}
+              loadedFrom={loadedFrom}
             />
         ) : (
           <div className="flex justify-center items-center h-full">
@@ -552,3 +578,5 @@ const DawPage = () => {
 };
 
 export default DawPage;
+
+    

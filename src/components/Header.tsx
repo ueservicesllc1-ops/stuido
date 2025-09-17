@@ -11,9 +11,10 @@ import Timeline from './Timeline';
 import { SongStructure } from '@/ai/flows/song-structure';
 import SettingsDialog from './SettingsDialog';
 import { Input } from './ui/input';
-import { Slider } from './ui/slider';
 import type { Song } from '@/actions/songs';
+import PlaybackModeToggle from './PlaybackModeToggle';
 
+type PlaybackMode = 'online' | 'cache';
 
 interface HeaderProps {
   isPlaying?: boolean;
@@ -39,6 +40,8 @@ interface HeaderProps {
   onBpmChange: (bpm: number) => void;
   pitch: number;
   onPitchChange: (pitch: number) => void;
+  playbackMode: PlaybackMode;
+  onPlaybackModeChange: (mode: PlaybackMode) => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -63,7 +66,9 @@ const Header: React.FC<HeaderProps> = ({
   playbackRate,
   onBpmChange,
   pitch,
-  onPitchChange
+  onPitchChange,
+  playbackMode,
+  onPlaybackModeChange
 }) => {
   
   const currentBPM = activeSong?.tempo ? activeSong.tempo * playbackRate : null;
@@ -190,10 +195,7 @@ const Header: React.FC<HeaderProps> = ({
         </div>
         
         <div className="flex items-center justify-end gap-2 ml-auto">
-            <div className="flex items-center gap-1.5 bg-destructive/20 border border-destructive/50 rounded-md px-2 py-1">
-                <div className="w-2 h-2 rounded-full bg-destructive shadow-[0_0_4px] shadow-destructive" />
-                <span className="text-destructive font-bold text-sm">IA</span>
-            </div>
+            <PlaybackModeToggle mode={playbackMode} onModeChange={onPlaybackModeChange} />
             <Button variant="ghost" className="gap-2">
                 <Circle className="w-2 h-2 fill-current" />
                 OUTS
@@ -235,3 +237,5 @@ const Header: React.FC<HeaderProps> = ({
 };
 
 export default Header;
+
+    

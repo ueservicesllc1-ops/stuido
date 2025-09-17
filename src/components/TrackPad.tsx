@@ -21,6 +21,7 @@ interface TrackPadProps {
   onSoloToggle: () => void;
   vuMeterLevel: number;
   isPanVisible: boolean;
+  loadedFrom?: 'cache' | 'network';
 }
 
 const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
@@ -36,6 +37,7 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
   onMuteToggle,
   vuMeterLevel,
   isPanVisible,
+  loadedFrom,
 }) => {
   const { name } = track;
   
@@ -47,7 +49,14 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
     return upperCaseName === 'CLICK' || upperCaseName === 'CUES';
   }, [name]);
 
-  const ledColorClass = 'bg-green-500 shadow-[0_0_5px_1px] shadow-green-500/70';
+  const ledColorClass = useMemo(() => {
+    if (!isAudible) return "bg-background/50";
+    if (loadedFrom === 'cache') {
+      return 'bg-blue-500 shadow-[0_0_5px_1px] shadow-blue-500/70';
+    }
+    return 'bg-green-500 shadow-[0_0_5px_1px] shadow-green-500/70';
+  }, [isAudible, loadedFrom]);
+
 
   return (
     <div 
@@ -59,7 +68,7 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
       {/* LEDs & Name */}
        <div className="flex justify-between items-center w-full px-1 pt-1">
         <div className="flex gap-1.5">
-          <div className={cn("w-2 h-2 rounded-full transition-colors", isAudible ? ledColorClass : "bg-background/50")} />
+          <div className={cn("w-2 h-2 rounded-full transition-colors", ledColorClass)} />
         </div>
         <div className={cn("w-12 h-5 text-xs flex items-center justify-center font-bold rounded-sm",
             isLoading && 'text-muted-foreground'
@@ -132,3 +141,5 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
 TrackPad.displayName = 'TrackPad';
 
 export default TrackPad;
+
+    
