@@ -8,8 +8,8 @@ import { useToast } from './ui/use-toast';
 import { Loader2 } from 'lucide-react';
 import { getB2FileAsDataURI } from '@/actions/download';
 
-const topRowKeys = ['A', 'B', 'C', 'D', 'E', 'F'];
-const bottomRowKeys = ['1', '2', '3', '4', '5', '6'];
+const topRowKeys = ['A', 'B', 'C', 'D'];
+const bottomRowKeys = ['1', '2', '3', '4'];
 
 type ToneModule = typeof import('tone');
 type PlayersRef = Record<string, import('tone').Player | null>;
@@ -138,7 +138,7 @@ const TonicPad = () => {
 
   return (
     <div className="bg-card/50 rounded-lg p-3 flex flex-col gap-2">
-      <div className="grid grid-cols-6 grid-rows-2 gap-1.5 h-32">
+      <div className="grid grid-cols-4 grid-rows-2 gap-1.5 h-32">
         {topRowKeys.map((key) => (
             <Button 
                 key={key} 

@@ -11,8 +11,8 @@ import { useToast } from './ui/use-toast';
 import { uploadFileToB2 } from '@/actions/upload';
 import { Progress } from './ui/progress';
 
-const topRowKeys = ['A', 'B', 'C', 'D', 'E', 'F'];
-const bottomRowKeys = ['1', '2', '3', '4', '5', '6'];
+const topRowKeys = ['A', 'B', 'C', 'D'];
+const bottomRowKeys = ['1', '2', '3', '4'];
 
 type PadStatus = 'idle' | 'uploading' | 'saving' | 'success' | 'error';
 
@@ -167,14 +167,14 @@ const SamplerPadSettings = () => {
             <CardHeader>
                 <CardTitle>Configuración del Sampler Pad</CardTitle>
                 <CardDescription>
-                    Sube y asigna archivos de audio a cada uno de los pads. Organiza tus sonidos en 6 grupos (A-F), cada uno con 6 pads (1-6).
+                    Sube y asigna archivos de audio a cada uno de los pads. Organiza tus sonidos en 4 grupos (A-D), cada uno con 4 pads (1-4).
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="flex flex-col gap-6">
                     <div>
                         <h3 className="text-lg font-medium mb-2">Seleccionar Grupo</h3>
-                        <div className="grid grid-cols-6 gap-2">
+                        <div className="grid grid-cols-4 gap-2">
                             {topRowKeys.map((key) => (
                                 <Button
                                     key={key}
@@ -195,7 +195,7 @@ const SamplerPadSettings = () => {
                                 <Loader2 className="w-8 h-8 animate-spin" />
                             </div>
                          ) : (
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 {bottomRowKeys.map((padKey) => {
                                     const padState = pads[padKey] || { status: 'idle', progress: 0, sample: null };
                                     const isProcessing = padState.status === 'uploading' || padState.status === 'saving';
