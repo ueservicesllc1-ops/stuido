@@ -12,7 +12,6 @@ import { SongStructure } from '@/ai/flows/song-structure';
 import SettingsDialog from './SettingsDialog';
 import { Input } from './ui/input';
 import type { Song } from '@/actions/songs';
-import VolumeSlider from './VolumeSlider';
 
 interface HeaderProps {
   isPlaying?: boolean;
