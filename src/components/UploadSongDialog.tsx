@@ -31,7 +31,6 @@ import { saveSong, NewSong, TrackFile } from '@/actions/songs';
 import { Progress } from './ui/progress';
 import { Textarea } from './ui/textarea';
 
-const ACCEPTED_AUDIO_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.aac', '.m4a'];
 const ACCEPTED_MIME_TYPES = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio/x-m4a', 'audio/mp3'];
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
@@ -306,34 +305,114 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <ScrollArea className="h-[450px] pr-6">
               <div className="space-y-4">
-                <FormField control={form.control} name="name" render={({ field }) => (
-                  <FormItem><FormLabel>Nombre de la canción</FormLabel><FormControl><Input placeholder="Ej: Gracia Sublime es" {...field} /></FormControl><FormMessage /></FormItem>
-                )}/>
-                <FormField control={form.control} name="artist" render={({ field }) => (
-                  <FormItem><FormLabel>Artista</FormLabel><FormControl><Input placeholder="Ej: Elevation Worship" {...field} /></FormControl><FormMessage /></FormItem>
-                )}/>
-                <FormField control={form.control} name="albumImageUrl" render={({ field }) => (
-                  <FormItem><FormLabel>URL de la carátula (opcional)</FormLabel><FormControl><Input placeholder="https://ejemplo.com/imagen.jpg" {...field} /></FormControl><FormMessage /></FormItem>
-                )}/>
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nombre de la canción</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ej: Gracia Sublime es" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="artist"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Artista</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ej: Elevation Worship" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="albumImageUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>URL de la carátula (opcional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://ejemplo.com/imagen.jpg" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <div className="grid grid-cols-3 gap-4">
-                    <FormField control={form.control} name="tempo" render={({ field }) => (
-                        <FormItem><FormLabel>Tempo (BPM)</FormLabel><FormControl><Input type="number" placeholder="120" {...field} /></FormControl><FormMessage /></FormItem>
-                    )}/>
-                    <FormField control={form.control} name="key" render={({ field }) => (
-                        <FormItem><FormLabel>Tonalidad</FormLabel><FormControl><Input placeholder="C" {...field} /></FormControl><FormMessage /></FormItem>
-                    )}/>
-                    <FormField control={form.control} name="timeSignature" render={({ field }) => (
-                        <FormItem><FormLabel>Compás</FormLabel><FormControl><Input placeholder="4/4" {...field} /></FormControl><FormMessage /></FormItem>
-                    )}/>
+                  <FormField
+                    control={form.control}
+                    name="tempo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tempo (BPM)</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="120" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="key"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tonalidad</FormLabel>
+                        <FormControl>
+                          <Input placeholder="C" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="timeSignature"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Compás</FormLabel>
+                        <FormControl>
+                          <Input placeholder="4/4" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
                 
-                 <FormField control={form.control} name="lyrics" render={({ field }) => (
-                  <FormItem><FormLabel>Letra de la canción (opcional)</FormLabel><FormControl><Textarea placeholder="[Intro]&#10;[Verso 1]&#10;..." {...field} rows={6} className="bg-input" /></FormControl><FormMessage /></FormItem>
-                )}/>
+                 <FormField
+                  control={form.control}
+                  name="lyrics"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Letra de la canción (opcional)</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="[Intro]&#10;[Verso 1]&#10;..." {...field} rows={6} className="bg-input" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                <FormField control={form.control} name="youtubeUrl" render={({ field }) => (
-                  <FormItem><FormLabel>URL de YouTube (opcional)</FormLabel><FormControl><Input placeholder="https://www.youtube.com/watch?v=..." {...field} /></FormControl><FormMessage /></FormItem>
-                )}/>
+                <FormField
+                  control={form.control}
+                  name="youtubeUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>URL de YouTube (opcional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://www.youtube.com/watch?v=..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 
                 <div className="space-y-2">
                    <FormLabel>Archivos de Pistas</FormLabel>
@@ -367,6 +446,7 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
                                   <FormControl>
                                     <Input {...field} className="h-8 text-sm" disabled={isUploading}/>
                                   </FormControl>
+                                  <FormMessage />
                                 </FormItem>
                               )}
                             />
@@ -424,5 +504,7 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
 };
 
 export default UploadSongDialog;
+
+    
 
     
