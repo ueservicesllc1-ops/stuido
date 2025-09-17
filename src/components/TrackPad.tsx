@@ -29,6 +29,8 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
 }) => {
   const volumeSliderValue = useMemo(() => [volume], [volume]);
   const isClipping = vuLevel >= 0;
+  const hasSignal = vuLevel > -48;
+
   // Convert dB to a 0-100 scale. Assuming VU meter range starts from -48dB.
   const vuMeterLevel = useMemo(() => {
     if (isMuted) return 0;
@@ -52,13 +54,13 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
                 isClipping && !isMuted && "bg-destructive shadow-[0_0_4px_1px] shadow-destructive/70 animate-pulse"
             )} />
         </div>
-        <div className="relative flex-grow h-full flex gap-2 pt-4">
+        <div className="relative flex-grow h-full flex justify-center gap-2 pt-4">
             <Slider
                 value={volumeSliderValue}
                 max={100}
                 step={1}
                 orientation="vertical"
-                onValueChange={onVolumeChange}
+                onValueChange={(val) => onVolumeChange(val[0])}
                 className="h-full w-4"
                 trackClassName="bg-input"
                 rangeClassName="bg-gradient-to-t from-blue-500 to-green-500"
