@@ -10,7 +10,6 @@ interface TrackPadProps {
   isPlaying: boolean;
   isMuted: boolean;
   isSolo: boolean;
-  isAudible: boolean;
   volume: number;
   onVolumeChange: (volume: number) => void;
   onMuteToggle: () => void;
@@ -22,7 +21,6 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
   isPlaying,
   isMuted,
   isSolo,
-  isAudible,
   volume,
   onVolumeChange,
   onSoloToggle,
@@ -58,9 +56,10 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
                 max={100}
                 step={1}
                 orientation="vertical"
-                onValueChange={(val) => onVolumeChange(val[0])}
-                className='h-full w-full py-4'
-                ledClassName={faderLedColor}
+                onValueChange={(val) => onValueChange(val[0])}
+                className="h-full w-4"
+                trackClassName="bg-input"
+                rangeClassName="bg-gradient-to-t from-destructive via-yellow-500 to-green-500"
             />
         </div>
 
