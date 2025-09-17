@@ -46,6 +46,8 @@ const DawPage = () => {
   
   const toneRef = useRef<ToneModule | null>(null);
   const eqNodesRef = useRef<import('tone').Filter[]>([]);
+  const masterMeterRef = useRef<import('tone').Meter | null>(null);
+
   const [loadingTracks, setLoadingTracks] = useState(new Set<string>());
   const [loadedTracksCount, setLoadedTracksCount] = useState(0);
   
@@ -53,9 +55,11 @@ const DawPage = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [pitch, setPitch] = useState(0);
+  const [masterVolume, setMasterVolume] = useState(75);
 
   const [volumes, setVolumes] = useState<{ [key: string]: number }>({});
   const [vuLevels, setVuLevels] = useState<Record<string, number>>({});
+  const [masterVuLevel, setMasterVuLevel] = useState(-Infinity);
   const [eqBands, setEqBands] = useState([50, 50, 50, 50, 50]);
   const [fadeOutDuration, setFadeOutDuration] = useState(0.5);
   const [isPanVisible, setIsPanVisible] = useState(true);
@@ -82,9 +86,13 @@ const DawPage = () => {
                 return filter;
             });
 
+            masterMeterRef.current = new Tone.Meter();
+            const masterVol = Tone.Destination;
+            
             if (eqChain.length > 0) {
-              Tone.connectSeries(...eqChain, Tone.getDestination());
+              Tone.connectSeries(...eqChain, masterVol);
             }
+            masterVol.connect(masterMeterRef.current);
 
             eqNodesRef.current = eqChain;
         }
@@ -94,6 +102,15 @@ const DawPage = () => {
   useEffect(() => {
     initAudio();
   }, [initAudio]);
+
+  useEffect(() => {
+    const Tone = toneRef.current;
+    if (!Tone) return;
+
+    const newDb = masterVolume > 0 ? (masterVolume / 100) * 40 - 40 : -Infinity;
+    Tone.Destination.volume.value = newDb;
+
+  }, [masterVolume]);
 
   useEffect(() => {
     if (!toneRef.current || eqNodesRef.current.length === 0) return;
@@ -291,6 +308,10 @@ const DawPage = () => {
         });
         setVuLevels(newVuLevels);
 
+        if (masterMeterRef.current) {
+          setMasterVuLevel(masterMeterRef.current.getValue() as number);
+        }
+
         animationFrameId = requestAnimationFrame(update);
       };
       update();
@@ -422,6 +443,10 @@ const DawPage = () => {
     }
   }, []);
 
+  const handleMasterVolumeChange = (newVol: number) => {
+    setMasterVolume(newVol);
+  }
+
 
   const handleEqChange = (bandIndex: number, newValue: number) => {
     setEqBands(prevBands => {
@@ -479,6 +504,9 @@ const DawPage = () => {
             onBpmChange={handleBpmChange}
             pitch={pitch}
             onPitchChange={setPitch}
+            masterVolume={masterVolume}
+            onMasterVolumeChange={handleMasterVolumeChange}
+            masterVuLevel={masterVuLevel}
         />
       </div>
 

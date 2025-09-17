@@ -12,6 +12,7 @@ import { SongStructure } from '@/ai/flows/song-structure';
 import SettingsDialog from './SettingsDialog';
 import { Input } from './ui/input';
 import type { Song } from '@/actions/songs';
+import VolumeSlider from './VolumeSlider';
 
 interface HeaderProps {
   isPlaying?: boolean;
@@ -37,6 +38,9 @@ interface HeaderProps {
   onBpmChange: (bpm: number) => void;
   pitch: number;
   onPitchChange: (pitch: number) => void;
+  masterVolume: number;
+  onMasterVolumeChange: (volume: number) => void;
+  masterVuLevel: number;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -62,6 +66,9 @@ const Header: React.FC<HeaderProps> = ({
   onBpmChange,
   pitch,
   onPitchChange,
+  masterVolume,
+  onMasterVolumeChange,
+  masterVuLevel,
 }) => {
   
   const currentBPM = activeSong?.tempo ? activeSong.tempo * playbackRate : null;
@@ -107,7 +114,14 @@ const Header: React.FC<HeaderProps> = ({
   return (
     <header className="flex flex-col bg-card/50 border-b border-border p-2 gap-2 rounded-lg">
       <div className="flex items-center justify-between gap-6">
-        <div className="w-64" />
+         <div className="w-64">
+            <VolumeSlider
+                label="Master"
+                volume={masterVolume}
+                onVolumeChange={onMasterVolumeChange}
+                vuLevel={masterVuLevel}
+            />
+        </div>
         
         <div className="flex items-center gap-2">
             <div className="flex items-center bg-black/80 border border-amber-400/20 rounded-md h-12">
