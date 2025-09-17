@@ -13,8 +13,8 @@ interface TrackPadProps {
   volume: number;
   vuLevel: number;
   onVolumeChange: (volume: number) => void;
-  onMuteToggle: () => void;
   onSoloToggle: () => void;
+  onMuteToggle: () => void;
 }
 
 const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
@@ -67,7 +67,7 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
                 rangeClassName="bg-gradient-to-t from-blue-500 to-green-500"
                 thumbClassName="h-3 w-5 rounded-sm bg-foreground border-none cursor-pointer"
             />
-            <div className="absolute left-[calc(50%+12px)] h-full">
+             <div className="absolute left-[calc(50%+12px)] h-full">
               <VuMeter level={vuMeterLevel} orientation="vertical" />
             </div>
         </div>
