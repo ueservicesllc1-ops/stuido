@@ -7,7 +7,6 @@ import { cn } from '@/lib/utils';
 import { Loader2, Settings } from 'lucide-react';
 import { SetlistSong } from '@/actions/setlists';
 import VuMeter from './VuMeter';
-import { PlaybackMode } from '@/app/page';
 
 interface TrackPadProps {
   track: SetlistSong;
@@ -22,7 +21,6 @@ interface TrackPadProps {
   onSoloToggle: () => void;
   onPlayToggle: () => void;
   vuMeterLevel: number;
-  playbackMode: PlaybackMode;
   isPanVisible: boolean;
 }
 
@@ -39,7 +37,6 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
   onMuteToggle,
   onPlayToggle,
   vuMeterLevel,
-  playbackMode,
   isPanVisible,
 }) => {
   const { name } = track;
@@ -52,16 +49,7 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
     return upperCaseName === 'CLICK' || upperCaseName === 'CUES';
   }, [name]);
 
-  const ledColorClass = useMemo(() => {
-    switch (playbackMode) {
-      case 'online':
-        return 'bg-blue-500 shadow-[0_0_5px_1px] shadow-blue-500/70';
-      case 'offline':
-        return 'bg-green-500 shadow-[0_0_5px_1px] shadow-green-500/70';
-      default:
-        return 'bg-amber-400 shadow-[0_0_5px_1px] shadow-amber-400/70';
-    }
-  }, [playbackMode]);
+  const ledColorClass = 'bg-green-500 shadow-[0_0_5px_1px] shadow-green-500/70';
 
   return (
     <div 

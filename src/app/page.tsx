@@ -6,15 +6,12 @@ import MixerGrid from '@/components/MixerGrid';
 import SongList from '@/components/SongList';
 import TonicPad from '@/components/TonicPad';
 import { getSetlists, Setlist, SetlistSong } from '@/actions/setlists';
-import { cacheArrayBuffer, getCachedArrayBuffer } from '@/lib/audiocache';
 import { Song } from '@/actions/songs';
 import { SongStructure } from '@/ai/flows/song-structure';
 import LyricsDisplay from '@/components/LyricsDisplay';
 import YouTubePlayerDialog from '@/components/YouTubePlayerDialog';
 import type { LyricsSyncOutput } from '@/ai/flows/lyrics-synchronization';
 import TeleprompterDialog from '@/components/TeleprompterDialog';
-
-export type PlaybackMode = 'online' | 'offline';
 
 const eqFrequencies = [60, 250, 1000, 4000, 8000];
 const MAX_EQ_GAIN = 12;
@@ -56,8 +53,6 @@ const DawPage = () => {
   const [pitch, setPitch] = useState(0);
 
   const [pans, setPans] = useState<{ [key: string]: number }>({});
-  const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('online');
-
   const [eqBands, setEqBands] = useState([50, 50, 50, 50, 50]);
   const [fadeOutDuration, setFadeOutDuration] = useState(0.5);
   const [isPanVisible, setIsPanVisible] = useState(true);
@@ -189,9 +184,9 @@ const DawPage = () => {
           if (!Tone || !eqNodesRef.current.length) return;
 
           const tracksForCurrentSong = tracks.filter(t => t.songId === activeSongId);
-          const tracksToLoad = tracksForCurrentSong.filter(t => !trackNodesRef.current[t.id]);
           const currentTrackIds = new Set(tracksForCurrentSong.map(t => t.id));
-
+          
+          // Dispose of players for tracks that are not in the current song
           Object.keys(trackNodesRef.current).forEach(trackId => {
               if (!currentTrackIds.has(trackId)) {
                   const node = trackNodesRef.current[trackId];
@@ -202,7 +197,8 @@ const DawPage = () => {
                   delete trackNodesRef.current[trackId];
               }
           });
-
+          
+          const tracksToLoad = tracksForCurrentSong.filter(t => !trackNodesRef.current[t.id]);
           if (tracksToLoad.length === 0) {
               setLoadingTracks(new Set());
               return;
@@ -212,22 +208,11 @@ const DawPage = () => {
 
           const loadPromises = tracksToLoad.map(async (track) => {
               try {
-                  let buffer;
-                  if (playbackMode === 'offline') {
-                      const cachedData = await getCachedArrayBuffer(track.url);
-                      if (cachedData) {
-                          buffer = await Tone.context.decodeAudioData(cachedData);
-                      } else {
-                          throw new Error(`Track ${track.name} not cached`);
-                      }
-                  } else {
-                      const proxyUrl = `/api/download?url=${encodeURIComponent(track.url)}`;
-                      const response = await fetch(proxyUrl);
-                      if (!response.ok) throw new Error(`Failed to fetch ${track.url}: ${response.statusText}`);
-                      const arrayBuffer = await response.arrayBuffer();
-                      await cacheArrayBuffer(track.url, arrayBuffer.slice(0));
-                      buffer = await Tone.context.decodeAudioData(arrayBuffer);
-                  }
+                  const proxyUrl = `/api/download?url=${encodeURIComponent(track.url)}`;
+                  const response = await fetch(proxyUrl);
+                  if (!response.ok) throw new Error(`Failed to fetch ${track.url}: ${response.statusText}`);
+                  const arrayBuffer = await response.arrayBuffer();
+                  const buffer = await Tone.context.decodeAudioData(arrayBuffer);
 
                   const player = new Tone.Player(buffer).toDestination();
                   player.loop = true;
@@ -247,6 +232,11 @@ const DawPage = () => {
 
               } catch (error) {
                   console.error(`Error loading track ${track.name}:`, error);
+                  setLoadingTracks(prev => {
+                      const newSet = new Set(prev);
+                      newSet.delete(track.id);
+                      return newSet;
+                  });
               }
           });
       
@@ -260,7 +250,7 @@ const DawPage = () => {
           stopAllTracks();
       };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSongId, playbackMode, pitch]);
+  }, [activeSongId, pitch]);
 
   useEffect(() => {
     if (activeSongId) {
@@ -279,6 +269,7 @@ const DawPage = () => {
       newPans[track.id] = pans[track.id] ?? 0;
     });
     setPans(newPans);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tracks]);
 
 
@@ -438,8 +429,6 @@ const DawPage = () => {
     <div className="grid grid-cols-[1fr_384px] grid-rows-[auto_auto_1fr] h-screen w-screen p-4 gap-4">
       <div className="col-span-2 row-start-1">
         <Header 
-            playbackMode={playbackMode}
-            onPlaybackModeChange={setPlaybackMode}
             fadeOutDuration={fadeOutDuration}
             onFadeOutDurationChange={setFadeOutDuration}
             isPanVisible={isPanVisible}
@@ -479,7 +468,6 @@ const DawPage = () => {
               onPanChange={handlePanChange}
               onTrackPlayToggle={handleTrackPlayToggle}
               vuData={vuData}
-              playbackMode={playbackMode}
               isPanVisible={isPanVisible}
             />
         ) : (
@@ -519,5 +507,3 @@ const DawPage = () => {
 };
 
 export default DawPage;
-
-    

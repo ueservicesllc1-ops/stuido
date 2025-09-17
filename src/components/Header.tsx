@@ -5,8 +5,6 @@ import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Rewind, Play, Pause, Square, FastForward, Settings, RadioTower, Disc, Loader2, DownloadCloud, Timer, Plus, Minus, RotateCcw } from 'lucide-react';
 import { Circle } from './icons';
-import PlaybackModeToggle from './PlaybackModeToggle';
-import type { PlaybackMode } from '@/app/page';
 import { Progress } from './ui/progress';
 import { cn, transposeNote } from '@/lib/utils';
 import Timeline from './Timeline';
@@ -27,8 +25,6 @@ interface HeaderProps {
   onSeek?: (position: number) => void;
   currentTime?: number;
   duration?: number;
-  playbackMode: PlaybackMode;
-  onPlaybackModeChange: (mode: PlaybackMode) => void;
   loadingProgress?: number;
   showLoadingBar?: boolean;
   isReadyToPlay?: boolean;
@@ -55,8 +51,6 @@ const Header: React.FC<HeaderProps> = ({
   onSeek,
   currentTime = 0,
   duration = 0,
-  playbackMode,
-  onPlaybackModeChange,
   loadingProgress,
   showLoadingBar,
   isReadyToPlay,
@@ -198,7 +192,6 @@ const Header: React.FC<HeaderProps> = ({
                 <div className="w-2 h-2 rounded-full bg-destructive shadow-[0_0_4px] shadow-destructive" />
                 <span className="text-destructive font-bold text-sm">IA</span>
             </div>
-            <PlaybackModeToggle value={playbackMode} onChange={onPlaybackModeChange} />
             <Button variant="ghost" className="gap-2">
                 <Circle className="w-2 h-2 fill-current" />
                 OUTS
@@ -240,5 +233,3 @@ const Header: React.FC<HeaderProps> = ({
 };
 
 export default Header;
-
-    
