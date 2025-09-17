@@ -46,7 +46,7 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <div className="w-full text-center bg-black/80 border border-amber-400/20 rounded-md px-1 py-1">
+      <div className="w-full text-center bg-black/80 border border-amber-400/20 rounded-md px-1 py-1 h-8 flex items-center justify-center">
         <span className="font-mono text-sm text-amber-400 [text-shadow:0_0_8px_theme(colors.amber.400)] truncate block w-full">
             {track.name}
         </span>
