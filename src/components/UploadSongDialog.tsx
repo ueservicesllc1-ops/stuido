@@ -30,38 +30,6 @@ import { ScrollArea } from './ui/scroll-area';
 import { saveSong, NewSong, TrackFile } from '@/actions/songs';
 import { Progress } from './ui/progress';
 import { Textarea } from './ui/textarea';
-import { openDB, IDBPDatabase } from 'idb';
-
-const DB_NAME = 'fileHandleDB';
-const STORE_NAME = 'fileHandles';
-const DB_VERSION = 1;
-
-let dbPromise: Promise<IDBPDatabase> | null = null;
-
-const getDb = (): Promise<IDBPDatabase> => {
-    if (!dbPromise) {
-        dbPromise = openDB(DB_NAME, DB_VERSION, {
-            upgrade(db) {
-                if (!db.objectStoreNames.contains(STORE_NAME)) {
-                    db.createObjectStore(STORE_NAME);
-                }
-            },
-        });
-    }
-    return dbPromise;
-};
-
-// Guarda un FileSystemFileHandle en IndexedDB
-const setFileHandle = async (key: string, handle: FileSystemFileHandle): Promise<void> => {
-    try {
-        const db = await getDb();
-        await db.put(STORE_NAME, handle, key);
-        console.log(`File handle saved for key: ${key}`);
-    } catch (error) {
-        console.error('Error saving file handle to IndexedDB:', error);
-    }
-};
-
 
 const ACCEPTED_AUDIO_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.aac', '.m4a'];
 const ACCEPTED_MIME_TYPES = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio/x-m4a', 'audio/mp3'];
@@ -98,7 +66,6 @@ interface UploadSongDialogProps {
 }
 
 type TrackStatus = 'pending' | 'uploading' | 'success' | 'error';
-type LocalFileHandle = FileSystemFileHandle | undefined;
 
 const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished }) => {
   const [open, setOpen] = useState(false);
@@ -106,7 +73,6 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
   const [trackStatuses, setTrackStatuses] = useState<Record<number, TrackStatus>>({});
   const [trackErrorMessages, setTrackErrorMessages] = useState<Record<number, string>>({});
   const [uploadProgress, setUploadProgress] = useState<Record<number, number>>({});
-  const [fileHandles, setFileHandles] = useState<Record<number, LocalFileHandle>>({});
   const { toast } = useToast();
 
   const form = useForm<SongFormValues>({
@@ -145,65 +111,34 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
     setTrackStatuses({});
     setTrackErrorMessages({});
     setUploadProgress({});
-    setFileHandles({});
   }
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!('showOpenFilePicker' in window)) {
-        toast({
-            variant: "destructive",
-            title: "Navegador no compatible",
-            description: "Tu navegador no soporta el acceso a archivos locales para el modo offline. La subida continuará de forma normal."
-        });
+    const files = event.target.files;
+    if (!files) return;
+
+    const newTrackStatuses: Record<number, TrackStatus> = {};
+    const newProgress: Record<number, number> = {};
+
+    for (const [index, file] of Array.from(files).entries()) {
+        let trackName = file.name.split('.').slice(0, -1).join('.') || file.name;
+        trackName = trackName.replace(/[\s_]/g, '-').substring(0, 10); // Sanitize name
+        
+        const newIndex = fields.length + index;
+        append({ file, name: trackName });
+        newTrackStatuses[newIndex] = 'pending';
+        newProgress[newIndex] = 0;
     }
 
-    try {
-        const handles = await window.showOpenFilePicker({
-            multiple: true,
-            types: [{ 
-                description: 'Audio Files', 
-                accept: { 
-                    'audio/*': ACCEPTED_AUDIO_EXTENSIONS 
-                } 
-            }],
-        });
+    setTrackStatuses(prev => ({...prev, ...newTrackStatuses}));
+    setUploadProgress(prev => ({...prev, ...newProgress}));
 
-        const newTrackStatuses: Record<number, TrackStatus> = {};
-        const newProgress: Record<number, number> = {};
-        const newHandles: Record<number, LocalFileHandle> = {};
-
-        for (const [index, handle] of handles.entries()) {
-            const file = await handle.getFile();
-            let trackName = file.name.split('.').slice(0, -1).join('.') || file.name;
-            trackName = trackName.replace(/[\s_]/g, '-').substring(0, 10); // Sanitize name
-            
-            const newIndex = fields.length + index;
-            append({ file, name: trackName });
-            newTrackStatuses[newIndex] = 'pending';
-            newProgress[newIndex] = 0;
-            newHandles[newIndex] = handle;
-        }
-
-        setTrackStatuses(prev => ({...prev, ...newTrackStatuses}));
-        setUploadProgress(prev => ({...prev, ...newProgress}));
-        setFileHandles(prev => ({...prev, ...newHandles}));
-
-
-        if (!form.getValues('name') && handles.length > 0) {
-            const firstFile = await handles[0].getFile();
-            form.setValue('name', firstFile.name.split('.').slice(0, -1).join('.'));
-        }
-    } catch(err) {
-        // User cancelled picker
-        if ((err as Error).name !== 'AbortError') {
-             console.error("Error picking files: ", err);
-             toast({
-                variant: "destructive",
-                title: "Error",
-                description: "No se pudieron seleccionar los archivos."
-             });
-        }
+    if (!form.getValues('name') && files.length > 0) {
+        form.setValue('name', files[0].name.split('.').slice(0, -1).join('.'));
     }
+
+    // Reset the input value to allow selecting the same files again
+    event.target.value = '';
   };
 
   const uploadTrackWithProgress = (formData: FormData, index: number): Promise<{ success: boolean, track?: Omit<TrackFile, 'handle'>, error?: string }> => {
@@ -265,11 +200,7 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
                 throw new Error(result.error || `Error desconocido al subir ${track.name}.`);
             }
 
-            const trackWithHandle: TrackFile = {
-                ...result.track,
-                handle: fileHandles[i]
-            }
-            uploadedTracks.push(trackWithHandle);
+            uploadedTracks.push(result.track);
             setTrackStatuses(prev => ({ ...prev, [i]: 'success' }));
 
         } catch (error) {
@@ -313,13 +244,6 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
 
         if (!saveResult.success || !saveResult.song) {
            throw new Error(saveResult.error || 'No se pudo guardar la canción en la base de datos.');
-        }
-
-        // Guardar los file handles en IndexedDB
-        for (const track of uploadedTracks) {
-            if (track.handle) {
-                await setFileHandle(track.fileKey, track.handle);
-            }
         }
         
         toast({
@@ -424,7 +348,7 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
                             Seleccionar Archivos de Pistas
                         </Button>
                     </FormControl>
-                    <input id="file-picker-input" type="file" multiple className="hidden" onChange={handleFileChange} />
+                    <input id="file-picker-input" type="file" multiple className="hidden" onChange={handleFileChange} accept={ACCEPTED_MIME_TYPES.join(',')} />
                 </div>
 
                 {fields.length > 0 && (
@@ -500,3 +424,5 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
 };
 
 export default UploadSongDialog;
+
+    

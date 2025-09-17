@@ -14,58 +14,6 @@ import type { LyricsSyncOutput } from '@/ai/flows/lyrics-synchronization';
 import TeleprompterDialog from '@/components/TeleprompterDialog';
 import { getCachedArrayBuffer, cacheArrayBuffer } from '@/lib/audiocache';
 import { blobToDataURI } from '@/lib/utils';
-import { openDB, IDBPDatabase } from 'idb';
-
-const DB_NAME = 'fileHandleDB';
-const STORE_NAME = 'fileHandles';
-const DB_VERSION = 1;
-
-let dbPromise: Promise<IDBPDatabase> | null = null;
-
-const getDb = (): Promise<IDBPDatabase> => {
-    if (!dbPromise) {
-        dbPromise = openDB(DB_NAME, DB_VERSION, {
-            upgrade(db) {
-                if (!db.objectStoreNames.contains(STORE_NAME)) {
-                    db.createObjectStore(STORE_NAME);
-                }
-            },
-        });
-    }
-    return dbPromise;
-};
-
-// Obtiene un FileSystemFileHandle de IndexedDB
-const getFileHandle = async (key: string): Promise<FileSystemFileHandle | undefined> => {
-    try {
-        const db = await getDb();
-        const handle = await db.get(STORE_NAME, key);
-        
-        if (!handle) {
-            // console.log(`No file handle found for key: ${key}`);
-            return undefined;
-        }
-        
-        // Verificar si todavía tenemos permiso para acceder al archivo
-        const permission = await handle.queryPermission({ mode: 'read' });
-        if (permission === 'granted') {
-            return handle;
-        }
-        
-        // Si no tenemos permiso, lo solicitamos de nuevo
-        if (await handle.requestPermission({ mode: 'read' }) === 'granted') {
-            return handle;
-        }
-
-        console.warn(`Permission denied for file handle: ${key}`);
-        return undefined;
-
-    } catch (error) {
-        console.error('Error getting file handle from IndexedDB:', error);
-        return undefined;
-    }
-};
-
 
 const eqFrequencies = [60, 250, 1000, 4000, 8000];
 const MAX_EQ_GAIN = 12;
@@ -115,7 +63,7 @@ const DawPage = () => {
   const [masterVuLevel, setMasterVuLevel] = useState(-Infinity);
   const [eqBands, setEqBands] = useState([50, 50, 50, 50, 50]);
   const [fadeOutDuration, setFadeOutDuration] = useState(0.5);
-  const [isPanVisible, setIsPanVisible] = useState(true);
+  const [isPanVisible, setIsPanVisible] = useState(false);
   
   const [isYouTubePlayerOpen, setIsYouTubePlayerOpen] = useState(false);
   const [isTeleprompterOpen, setIsTeleprompterOpen] = useState(false);
@@ -277,23 +225,13 @@ const DawPage = () => {
         const loadPromises = tracksToLoad.map(async (track) => {
             let buffer: ArrayBuffer | undefined;
             try {
-                // 1. Intentar obtener desde el File Handle (modo escritorio)
-                const handle = await getFileHandle(track.fileKey);
-                if (handle) {
-                    console.log(`Local file handle FOUND for: ${track.name}`);
-                    const file = await handle.getFile();
-                    buffer = await file.arrayBuffer();
-                }
-
-                // 2. Si no hay handle, intentar desde el caché de audio
-                if (!buffer) {
-                    const cachedBuffer = await getCachedArrayBuffer(track.url);
-                    if (cachedBuffer) {
-                        buffer = cachedBuffer;
-                    }
+                // 1. Intentar desde el caché de audio
+                const cachedBuffer = await getCachedArrayBuffer(track.url);
+                if (cachedBuffer) {
+                    buffer = cachedBuffer;
                 }
                 
-                // 3. Si no está en caché, descargar desde B2
+                // 2. Si no está en caché, descargar desde B2
                 if (!buffer) {
                     console.log(`Local file/cache MISS for: ${track.name}. Fetching from B2.`);
                     const proxyUrl = `/api/download?url=${encodeURIComponent(track.url)}`;
@@ -672,5 +610,3 @@ const DawPage = () => {
 };
 
 export default DawPage;
-
-    
