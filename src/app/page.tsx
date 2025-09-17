@@ -23,6 +23,7 @@ type TrackNodes = Record<string, {
     panner: import('tone').Panner;
     analyser: import('tone').Analyser;
     pitchShift: import('tone').PitchShift;
+    volume: import('tone').Volume;
 }>;
 
 
@@ -56,6 +57,7 @@ const DawPage = () => {
   const [pitch, setPitch] = useState(0);
 
   const [pans, setPans] = useState<{ [key: string]: number }>({});
+  const [volumes, setVolumes] = useState<{ [key: string]: number }>({});
   const [eqBands, setEqBands] = useState([50, 50, 50, 50, 50]);
   const [fadeOutDuration, setFadeOutDuration] = useState(0.5);
   const [isPanVisible, setIsPanVisible] = useState(true);
@@ -225,11 +227,12 @@ const DawPage = () => {
 
                 const player = new Tone.Player(audioBuffer);
                 player.loop = true;
+                const volume = new Tone.Volume(0);
                 const pitchShift = new Tone.PitchShift({ pitch: pitch });
                 const panner = new Tone.Panner(0);
                 const analyser = new Tone.Analyser('waveform', 256);
                 
-                player.chain(panner, pitchShift, analyser);
+                player.chain(volume, panner, pitchShift, analyser);
                 
                 if (eqNodesRef.current.length > 0) {
                   pitchShift.connect(eqNodesRef.current[0]);
@@ -237,7 +240,7 @@ const DawPage = () => {
                   pitchShift.toDestination();
                 }
                 
-                trackNodesRef.current[track.id] = { player, panner, analyser, pitchShift };
+                trackNodesRef.current[track.id] = { player, panner, analyser, pitchShift, volume };
                 setLoadedFrom(prev => ({...prev, [track.id]: loadedFromSource}));
                 setLoadedTracksCount(prev => prev + 1);
 
@@ -268,10 +271,13 @@ const DawPage = () => {
 
   useEffect(() => {
     const newPans: { [key: string]: number } = {};
+    const newVolumes: { [key: string]: number } = {};
     activeTracks.forEach(track => {
       newPans[track.id] = pans[track.id] ?? 0;
+      newVolumes[track.id] = volumes[track.id] ?? 75;
     });
     setPans(newPans);
+    setVolumes(newVolumes);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSongId]);
 
@@ -349,8 +355,9 @@ const DawPage = () => {
 
     Object.keys(trackNodesRef.current).forEach(trackId => {
         const node = trackNodesRef.current[trackId];
-        if (node?.player) {
-            node.player.mute = getIsMuted(trackId);
+        if (node?.volume) {
+          const isMuted = getIsMuted(trackId);
+          node.volume.mute = isMuted;
         }
         if (node?.panner) {
             const panValue = pans[trackId] ?? 0;
@@ -446,6 +453,17 @@ const DawPage = () => {
     setPans(prevPans => ({ ...prevPans, [trackId]: newPan }));
   }, []);
 
+  const handleVolumeChange = useCallback((trackId: string, newVol: number) => {
+    setVolumes(prev => ({...prev, [trackId]: newVol}));
+    const node = trackNodesRef.current[trackId];
+    if (node && node.volume) {
+      // Convert slider value (0-100) to dB (-60 to 0)
+      const newDb = newVol > 0 ? (newVol / 100) * 40 - 40 : -Infinity;
+      node.volume.volume.value = newDb;
+    }
+  }, []);
+
+
   const handleEqChange = (bandIndex: number, newValue: number) => {
     setEqBands(prevBands => {
       const newBands = [...prevBands];
@@ -524,10 +542,12 @@ const DawPage = () => {
               soloTracks={soloTracks}
               mutedTracks={mutedTracks}
               pans={pans}
+              volumes={volumes}
               loadingTracks={loadingTracks}
               onMuteToggle={handleMuteToggle}
               onSoloToggle={handleSoloToggle}
               onPanChange={handlePanChange}
+              onVolumeChange={handleVolumeChange}
               vuData={vuData}
               isPanVisible={isPanVisible}
               isPlaying={isPlaying}
@@ -570,3 +590,5 @@ const DawPage = () => {
 };
 
 export default DawPage;
+
+    

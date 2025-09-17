@@ -16,7 +16,9 @@ interface TrackPadProps {
   isSolo: boolean;
   isAudible: boolean;
   pan: number;
+  volume: number;
   onPanChange: (pan: number) => void;
+  onVolumeChange: (volume: number) => void;
   onMuteToggle: () => void;
   onSoloToggle: () => void;
   vuMeterLevel: number;
@@ -32,7 +34,9 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
   isSolo,
   isAudible,
   pan,
+  volume,
   onPanChange,
+  onVolumeChange,
   onSoloToggle,
   onMuteToggle,
   vuMeterLevel,
@@ -42,6 +46,7 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
   const { name } = track;
   
   const panSliderValue = useMemo(() => [pan], [pan]);
+  const volumeSliderValue = useMemo(() => [volume], [volume]);
   const isDisabled = isLoading;
 
   const isSpecialTrack = useMemo(() => {
@@ -57,29 +62,53 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
     return 'bg-green-500 shadow-[0_0_5px_1px] shadow-green-500/70';
   }, [isAudible, loadedFrom]);
 
+  const faderLedColor = useMemo(() => {
+    if (isMuted) return "bg-destructive shadow-[0_0_3px_1px] shadow-destructive/50";
+    if (isSolo) return "bg-yellow-500 shadow-[0_0_3px_1px] shadow-yellow-500/50";
+    return "bg-amber-400 shadow-[0_0_3px_1px] shadow-amber-400/50";
+  }, [isMuted, isSolo]);
+
 
   return (
     <div 
         className={cn(
-            "flex flex-col items-center gap-2 p-1 rounded-sm border border-black/50 transition-colors h-48 justify-between",
+            "relative flex flex-col items-center gap-2 rounded-lg border border-black/50 transition-colors h-48 justify-between p-1",
             isPlaying ? "bg-primary/5" : "bg-input"
         )}
     >
-      {/* LEDs & Name */}
-       <div className="flex justify-between items-center w-full px-1 pt-1">
-        <div className="flex gap-1.5">
-          <div className={cn("w-2 h-2 rounded-full transition-colors", ledColorClass)} />
+        {/* Fader */}
+        <div className="absolute inset-y-0 left-1 w-10 flex flex-col items-center">
+             <Slider
+                value={volumeSliderValue}
+                max={100}
+                step={1}
+                orientation="vertical"
+                onValueChange={(val) => onVolumeChange(val[0])}
+                disabled={isDisabled}
+                className={cn(
+                    'h-full w-full py-4',
+                    (isDisabled) && 'opacity-50'
+                )}
+                ledClassName={faderLedColor}
+            />
         </div>
-        <div className={cn("w-12 h-5 text-xs flex items-center justify-center font-bold rounded-sm",
-            isLoading && 'text-muted-foreground'
-        )}>
-             {isLoading && <Loader2 className="w-3 h-3 animate-spin" />}
+
+
+        {/* LEDs & Name */}
+        <div className="relative z-10 flex justify-between items-center w-full px-1 pt-1 ml-10">
+            <div className="flex gap-1.5">
+            <div className={cn("w-2 h-2 rounded-full transition-colors", ledColorClass)} />
+            </div>
+            <div className={cn("w-12 h-5 text-xs flex items-center justify-center font-bold rounded-sm",
+                isLoading && 'text-muted-foreground'
+            )}>
+                {isLoading && <Loader2 className="w-3 h-3 animate-spin" />}
+            </div>
         </div>
-      </div>
 
        <VuMeter level={vuMeterLevel} />
 
-       <div className="flex items-center justify-center w-full mt-1">
+       <div className="relative z-10 flex items-center justify-center w-full mt-auto ml-10">
          <span className={cn(
             "text-xs font-semibold uppercase text-muted-foreground tracking-wider truncate",
             isDisabled && 'opacity-50',
@@ -89,7 +118,7 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
        </div>
        
        {isPanVisible && (
-        <div className="w-full px-2">
+        <div className="relative z-10 w-full px-2 ml-10">
               <Slider
                   value={panSliderValue}
                   max={1}
@@ -108,7 +137,7 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
         </div>
        )}
 
-      <div className="flex gap-1.5 w-full mt-1">
+      <div className="relative z-10 flex gap-1.5 w-full mt-1 ml-10">
         <Button
           onClick={onMuteToggle}
           variant="secondary"
@@ -141,5 +170,7 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
 TrackPad.displayName = 'TrackPad';
 
 export default TrackPad;
+
+    
 
     

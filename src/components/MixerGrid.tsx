@@ -9,10 +9,12 @@ interface MixerGridProps {
   soloTracks: string[];
   mutedTracks: string[];
   pans: { [key: string]: number };
+  volumes: { [key: string]: number };
   loadingTracks: Set<string>;
   onMuteToggle: (trackId: string) => void;
   onSoloToggle: (trackId: string) => void;
   onPanChange: (trackId: string, newPan: number) => void;
+  onVolumeChange: (trackId: string, newVolume: number) => void;
   vuData: Record<string, number>;
   isPanVisible: boolean;
   isPlaying: boolean;
@@ -24,10 +26,12 @@ const MixerGrid: React.FC<MixerGridProps> = ({
   soloTracks, 
   mutedTracks,
   pans,
+  volumes,
   loadingTracks,
   onMuteToggle, 
   onSoloToggle,
   onPanChange,
+  onVolumeChange,
   vuData,
   isPanVisible,
   isPlaying,
@@ -55,9 +59,11 @@ const MixerGrid: React.FC<MixerGridProps> = ({
             isSolo={isSolo}
             isAudible={isAudible}
             pan={pans[track.id] ?? 0}
+            volume={volumes[track.id] ?? 75}
             onMuteToggle={() => onMuteToggle(track.id)}
             onSoloToggle={() => onSoloToggle(track.id)}
             onPanChange={(newPan) => onPanChange(track.id, newPan)}
+            onVolumeChange={(newVol) => onVolumeChange(track.id, newVol)}
             vuMeterLevel={vuData[track.id] || 0}
             isPanVisible={isPanVisible}
             loadedFrom={loadedFrom[track.id]}
@@ -69,5 +75,7 @@ const MixerGrid: React.FC<MixerGridProps> = ({
 };
 
 export default MixerGrid;
+
+    
 
     
