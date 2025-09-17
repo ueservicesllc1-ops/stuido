@@ -52,7 +52,7 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
         </span>
       </div>
         
-      <div className="relative h-52 w-20 rounded-md border border-border/20 bg-black/50 p-2 flex justify-center items-center">
+      <div className="relative h-52 w-24 rounded-md border border-border/20 bg-black/50 p-2 flex justify-center items-center">
         <Slider
             value={volumeSliderValue}
             max={100}
