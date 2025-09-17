@@ -1,7 +1,6 @@
 'use client';
 import React, { useMemo } from 'react';
 import { Button } from './ui/button';
-import { Slider } from './ui/slider';
 import { cn } from '@/lib/utils';
 import { SetlistSong } from '@/actions/setlists';
 import VuMeter from './VuMeter';
@@ -11,11 +10,9 @@ interface TrackPadProps {
   track: SetlistSong;
   isMuted: boolean;
   isSolo: boolean;
-  volume: number;
   vuLevel: number;
   tempo: number;
   isPlaying: boolean;
-  onVolumeChange: (newVolume: number) => void;
   onSoloToggle: () => void;
   onMuteToggle: () => void;
 }
@@ -24,16 +21,12 @@ const TrackPad: React.FC<TrackPadProps> = ({
   track,
   isMuted,
   isSolo,
-  volume,
   vuLevel,
   tempo,
   isPlaying,
-  onVolumeChange,
   onSoloToggle,
   onMuteToggle
 }) => {
-  const volumeSliderValue = useMemo(() => [volume], [volume]);
-  
   const isClickTrack = useMemo(() => track.name.trim().toUpperCase() === 'CLICK', [track.name]);
 
   const vuMeterLevel = useMemo(() => {
@@ -50,13 +43,7 @@ const TrackPad: React.FC<TrackPadProps> = ({
       </div>
         
       <div className="relative h-52 w-24 rounded-md border border-border/20 bg-black/50 p-2 flex justify-center items-center">
-        <Slider
-            value={volumeSliderValue}
-            max={100}
-            step={1}
-            orientation="vertical"
-            onValueChange={(val) => onVolumeChange(val[0])}
-        />
+        {/* Slider eliminado */}
         <div className="absolute right-2 top-0 bottom-0 flex items-center">
             {isClickTrack ? (
                 <TempoLed tempo={tempo} isPlaying={isPlaying} />

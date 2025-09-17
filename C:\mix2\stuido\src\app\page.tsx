@@ -55,10 +55,8 @@ const DawPage = () => {
   const [playbackRate, setPlaybackRate] = useState(1);
   const [pitch, setPitch] = useState(0);
 
-  const [volumes, setVolumes] = useState<{ [key: string]: number }>({});
   const [vuLevels, setVuLevels] = useState<Record<string, number>>({});
   const [masterVuLevel, setMasterVuLevel] = useState(-Infinity);
-  const [eqBands, setEqBands] = useState([50, 50, 50, 50, 50]);
   const [fadeOutDuration, setFadeOutDuration] = useState(0.5);
   const [isPanVisible, setIsPanVisible] = useState(false);
   
@@ -100,15 +98,6 @@ const DawPage = () => {
   useEffect(() => {
     initAudio();
   }, [initAudio]);
-
-
-  useEffect(() => {
-    if (!toneRef.current || eqNodesRef.current.length === 0) return;
-    eqNodesRef.current.forEach((filter, i) => {
-      const gainValue = (eqBands[i] / 100) * (MAX_EQ_GAIN * 2) - MAX_EQ_GAIN;
-      filter.gain.value = gainValue;
-    });
-  }, [eqBands]);
 
   const activeTracks = useMemo(() => {
     const getPrio = (trackName: string) => {
@@ -274,16 +263,6 @@ const DawPage = () => {
         setSongSyncOffset(currentSong?.syncOffset || 0);
     }
   }, [activeSongId, songs]);
-
-  useEffect(() => {
-    const newVolumes: { [key: string]: number } = {};
-    activeTracks.forEach(track => {
-      newVolumes[track.id] = volumes[track.id] ?? 100;
-    });
-    setVolumes(newVolumes);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSongId]);
-
 
   useEffect(() => {
     let animationFrameId: number;
@@ -456,29 +435,6 @@ const DawPage = () => {
       setPitch(0);
   }
 
-  const handleVolumeChange = useCallback((trackId: string, newVol: number) => {
-    setVolumes(prev => ({...prev, [trackId]: newVol}));
-    const node = trackNodesRef.current[trackId];
-    if (node && node.volume) {
-      const newDb = newVol > 0 ? (newVol / 100) * 40 - 40 : -Infinity;
-      node.volume.volume.value = newDb;
-    }
-  }, []);
-
-
-
-  const handleEqChange = (bandIndex: number, newValue: number) => {
-    setEqBands(prevBands => {
-      const newBands = [...prevBands];
-      newBands[bandIndex] = newValue;
-      return newBands;
-    });
-  };
-
-  const handleEqReset = () => {
-    setEqBands([50, 50, 50, 50, 50]);
-  };
-  
   const handleBpmChange = (newBpm: number) => {
       if (!activeSong || !activeSong.tempo) return;
       const newRate = newBpm / activeSong.tempo;
@@ -523,7 +479,6 @@ const DawPage = () => {
             onBpmChange={handleBpmChange}
             pitch={pitch}
             onPitchChange={setPitch}
-            masterVuLevel={masterVuLevel}
         />
       </div>
       
@@ -534,9 +489,6 @@ const DawPage = () => {
               youtubeUrl={songYoutubeUrl}
               onOpenYouTube={() => setIsYouTubePlayerOpen(true)}
               onOpenTeleprompter={() => setIsTeleprompterOpen(true)}
-              eqBands={eqBands}
-              onEqChange={handleEqChange}
-              onReset={handleEqReset}
             />
         </div>
         {activeSongId ? (
@@ -545,10 +497,8 @@ const DawPage = () => {
               activeSong={activeSong}
               soloTracks={soloTracks}
               mutedTracks={mutedTracks}
-              volumes={volumes}
               onMuteToggle={handleMuteToggle}
               onSoloToggle={handleSoloToggle}
-              onVolumeChange={handleVolumeChange}
               isPlaying={isPlaying}
               vuLevels={vuLevels}
             />

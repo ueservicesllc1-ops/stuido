@@ -37,7 +37,6 @@ interface HeaderProps {
   onBpmChange: (bpm: number) => void;
   pitch: number;
   onPitchChange: (pitch: number) => void;
-  masterVuLevel: number;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -63,7 +62,6 @@ const Header: React.FC<HeaderProps> = ({
   onBpmChange,
   pitch,
   onPitchChange,
-  masterVuLevel,
 }) => {
   
   const currentBPM = activeSong?.tempo ? activeSong.tempo * playbackRate : null;
@@ -190,7 +188,7 @@ const Header: React.FC<HeaderProps> = ({
             </div>
         </div>
         
-        <div className="flex items-center justify-end gap-2 ml-auto">
+        <div className="flex items-center justify-end gap-2 ml-auto w-64">
             <Button variant="ghost" className="gap-2">
                 <Circle className="w-2 h-2 fill-current" />
                 OUTS

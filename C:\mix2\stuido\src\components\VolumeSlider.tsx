@@ -2,23 +2,18 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { Slider } from './ui/slider';
 import { cn } from '@/lib/utils';
 import VuMeter from './VuMeter';
 
 interface VolumeSliderProps {
     label: string;
-    volume: number;
     vuLevel: number;
-    onVolumeChange: (volume: number) => void;
     disabled?: boolean;
 }
 
 const VolumeSlider: React.FC<VolumeSliderProps> = ({
     label,
-    volume,
     vuLevel,
-    onVolumeChange,
     disabled = false,
 }) => {
     const isClipping = vuLevel >= 0;
@@ -40,14 +35,7 @@ const VolumeSlider: React.FC<VolumeSliderProps> = ({
                     )} />
                 </div>
                 <div className="relative w-full h-full flex items-center">
-                    <Slider
-                        value={[volume]}
-                        max={100}
-                        step={1}
-                        onValueChange={(val) => onVolumeChange(val[0])}
-                        className="w-full"
-                        disabled={disabled}
-                    />
+                    {/* Slider eliminado */}
                 </div>
                  <div className="absolute right-2 top-0 bottom-0 flex items-center">
                     <VuMeter level={vuMeterLevel} orientation="horizontal" />
@@ -58,4 +46,3 @@ const VolumeSlider: React.FC<VolumeSliderProps> = ({
 }
 
 export default VolumeSlider;
-    
