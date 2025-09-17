@@ -21,7 +21,6 @@ type ToneModule = typeof import('tone');
 type TrackNodes = Record<string, {
     player: import('tone').Player;
     panner: import('tone').Panner;
-    analyser: import('tone').Analyser;
     pitchShift: import('tone').PitchShift;
     volume: import('tone').Volume;
 }>;
@@ -46,9 +45,7 @@ const DawPage = () => {
   
   const toneRef = useRef<ToneModule | null>(null);
   const eqNodesRef = useRef<import('tone').Filter[]>([]);
-  const [vuData, setVuData] = useState<Record<string, number>>({});
   const [loadingTracks, setLoadingTracks] = useState(new Set<string>());
-  const [loadedFrom, setLoadedFrom] = useState<Record<string, 'cache' | 'network'>>({});
   const [loadedTracksCount, setLoadedTracksCount] = useState(0);
   
   const [isPlaying, setIsPlaying] = useState(false);
@@ -56,7 +53,6 @@ const DawPage = () => {
   const [playbackRate, setPlaybackRate] = useState(1);
   const [pitch, setPitch] = useState(0);
 
-  const [pans, setPans] = useState<{ [key: string]: number }>({});
   const [volumes, setVolumes] = useState<{ [key: string]: number }>({});
   const [eqBands, setEqBands] = useState([50, 50, 50, 50, 50]);
   const [fadeOutDuration, setFadeOutDuration] = useState(0.5);
@@ -206,12 +202,10 @@ const DawPage = () => {
 
         const loadPromises = tracksToLoad.map(async (track) => {
             let buffer;
-            let loadedFromSource: 'cache' | 'network' = 'network';
             try {
                 const cachedBuffer = await getCachedArrayBuffer(track.url);
                 if (cachedBuffer) {
                     buffer = cachedBuffer;
-                    loadedFromSource = 'cache';
                 }
                 
                 if (!buffer) {
@@ -219,7 +213,6 @@ const DawPage = () => {
                     const response = await fetch(proxyUrl);
                     if (!response.ok) throw new Error(`Failed to fetch ${track.url}: ${response.statusText}`);
                     buffer = await response.arrayBuffer();
-                    loadedFromSource = 'network';
                     await cacheArrayBuffer(track.url, buffer.slice(0)); // Cache the downloaded buffer
                 }
 
@@ -230,9 +223,8 @@ const DawPage = () => {
                 const volume = new Tone.Volume(0);
                 const pitchShift = new Tone.PitchShift({ pitch: pitch });
                 const panner = new Tone.Panner(0);
-                const analyser = new Tone.Analyser('waveform', 256);
                 
-                player.chain(volume, panner, pitchShift, analyser);
+                player.chain(volume, panner, pitchShift);
                 
                 if (eqNodesRef.current.length > 0) {
                   pitchShift.connect(eqNodesRef.current[0]);
@@ -240,8 +232,7 @@ const DawPage = () => {
                   pitchShift.toDestination();
                 }
                 
-                trackNodesRef.current[track.id] = { player, panner, analyser, pitchShift, volume };
-                setLoadedFrom(prev => ({...prev, [track.id]: loadedFromSource}));
+                trackNodesRef.current[track.id] = { player, panner, pitchShift, volume };
                 setLoadedTracksCount(prev => prev + 1);
 
             } catch (error) {
@@ -270,53 +261,14 @@ const DawPage = () => {
   }, [activeSongId, songs]);
 
   useEffect(() => {
-    const newPans: { [key: string]: number } = {};
     const newVolumes: { [key: string]: number } = {};
     activeTracks.forEach(track => {
-      newPans[track.id] = pans[track.id] ?? 0;
       newVolumes[track.id] = volumes[track.id] ?? 75;
     });
-    setPans(newPans);
     setVolumes(newVolumes);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSongId]);
 
-
-  const updateVuMeters = useCallback(() => {
-    if (!isPlaying) {
-      setVuData({});
-      return;
-    }
-
-    const newVuData: Record<string, number> = {};
-    let activeNodes = false;
-    
-    Object.keys(trackNodesRef.current).forEach(trackId => {
-      const node = trackNodesRef.current[trackId];
-      // Check if the track belongs to the active song
-      if (node && tracks.some(t => t.id === trackId && t.songId === activeSongId)) {
-        activeNodes = true;
-        if (node.analyser) {
-          const values = node.analyser.getValue();
-          if(values instanceof Float32Array) {
-              let peak = 0;
-              for (let i = 0; i < values.length; i++) {
-                  peak = Math.max(peak, Math.abs(values[i]));
-              }
-              const dbfs = peak > 0 ? 20 * Math.log10(peak) : -60;
-              const meterScale = (dbfs + 60) / 60 * 100;
-              newVuData[trackId] = Math.max(0, meterScale);
-          }
-        }
-      }
-    });
-
-    setVuData(newVuData);
-    
-    if (activeNodes) {
-      requestAnimationFrame(updateVuMeters);
-    }
-  }, [isPlaying, activeSongId, tracks]);
 
   useEffect(() => {
     let animationFrameId: number;
@@ -359,15 +311,11 @@ const DawPage = () => {
           const isMuted = getIsMuted(trackId);
           node.volume.mute = isMuted;
         }
-        if (node?.panner) {
-            const panValue = pans[trackId] ?? 0;
-            node.panner.pan.value = panValue;
-        }
         if (node?.pitchShift) {
             node.pitchShift.pitch = pitch;
         }
     });
-  }, [mutedTracks, soloTracks, getIsMuted, pans, pitch]);
+  }, [mutedTracks, soloTracks, getIsMuted, pitch]);
   
    useEffect(() => {
       const Tone = toneRef.current;
@@ -407,9 +355,8 @@ const DawPage = () => {
 
       Tone.Transport.start();
       setIsPlaying(true);
-      requestAnimationFrame(updateVuMeters);
     }
-  }, [loadingTracks.size, activeSong, initAudio, updateVuMeters, activeTracks]);
+  }, [loadingTracks.size, activeSong, initAudio, activeTracks]);
 
 
   const handlePause = useCallback(() => {
@@ -449,9 +396,6 @@ const DawPage = () => {
       setPlaybackRate(1);
       setPitch(0);
   }
-  const handlePanChange = useCallback((trackId: string, newPan: number) => {
-    setPans(prevPans => ({ ...prevPans, [trackId]: newPan }));
-  }, []);
 
   const handleVolumeChange = useCallback((trackId: string, newVol: number) => {
     setVolumes(prev => ({...prev, [trackId]: newVol}));
@@ -541,17 +485,11 @@ const DawPage = () => {
               tracks={activeTracks}
               soloTracks={soloTracks}
               mutedTracks={mutedTracks}
-              pans={pans}
               volumes={volumes}
-              loadingTracks={loadingTracks}
               onMuteToggle={handleMuteToggle}
               onSoloToggle={handleSoloToggle}
-              onPanChange={handlePanChange}
               onVolumeChange={handleVolumeChange}
-              vuData={vuData}
-              isPanVisible={isPanVisible}
               isPlaying={isPlaying}
-              loadedFrom={loadedFrom}
             />
         ) : (
           <div className="flex justify-center items-center h-full">
