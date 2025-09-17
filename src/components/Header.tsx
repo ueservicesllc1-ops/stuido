@@ -214,7 +214,7 @@ const Header: React.FC<HeaderProps> = ({
         duration={duration}
         onSeek={onSeek}
         structure={songStructure}
-        isReady={isReadyToPlay}
+        isReady={!!isReadyToPlay}
        />
 
       {showLoadingBar && (
@@ -233,3 +233,5 @@ const Header: React.FC<HeaderProps> = ({
 };
 
 export default Header;
+
+    

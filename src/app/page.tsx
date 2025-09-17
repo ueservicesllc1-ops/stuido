@@ -186,7 +186,6 @@ const DawPage = () => {
           const tracksForCurrentSong = tracks.filter(t => t.songId === activeSongId);
           const currentTrackIds = new Set(tracksForCurrentSong.map(t => t.id));
           
-          // Dispose of players for tracks that are not in the current song
           Object.keys(trackNodesRef.current).forEach(trackId => {
               if (!currentTrackIds.has(trackId)) {
                   const node = trackNodesRef.current[trackId];
@@ -232,11 +231,8 @@ const DawPage = () => {
 
               } catch (error) {
                   console.error(`Error loading track ${track.name}:`, error);
-                  setLoadingTracks(prev => {
-                      const newSet = new Set(prev);
-                      newSet.delete(track.id);
-                      return newSet;
-                  });
+                  // The track will remain in the loading set, which is desired behavior
+                  // to indicate that it failed. We can add specific error handling UI later.
               }
           });
       
@@ -439,6 +435,7 @@ const DawPage = () => {
             onBpmChange={handleBpmChange}
             pitch={pitch}
             onPitchChange={setPitch}
+            isReadyToPlay={loadingTracks.size === 0}
         />
       </div>
 
@@ -507,3 +504,5 @@ const DawPage = () => {
 };
 
 export default DawPage;
+
+    
