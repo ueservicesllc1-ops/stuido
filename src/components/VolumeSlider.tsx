@@ -30,6 +30,13 @@ const VolumeSlider: React.FC<VolumeSliderProps> = ({
         <div className="flex items-center gap-3 w-full">
             <span className="font-bold text-sm w-16 text-right">{label}</span>
              <div className="relative flex-grow h-10 rounded-md border border-border/50 bg-black/30 p-2 flex items-center gap-4">
+                <div className="absolute top-1 left-2 flex gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_4px_theme(colors.blue.500)]" />
+                    <div className={cn(
+                        "w-2 h-2 rounded-full bg-red-500 transition-opacity",
+                        isClipping ? "opacity-100 shadow-[0_0_4px_theme(colors.red.500)]" : "opacity-20"
+                    )} />
+                </div>
                 <div className="relative w-full h-full flex items-center">
                     <Slider
                         value={[volume]}
