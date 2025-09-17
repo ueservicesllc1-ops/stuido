@@ -54,3 +54,4 @@ const VolumeSlider: React.FC<VolumeSliderProps> = ({
 }
 
 export default VolumeSlider;
+    
