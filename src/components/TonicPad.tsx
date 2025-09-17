@@ -140,6 +140,9 @@ const TonicPad = () => {
 
   return (
     <div className="bg-card/50 rounded-lg p-3 flex flex-col gap-3">
+        <div className="flex justify-between items-center">
+            <h2 className="font-bold text-foreground">Sampler</h2>
+        </div>
         <div className="grid grid-cols-4 gap-2">
             {topRowKeys.map((key) => (
                 <Button 
