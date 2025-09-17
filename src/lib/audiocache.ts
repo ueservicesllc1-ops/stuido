@@ -35,12 +35,13 @@ export const getCachedArrayBuffer = async (url: string): Promise<ArrayBuffer | n
 export const cacheArrayBuffer = async (url: string, buffer: ArrayBuffer): Promise<void> => {
   try {
     const key = `${CACHE_VERSION}-${url}`;
-    await audioStore.setItem(key, buffer);
+    await audioStore.setItem(key, buffer.slice(0)); // Use slice(0) to store a copy
     console.log(`Cached: ${url}`);
   } catch (error) {
     console.error('Error setting to cache:', error);
   }
 };
+
 
 // Función para limpiar el caché (útil para mantenimiento)
 export const clearCache = async (): Promise<void> => {
@@ -51,5 +52,3 @@ export const clearCache = async (): Promise<void> => {
     console.error('Error clearing cache:', error);
   }
 };
-
-    

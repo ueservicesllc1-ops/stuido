@@ -18,7 +18,6 @@ const eqFrequencies = [60, 250, 1000, 4000, 8000];
 const MAX_EQ_GAIN = 12;
 
 type ToneModule = typeof import('tone');
-type PlaybackMode = 'online' | 'cache';
 type TrackNodes = Record<string, {
     player: import('tone').Player;
     panner: import('tone').Panner;
@@ -55,7 +54,6 @@ const DawPage = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [pitch, setPitch] = useState(0);
-  const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('cache');
 
   const [pans, setPans] = useState<{ [key: string]: number }>({});
   const [eqBands, setEqBands] = useState([50, 50, 50, 50, 50]);
@@ -208,12 +206,10 @@ const DawPage = () => {
             let buffer;
             let loadedFromSource: 'cache' | 'network' = 'network';
             try {
-                if (playbackMode === 'cache') {
-                    const cachedBuffer = await getCachedArrayBuffer(track.url);
-                    if (cachedBuffer) {
-                        buffer = cachedBuffer;
-                        loadedFromSource = 'cache';
-                    }
+                const cachedBuffer = await getCachedArrayBuffer(track.url);
+                if (cachedBuffer) {
+                    buffer = cachedBuffer;
+                    loadedFromSource = 'cache';
                 }
                 
                 if (!buffer) {
@@ -222,9 +218,7 @@ const DawPage = () => {
                     if (!response.ok) throw new Error(`Failed to fetch ${track.url}: ${response.statusText}`);
                     buffer = await response.arrayBuffer();
                     loadedFromSource = 'network';
-                    if (playbackMode === 'cache') {
-                        await cacheArrayBuffer(track.url, buffer);
-                    }
+                    await cacheArrayBuffer(track.url, buffer.slice(0)); // Cache the downloaded buffer
                 }
 
                 const audioBuffer = await Tone.context.decodeAudioData(buffer.slice(0));
@@ -259,7 +253,7 @@ const DawPage = () => {
     loadAudioData();
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSongId, playbackMode, tracks, initAudio]);
+  }, [activeSongId, tracks, initAudio]);
 
   useEffect(() => {
     if (activeSongId) {
@@ -508,8 +502,6 @@ const DawPage = () => {
             onBpmChange={handleBpmChange}
             pitch={pitch}
             onPitchChange={setPitch}
-            playbackMode={playbackMode}
-            onPlaybackModeChange={setPlaybackMode}
         />
       </div>
 
@@ -578,5 +570,3 @@ const DawPage = () => {
 };
 
 export default DawPage;
-
-    
