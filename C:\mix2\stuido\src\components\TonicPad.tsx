@@ -8,7 +8,7 @@ import { useToast } from './ui/use-toast';
 import { Loader2 } from 'lucide-react';
 import { getB2FileAsDataURI } from '@/actions/download';
 
-const topRowKeys = ['A', 'B', 'C', 'D'];
+const topRowKeys = ['X', 'B', 'C', 'D'];
 const bottomRowKeys = ['1', '2', '3', '4'];
 
 type ToneModule = typeof import('tone');
@@ -202,5 +202,3 @@ const TonicPad = () => {
 };
 
 export default TonicPad;
-
-    
