@@ -300,7 +300,7 @@ const DawPage = () => {
       newPans[track.id] = pans[track.id] ?? 0;
     });
     setPans(newPans);
-  }, [tracks, pans]);
+  }, [tracks]);
 
 
   const updateVuMeters = useCallback(() => {
