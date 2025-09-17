@@ -62,7 +62,7 @@ export default {
         },
         green: {
           '400': '#22C55E', // For text/icon
-          '500': '#16A34A', // For slider
+          '500': '#16A34A', // For slider & LED
         },
         blue: {
           '500': '#3b82f6',

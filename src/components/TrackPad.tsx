@@ -24,21 +24,27 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
   volume,
   vuLevel,
   onVolumeChange,
-  onMuteToggle,
   onSoloToggle,
+  onMuteToggle
 }) => {
   const volumeSliderValue = useMemo(() => [volume], [volume]);
   const isClipping = vuLevel >= 0;
+  const hasSignal = vuLevel > -Infinity;
 
   return (
     <div className="flex flex-col items-center gap-2">
       <div className="flex items-center justify-center gap-1.5 mb-1 h-3">
-        {/* Signal LED */}
+        {/* Signal Presence (Green) LED */}
+        <div className={cn(
+            "w-2 h-2 rounded-full bg-input transition-colors",
+            hasSignal && !isMuted && "bg-green-500 shadow-[0_0_4px_1px] shadow-green-500/70 animate-pulse"
+        )} />
+        {/* Active (Blue) LED */}
         <div className={cn(
             "w-2 h-2 rounded-full bg-input transition-colors",
             !isMuted && "bg-blue-500 shadow-[0_0_4px_1px] shadow-blue-500/70"
         )} />
-        {/* Clip LED */}
+        {/* Clip (Red) LED */}
         <div className={cn(
             "w-2 h-2 rounded-full bg-input transition-colors",
             isClipping && "bg-destructive shadow-[0_0_4px_1px] shadow-destructive/70 animate-pulse"
