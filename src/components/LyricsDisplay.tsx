@@ -28,7 +28,7 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({
     onReset
 }) => {
   return (
-    <div className="grid grid-cols-4 gap-4 h-full">
+    <div className="grid grid-cols-3 gap-4 h-full">
         <div className="relative rounded-lg overflow-hidden h-full bg-card/50 border border-border p-2">
             <GraphicEq bands={eqBands} onBandChange={onEqChange} onReset={onReset} />
         </div>
@@ -73,18 +73,6 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({
              <span className="font-bold text-xl text-white drop-shadow-lg">Teleprompter</span>
          </div>
       </button>
-      <div className="relative rounded-lg overflow-hidden group h-full">
-        <Image
-          src="https://picsum.photos/seed/extra/600/400"
-          alt="Extra"
-          fill
-          className="object-cover transition-transform duration-300 group-hover:scale-105"
-          data-ai-hint="guitar pedals"
-        />
-         <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-             <span className="font-bold text-xl text-white drop-shadow-lg">Extra</span>
-         </div>
-      </div>
     </div>
   );
 };
