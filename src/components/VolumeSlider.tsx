@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo } from 'react';
@@ -38,15 +39,8 @@ const VolumeSlider: React.FC<VolumeSliderProps> = ({
                         className="w-full"
                     />
                 </div>
-                 <div className="absolute top-1 right-2 flex items-center justify-center gap-1.5 h-3">
-                    <div className={cn(
-                        "w-2 h-2 rounded-full bg-input transition-colors",
-                        vuLevel > -48 && "bg-blue-500 shadow-[0_0_4px_1px] shadow-blue-500/70"
-                    )} />
-                    <div className={cn(
-                        "w-2 h-2 rounded-full bg-input transition-colors",
-                        isClipping && "bg-destructive shadow-[0_0_4px_1px] shadow-destructive/70 animate-pulse"
-                    )} />
+                 <div className="absolute right-2 top-0 bottom-0 flex items-center">
+                    <VuMeter level={vuMeterLevel} orientation="horizontal" />
                 </div>
             </div>
         </div>
