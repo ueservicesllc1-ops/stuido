@@ -6,7 +6,7 @@ import { Slider } from './ui/slider';
 import { getSamplesByGroup, Sample } from '@/actions/samples';
 import { useToast } from './ui/use-toast';
 import { Loader2 } from 'lucide-react';
-import { getCachedArrayBuffer, cacheArrayBuffer } from '@/lib/audiocache';
+import { getB2FileAsDataURI } from '@/actions/download';
 
 const topRowKeys = ['A', 'B', 'C', 'D', 'E', 'F'];
 const bottomRowKeys = ['1', '2', '3', '4', '5', '6'];
@@ -62,21 +62,16 @@ const TonicPad = () => {
     }
 
     const loadPromises = samples.map(async (sample) => {
-        if (!sample.url || !sample.padKey) return;
+        if (!sample.url || !sample.padKey || !sample.fileKey) return;
         try {
-            let buffer;
-            const cachedBuffer = await getCachedArrayBuffer(sample.url);
-            if (cachedBuffer) {
-                buffer = cachedBuffer;
-            } else {
-                const proxyUrl = `/api/download?url=${encodeURIComponent(sample.url)}`;
-                const response = await fetch(proxyUrl);
-                if (!response.ok) throw new Error(`Failed to fetch ${sample.url}`);
-                buffer = await response.arrayBuffer();
-                await cacheArrayBuffer(sample.url, buffer.slice(0));
+            // Se usa la nueva server action para obtener el audio como Data URI
+            const downloadResult = await getB2FileAsDataURI(sample.fileKey);
+
+            if (!downloadResult.success || !downloadResult.dataUri) {
+                throw new Error(downloadResult.error || `Failed to get data URI for ${sample.name}`);
             }
             
-            const player = new Tone.Player(buffer).connect(masterVolumeNodeRef.current!);
+            const player = new Tone.Player(downloadResult.dataUri).connect(masterVolumeNodeRef.current!);
             audioPlayersRef.current[sample.padKey] = player;
         } catch (e) {
             console.error(`Error cargando el sample ${sample.name}:`, e);
