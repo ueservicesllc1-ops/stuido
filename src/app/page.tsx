@@ -6,13 +6,15 @@ import MixerGrid from '@/components/MixerGrid';
 import SongList from '@/components/SongList';
 import TonicPad from '@/components/TonicPad';
 import { getSetlists, Setlist, SetlistSong } from '@/actions/setlists';
-import { Song } from '@/actions/songs';
+import { Song, TrackFile } from '@/actions/songs';
 import { SongStructure } from '@/ai/flows/song-structure';
 import LyricsDisplay from '@/components/LyricsDisplay';
 import YouTubePlayerDialog from '@/components/YouTubePlayerDialog';
 import type { LyricsSyncOutput } from '@/ai/flows/lyrics-synchronization';
 import TeleprompterDialog from '@/components/TeleprompterDialog';
 import { getCachedArrayBuffer, cacheArrayBuffer } from '@/lib/audiocache';
+import { getFileHandle, setFileHandle } from '@/lib/file-handles';
+import { blobToDataURI } from '@/lib/utils';
 
 const eqFrequencies = [60, 250, 1000, 4000, 8000];
 const MAX_EQ_GAIN = 12;
@@ -222,19 +224,32 @@ const DawPage = () => {
         setLoadedTracksCount(tracksForCurrentSong.length - tracksToLoad.length);
 
         const loadPromises = tracksToLoad.map(async (track) => {
-            let buffer;
+            let buffer: ArrayBuffer | undefined;
             try {
-                const cachedBuffer = await getCachedArrayBuffer(track.url);
-                if (cachedBuffer) {
-                    buffer = cachedBuffer;
+                // 1. Intentar obtener desde el File Handle (modo escritorio)
+                const handle = await getFileHandle(track.fileKey);
+                if (handle) {
+                    console.log(`Local file handle FOUND for: ${track.name}`);
+                    const file = await handle.getFile();
+                    buffer = await file.arrayBuffer();
+                }
+
+                // 2. Si no hay handle, intentar desde el caché de audio
+                if (!buffer) {
+                    const cachedBuffer = await getCachedArrayBuffer(track.url);
+                    if (cachedBuffer) {
+                        buffer = cachedBuffer;
+                    }
                 }
                 
+                // 3. Si no está en caché, descargar desde B2
                 if (!buffer) {
+                    console.log(`Local file/cache MISS for: ${track.name}. Fetching from B2.`);
                     const proxyUrl = `/api/download?url=${encodeURIComponent(track.url)}`;
                     const response = await fetch(proxyUrl);
                     if (!response.ok) throw new Error(`Failed to fetch ${track.url}: ${response.statusText}`);
                     buffer = await response.arrayBuffer();
-                    await cacheArrayBuffer(track.url, buffer.slice(0)); // Cache the downloaded buffer
+                    await cacheArrayBuffer(track.url, buffer.slice(0)); // Cachear el buffer descargado
                 }
 
                 const audioBuffer = await Tone.context.decodeAudioData(buffer.slice(0));

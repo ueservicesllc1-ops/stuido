@@ -13,6 +13,7 @@ export interface TrackFile {
   name: string;
   url: string;
   fileKey: string;
+  handle?: FileSystemFileHandle; // Para el acceso local en modo escritorio
 }
 
 // Represents the new Song entity, which is a collection of tracks and metadata
@@ -55,11 +56,15 @@ export async function saveSong(data: NewSong) {
   try {
     const songsCollection = collection(db, 'songs');
 
+    // Remove non-serializable 'handle' from tracks before saving to Firestore
+    const tracksToSave = data.tracks.map(({ handle, ...rest }) => rest);
+
     const formattedData = {
         ...data,
         name: toTitleCase(data.name),
         artist: toTitleCase(data.artist),
         syncOffset: data.syncOffset || 0,
+        tracks: tracksToSave
     };
     
     const newDoc = await addDoc(songsCollection, {
@@ -69,7 +74,7 @@ export async function saveSong(data: NewSong) {
 
     const songData: Song = {
       id: newDoc.id,
-      ...formattedData
+      ...data // Devolvemos la data original con el handle para el cliente
     }
     
     // Disparar el análisis de estructura en segundo plano
