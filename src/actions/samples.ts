@@ -2,7 +2,7 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, query, where, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, doc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 
 export interface Sample {
   id: string;
@@ -11,7 +11,32 @@ export interface Sample {
   fileKey: string;
   groupKey: string;
   padKey: string;
+  createdAt?: string; // Cambiado a string para serialización
 }
+
+// Función para convertir Timestamps a strings
+const processSampleDoc = (doc: any): Sample => {
+    const data = doc.data();
+    const createdAt = data.createdAt;
+    
+    let createdAtString: string | undefined = undefined;
+    if (createdAt instanceof Timestamp) {
+        createdAtString = createdAt.toDate().toISOString();
+    } else if (typeof createdAt === 'string') {
+        createdAtString = createdAt;
+    }
+
+    return {
+        id: doc.id,
+        name: data.name,
+        url: data.url,
+        fileKey: data.fileKey,
+        groupKey: data.groupKey,
+        padKey: data.padKey,
+        createdAt: createdAtString,
+    };
+};
+
 
 // Devuelve todos los samples para un grupo específico (ej: 'A')
 export async function getSamplesByGroup(groupKey: string): Promise<{ success: boolean; samples?: Sample[], error?: string }> {
@@ -20,10 +45,7 @@ export async function getSamplesByGroup(groupKey: string): Promise<{ success: bo
         const q = query(samplesCollection, where('groupKey', '==', groupKey));
         const samplesSnapshot = await getDocs(q);
 
-        const samples: Sample[] = samplesSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...(doc.data() as Omit<Sample, 'id'>)
-        }));
+        const samples: Sample[] = samplesSnapshot.docs.map(processSampleDoc);
 
         return { success: true, samples };
     } catch (error) {
@@ -43,12 +65,27 @@ export async function saveSample(data: Partial<Sample>): Promise<{ success: bool
     // Hacemos una copia para no mutar el objeto original
     const dataToSave = { ...data };
     
+    // Firestore no permite guardar 'undefined', así que lo eliminamos si existe.
+    if (dataToSave.id === undefined) {
+      delete dataToSave.id;
+    }
+     // Quitamos createdAt si es un string, Firestore debe manejarlo con serverTimestamp
+    if (typeof dataToSave.createdAt === 'string') {
+        delete dataToSave.createdAt;
+    }
+    
     if (dataToSave.id) {
       // Actualizar un sample existente por su ID
       const sampleRef = doc(db, 'samples', dataToSave.id);
       const { id, ...updateData } = dataToSave; // Extraemos el id para no guardarlo en el documento
       await updateDoc(sampleRef, updateData);
-      return { success: true, sample: dataToSave as Sample };
+      
+      const updatedSample: Sample = {
+          ...(await getDoc(doc(db, 'samples', id))).data(),
+          id: id
+      } as Sample;
+
+      return { success: true, sample: processSampleDoc({ id: id, data: () => updatedSample }) };
     } else {
       // Buscar si ya existe un pad para este group/pad
       const q = query(samplesCollection, where('groupKey', '==', dataToSave.groupKey), where('padKey', '==', dataToSave.padKey));
@@ -60,15 +97,16 @@ export async function saveSample(data: Partial<Sample>): Promise<{ success: bool
         const sampleRef = doc(db, 'samples', existingDoc.id);
         const { id, ...updateData } = dataToSave;
         await updateDoc(sampleRef, updateData);
-        const updatedSample = { ...dataToSave, id: existingDoc.id } as Sample;
-        return { success: true, sample: updatedSample };
+        
+        const updatedDoc = await getDoc(sampleRef);
+        return { success: true, sample: processSampleDoc(updatedDoc) };
       } else {
         // Si no existe, crear un nuevo documento
-        const { id, ...newDocData } = dataToSave; // Quitamos el id por si viene como undefined
-        const finalDocData = { ...newDocData, createdAt: serverTimestamp() };
+        const finalDocData = { ...dataToSave, createdAt: serverTimestamp() };
         const newDoc = await addDoc(samplesCollection, finalDocData);
-        const newSample = { ...dataToSave, id: newDoc.id } as Sample;
-        return { success: true, sample: newSample };
+        
+        const savedDoc = await getDoc(newDoc);
+        return { success: true, sample: processSampleDoc(savedDoc) };
       }
     }
   } catch (error) {
