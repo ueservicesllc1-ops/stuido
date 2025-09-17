@@ -37,7 +37,7 @@ const Slider = React.forwardRef<
     thumbClassName?: string,
     trackClassName?: string,
   }
->(({ className, orientation = 'horizontal', ...props }, ref) => (
+>(({ className, orientation = 'horizontal', trackClassName, rangeClassName, thumbClassName, ...props }, ref) => (
   <SliderPrimitive.Root
     ref={ref}
     orientation={orientation}
@@ -51,13 +51,16 @@ const Slider = React.forwardRef<
     <SliderPrimitive.Track className={cn(
         "relative grow overflow-visible",
         orientation === 'horizontal' ? 'h-0.5 w-full' : 'h-full w-0.5 bg-input',
+        trackClassName
     )}>
-        {orientation === 'vertical' && <FaderMarks />}
+      {orientation === 'vertical' && <FaderMarks />}
+      <SliderPrimitive.Range className={cn("absolute bg-primary", rangeClassName)} />
     </SliderPrimitive.Track>
     <SliderPrimitive.Thumb 
         className={cn(
           "block h-1 w-12 rounded-sm bg-slider-thumb bg-cover bg-center cursor-pointer relative",
-          "ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+          "ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+          thumbClassName
         )}
     >
         <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-white/0" />
