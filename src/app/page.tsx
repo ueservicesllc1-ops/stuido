@@ -77,17 +77,17 @@ const DawPage = () => {
 
         if (eqNodesRef.current.length === 0) {
             const Tone = toneRef.current;
-            let lastNode: import('tone').InputNode = Tone.getDestination();
-
-            // Create EQ chain that connects to destination
+            
             const eqChain = eqFrequencies.map((freq) => {
                 const filter = new Tone.Filter(freq, 'peaking');
                 filter.Q.value = 1.5;
                 return filter;
             });
 
-            // Chain the filters together and connect the last one to the destination
-            Tone.Chain(...eqChain, lastNode);
+            if (eqChain.length > 0) {
+              Tone.connectSeries(...eqChain, Tone.getDestination());
+            }
+
             eqNodesRef.current = eqChain;
         }
     }
@@ -189,11 +189,9 @@ const DawPage = () => {
           if (!Tone || !eqNodesRef.current.length) return;
 
           const tracksForCurrentSong = tracks.filter(t => t.songId === activeSongId);
-          
           const tracksToLoad = tracksForCurrentSong.filter(t => !trackNodesRef.current[t.id]);
           const currentTrackIds = new Set(tracksForCurrentSong.map(t => t.id));
 
-          // Dispose of nodes for tracks that are no longer active for this song
           Object.keys(trackNodesRef.current).forEach(trackId => {
               if (!currentTrackIds.has(trackId)) {
                   const node = trackNodesRef.current[trackId];
@@ -231,22 +229,24 @@ const DawPage = () => {
                       buffer = await Tone.context.decodeAudioData(arrayBuffer);
                   }
 
-                  const player = new Tone.Player(buffer);
+                  const player = new Tone.Player(buffer).toDestination();
                   player.loop = true;
                   const pitchShift = new Tone.PitchShift({ pitch: pitch });
-                  const panner = new Tone.Panner(0).connect(pitchShift);
+                  const panner = new Tone.Panner(0);
                   const analyser = new Tone.Analyser('waveform', 256);
                   
-                  // Connect player -> panner -> analyser -> eq chain
-                  player.connect(panner);
-                  panner.connect(analyser);
-                  pitchShift.connect(eqNodesRef.current[0]);
+                  player.chain(panner, pitchShift, analyser);
+                  
+                  if (eqNodesRef.current.length > 0) {
+                    pitchShift.connect(eqNodesRef.current[0]);
+                  } else {
+                    pitchShift.toDestination();
+                  }
 
                   trackNodesRef.current[track.id] = { player, panner, analyser, pitchShift };
 
               } catch (error) {
                   console.error(`Error loading track ${track.name}:`, error);
-                  // We'll leave it in the loading set to indicate failure.
               }
           });
       
@@ -256,7 +256,6 @@ const DawPage = () => {
 
       loadAudioData();
 
-      // We stop tracks when activeSongId changes to avoid race conditions.
       return () => {
           stopAllTracks();
       };
@@ -520,3 +519,5 @@ const DawPage = () => {
 };
 
 export default DawPage;
+
+    
