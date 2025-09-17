@@ -15,10 +15,11 @@ import { Separator } from './ui/separator';
 import { Label } from './ui/label';
 import { Slider } from './ui/slider';
 import { Switch } from './ui/switch';
-import { ChevronRight, X, Heart } from 'lucide-react';
+import { ChevronRight, X, Heart, Rss } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import SamplerPadSettings from './SamplerPadSettings';
 
-type SettingsTab = 'General' | 'MIDI' | 'Audio' | 'About';
+type SettingsTab = 'General' | 'MIDI' | 'Audio' | 'Sampler' | 'About';
 
 interface SettingsRowProps {
   label: string;
@@ -90,10 +91,9 @@ const SettingsDialog = ({
     onPanVisibilityChange
 }: SettingsDialogProps) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('General');
-  const [transition, setTransition] = useState(12);
   const [tonicFollows, setTonicFollows] = useState(true);
 
-  const tabs: SettingsTab[] = ['General', 'MIDI', 'Audio', 'About'];
+  const tabs: SettingsTab[] = ['General', 'Sampler', 'MIDI', 'Audio', 'About'];
 
   const renderGeneralSettings = () => {
     return (
@@ -185,12 +185,17 @@ const SettingsDialog = ({
                        {renderGeneralSettings()}
                     </div>
                 )}
+                 {activeTab === 'Sampler' && (
+                    <div className="max-w-4xl mx-auto">
+                        <SamplerPadSettings />
+                    </div>
+                )}
                 {activeTab === 'About' && (
                     <div className="flex items-center justify-center h-full">
                         {renderAboutSettings()}
                     </div>
                 )}
-                {activeTab !== 'General' && activeTab !== 'About' && (
+                {activeTab !== 'General' && activeTab !== 'About' && activeTab !== 'Sampler' && (
                     <div className="flex items-center justify-center h-full">
                         <p className="text-muted-foreground text-2xl">Settings for {activeTab}</p>
                     </div>
