@@ -7,10 +7,8 @@ import { SetlistSong } from '@/actions/setlists';
 
 interface TrackPadProps {
   track: SetlistSong;
-  isPlaying: boolean;
   isMuted: boolean;
   isSolo: boolean;
-  isAudible: boolean;
   volume: number;
   onVolumeChange: (volume: number) => void;
   onMuteToggle: () => void;
@@ -19,24 +17,14 @@ interface TrackPadProps {
 
 const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
   track,
-  isPlaying,
   isMuted,
   isSolo,
-  isAudible,
   volume,
   onVolumeChange,
   onSoloToggle,
   onMuteToggle,
 }) => {
-  const { name } = track;
-  
   const volumeSliderValue = useMemo(() => [volume], [volume]);
-
-  const isSpecialTrack = useMemo(() => {
-    const upperCaseName = name.trim().toUpperCase();
-    return upperCaseName === 'CLICK' || upperCaseName === 'CUES';
-  }, [name]);
-
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -50,9 +38,13 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
             onValueChange={(val) => onValueChange(val[0])}
             className="h-full w-full"
             trackClassName="bg-input w-1 mx-auto"
-            rangeClassName="bg-gradient-to-t from-blue-500 via-yellow-500 to-green-500"
-            thumbClassName="h-3 w-5 rounded-sm bg-foreground border-none cursor-pointer"
+            rangeClassName="bg-gradient-to-t from-blue-500 to-green-500"
+            thumbClassName="h-1 w-5 rounded-sm bg-foreground border-none cursor-pointer"
         />
+      </div>
+
+       <div className="w-full text-center mt-1">
+        <span className="text-xs font-mono text-foreground truncate block w-full">{track.name}</span>
       </div>
 
       {/* Contenedor de Botones */}
@@ -70,11 +62,9 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
         <Button
           onClick={onSoloToggle}
           variant="secondary"
-          disabled={isSpecialTrack}
           className={cn(
             'w-full h-7 text-xs font-bold rounded-sm',
-            isSolo ? 'bg-yellow-500 text-black' : 'bg-secondary',
-             isSpecialTrack && '!bg-secondary/30 !text-muted-foreground'
+            isSolo ? 'bg-yellow-500 text-black' : 'bg-secondary'
           )}
         >
           S

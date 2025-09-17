@@ -1,4 +1,3 @@
-
 'use client';
 import React from 'react';
 import TrackPad from './TrackPad';
@@ -12,7 +11,6 @@ interface MixerGridProps {
   onMuteToggle: (trackId: string) => void;
   onSoloToggle: (trackId: string) => void;
   onVolumeChange: (trackId: string, newVolume: number) => void;
-  isPlaying: boolean;
 }
 
 const MixerGrid: React.FC<MixerGridProps> = ({ 
@@ -23,7 +21,6 @@ const MixerGrid: React.FC<MixerGridProps> = ({
   onMuteToggle, 
   onSoloToggle,
   onVolumeChange,
-  isPlaying,
 }) => {
   const isSoloActive = soloTracks.length > 0;
 
@@ -32,17 +29,13 @@ const MixerGrid: React.FC<MixerGridProps> = ({
       {tracks.map(track => {
         const isMuted = mutedTracks.includes(track.id);
         const isSolo = soloTracks.includes(track.id);
-
-        const isAudible = isPlaying && !isMuted && (!isSoloActive || isSolo);
         
         return (
           <TrackPad
             key={track.id}
             track={track}
-            isPlaying={isPlaying}
             isMuted={isMuted}
             isSolo={isSolo}
-            isAudible={isAudible}
             volume={volumes[track.id] ?? 75}
             onMuteToggle={() => onMuteToggle(track.id)}
             onSoloToggle={() => onSoloToggle(track.id)}
@@ -55,7 +48,3 @@ const MixerGrid: React.FC<MixerGridProps> = ({
 };
 
 export default MixerGrid;
-
-    
-
-    
