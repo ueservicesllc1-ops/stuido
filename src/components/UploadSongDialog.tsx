@@ -52,7 +52,7 @@ const getDb = (): Promise<IDBPDatabase> => {
 };
 
 // Guarda un FileSystemFileHandle en IndexedDB
-export const setFileHandle = async (key: string, handle: FileSystemFileHandle): Promise<void> => {
+const setFileHandle = async (key: string, handle: FileSystemFileHandle): Promise<void> => {
     try {
         const db = await getDb();
         await db.put(STORE_NAME, handle, key);
@@ -63,7 +63,8 @@ export const setFileHandle = async (key: string, handle: FileSystemFileHandle): 
 };
 
 
-const ACCEPTED_AUDIO_TYPES = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio/x-m4a', 'audio/mp3'];
+const ACCEPTED_AUDIO_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.aac', '.m4a'];
+const ACCEPTED_MIME_TYPES = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio/x-m4a', 'audio/mp3'];
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
 const trackSchema = z.object({
@@ -72,7 +73,7 @@ const trackSchema = z.object({
     .refine((file) => file.size > 0, 'Se requiere un archivo.')
     .refine((file) => file.size <= MAX_FILE_SIZE, `El tamaño máximo es 50MB.`)
     .refine(
-      (file) => ACCEPTED_AUDIO_TYPES.includes(file.type),
+      (file) => ACCEPTED_MIME_TYPES.includes(file.type),
       'Formato de audio no soportado.'
     ),
   name: z.string().min(1, { message: 'El nombre de la pista es requerido.' }),
@@ -159,7 +160,12 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
     try {
         const handles = await window.showOpenFilePicker({
             multiple: true,
-            types: [{ description: 'Audio Files', accept: { 'audio/*': ACCEPTED_AUDIO_TYPES } }],
+            types: [{ 
+                description: 'Audio Files', 
+                accept: { 
+                    'audio/*': ACCEPTED_AUDIO_EXTENSIONS 
+                } 
+            }],
         });
 
         const newTrackStatuses: Record<number, TrackStatus> = {};
@@ -494,5 +500,3 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
 };
 
 export default UploadSongDialog;
-
-    
