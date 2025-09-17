@@ -4,9 +4,10 @@
 import React from 'react';
 import Image from 'next/image';
 import { Button } from './ui/button';
-import { Youtube } from 'lucide-react';
+import { Youtube, SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import GraphicEq from './GraphicEq';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 
 interface LyricsDisplayProps {
   lyrics: string | null;
@@ -28,13 +29,37 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({
     onReset
 }) => {
   return (
-    <div className="grid grid-cols-4 gap-4 h-full">
-        <div className="relative rounded-lg overflow-hidden h-full bg-card/50 border border-border p-2 col-span-2">
-            <GraphicEq bands={eqBands} onBandChange={onEqChange} onReset={onReset} />
-        </div>
+    <div className="flex gap-4 h-full">
+        <Popover>
+            <PopoverTrigger asChild>
+                <button 
+                    className={cn(
+                        "relative rounded-lg overflow-hidden group h-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background flex-1"
+                    )}
+                >
+                    <Image
+                        src="https://picsum.photos/seed/eq-button/600/400"
+                        alt="Equalizer"
+                        fill
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        data-ai-hint="audio mixer knobs"
+                    />
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <span className="font-bold text-xl text-white drop-shadow-lg flex items-center gap-2">
+                            <SlidersHorizontal />
+                            EQ
+                        </span>
+                    </div>
+                </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[300px] h-[150px] bg-card/80 backdrop-blur-sm border-border">
+                <GraphicEq bands={eqBands} onBandChange={onEqChange} onReset={onReset} />
+            </PopoverContent>
+        </Popover>
+
        <button 
           className={cn(
-            "relative rounded-lg overflow-hidden group h-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background",
+            "relative rounded-lg overflow-hidden group h-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background flex-1",
             !youtubeUrl && "opacity-50 cursor-not-allowed"
           )}
           onClick={() => youtubeUrl && onOpenYouTube()}
@@ -56,7 +81,7 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({
       </button>
       <button 
         className={cn(
-            "relative rounded-lg overflow-hidden group h-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background",
+            "relative rounded-lg overflow-hidden group h-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background flex-1",
             !lyrics && "opacity-50 cursor-not-allowed"
         )}
         onClick={() => lyrics && onOpenTeleprompter()}
