@@ -202,5 +202,3 @@ const TonicPad = () => {
 };
 
 export default TonicPad;
-
-    
