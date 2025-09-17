@@ -544,7 +544,7 @@ const DawPage = () => {
         />
       </div>
 
-      <div className="col-span-2 row-start-2 h-28">
+      <div className="col-span-1 row-start-2 h-28">
         <LyricsDisplay 
             lyrics={songLyrics}
             youtubeUrl={songYoutubeUrl}
