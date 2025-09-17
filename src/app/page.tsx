@@ -186,24 +186,31 @@ const DawPage = () => {
   }, []);
 
 
-  useEffect(() => {
+useEffect(() => {
     if (!activeSongId) return;
 
     stopAllTracks();
 
     const tracksForCurrentSong = tracks.filter(t => t.songId === activeSongId);
     if (tracksForCurrentSong.length === 0) {
-      setLoadingTracks(new Set());
-      return;
+        setLoadingTracks(new Set());
+        return;
     }
-    
-    const trackIdsToLoad = new Set(tracksForCurrentSong.map(t => t.id));
-    setLoadingTracks(trackIdsToLoad);
 
     const loadAudioData = async () => {
         await initAudio();
         const Tone = toneRef.current;
         if (!Tone) return;
+        
+        const tracksToLoad = tracksForCurrentSong.filter(t => !trackNodesRef.current[t.id]);
+
+        if (tracksToLoad.length === 0) {
+            setLoadingTracks(new Set());
+            return;
+        }
+
+        const trackIdsToLoad = new Set(tracksToLoad.map(t => t.id));
+        setLoadingTracks(trackIdsToLoad);
 
         // Dispose existing players for tracks that are no longer active
         const currentTrackIds = new Set(tracksForCurrentSong.map(t => t.id));
@@ -219,18 +226,8 @@ const DawPage = () => {
             }
         });
 
-        const loadPromises = tracksForCurrentSong.map(async (track) => {
+        const loadPromises = tracksToLoad.map(async (track) => {
             try {
-                // If player already exists, don't recreate it
-                if (trackNodesRef.current[track.id]) {
-                     setLoadingTracks(prev => {
-                        const newSet = new Set(prev);
-                        newSet.delete(track.id);
-                        return newSet;
-                    });
-                    return;
-                }
-
                 let buffer;
                 if (playbackMode === 'offline') {
                     const cachedData = await getCachedArrayBuffer(track.url);
@@ -260,25 +257,20 @@ const DawPage = () => {
     
             } catch (error) {
                 console.error(`Error loading track ${track.name}:`, error);
-            } finally {
-                setLoadingTracks(prev => {
-                    const newSet = new Set(prev);
-                    newSet.delete(track.id);
-                    return newSet;
-                });
+                // We'll leave it in the loading set to indicate failure.
+                // The UI will show it as permanently loading.
             }
         });
     
         await Promise.all(loadPromises);
+        setLoadingTracks(new Set()); // All tracks finished loading (or failed)
     };
 
     loadAudioData();
 
-    return () => {
-      stopAllTracks();
-    }
+    // No return function needed here for cleanup, as it's handled at the start.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSongId, tracks, playbackMode, initAudio, pitch, stopAllTracks]);
+  }, [activeSongId, playbackMode, pitch]);
 
   useEffect(() => {
     if (activeSongId) {
@@ -300,6 +292,7 @@ const DawPage = () => {
       newPans[track.id] = pans[track.id] ?? 0;
     });
     setPans(newPans);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tracks]);
 
 

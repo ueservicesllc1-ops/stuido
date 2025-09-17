@@ -12,6 +12,7 @@ import { PlaybackMode } from '@/app/page';
 interface TrackPadProps {
   track: SetlistSong;
   isLoading: boolean;
+  isPlaying: boolean;
   isMuted: boolean;
   isSolo: boolean;
   isAudible: boolean;
@@ -21,6 +22,7 @@ interface TrackPadProps {
   onPanChange: (pan: number) => void;
   onMuteToggle: () => void;
   onSoloToggle: () => void;
+  onPlayToggle: () => void;
   vuMeterLevel: number;
   playbackMode: PlaybackMode;
   isPanVisible: boolean;
@@ -53,6 +55,7 @@ FaderTickMarks.displayName = 'FaderTickMarks';
 const TrackPad: React.FC<TrackPadProps> = React.memo(({
   track,
   isLoading,
+  isPlaying,
   isMuted,
   isSolo,
   isAudible,
@@ -62,6 +65,7 @@ const TrackPad: React.FC<TrackPadProps> = React.memo(({
   onPanChange,
   onSoloToggle,
   onMuteToggle,
+  onPlayToggle,
   vuMeterLevel,
   playbackMode,
   isPanVisible,
@@ -90,35 +94,41 @@ const TrackPad: React.FC<TrackPadProps> = React.memo(({
         return 'bg-blue-500 shadow-[0_0_5px_1px] shadow-blue-500/70';
       case 'offline':
         return 'bg-green-500 shadow-[0_0_5px_1px] shadow-green-500/70';
-      case 'hybrid':
       default:
         return 'bg-amber-400 shadow-[0_0_5px_1px] shadow-amber-400/70';
     }
   }, [playbackMode]);
 
-
   return (
-    <div className="flex flex-col items-center gap-2 bg-input p-1 rounded-sm border border-black/50">
-      {/* LEDs */}
-      <div className="flex gap-1.5 mt-1">
-        <div className={cn(
-            "w-2 h-2 rounded-full transition-colors",
-            isAudible ? "bg-blue-500/80 shadow-[0_0_5px_1px] shadow-blue-500/70" : "bg-blue-900/50"
-        )} />
-        <div className={cn(
-            "w-2 h-2 rounded-full transition-colors",
-            isPeaking ? "bg-destructive shadow-[0_0_5px_1px] shadow-destructive/70" : "bg-red-900/50"
-        )} />
+    <div 
+        className={cn(
+            "flex flex-col items-center gap-2 p-1 rounded-sm border border-black/50 transition-colors",
+            isPlaying ? "bg-primary/5" : "bg-input"
+        )}
+    >
+      {/* LEDs & Play Button */}
+       <div className="flex justify-between items-center w-full px-1 pt-1">
+        <div className="flex gap-1.5">
+          <div className={cn("w-2 h-2 rounded-full transition-colors", isAudible ? ledColorClass : "bg-background/50")} />
+          <div className={cn("w-2 h-2 rounded-full transition-colors", isPeaking ? "bg-destructive shadow-[0_0_5px_1px] shadow-destructive/70" : "bg-background/50")} />
+        </div>
+        <Button 
+            onClick={onPlayToggle}
+            disabled={isDisabled}
+            variant={isPlaying ? 'default' : 'secondary'}
+            size="sm"
+            className={cn(
+                "w-12 h-5 text-xs font-bold rounded-sm",
+                isPlaying && "bg-primary text-primary-foreground",
+                isDisabled && '!bg-secondary/30 !text-muted-foreground'
+            )}
+        >
+            {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'PLAY'}
+        </Button>
       </div>
 
       {/* Fader channel */}
       <div className="relative h-36 w-12 flex justify-center items-center">
-         {isDisabled && (
-           <div className="absolute inset-0 flex justify-center items-center bg-card/80 z-20 rounded-lg">
-              <Loader2 className="w-8 h-8 text-primary animate-spin" />
-           </div>
-         )}
-         
         {/* Fader Slot */}
         <div className="relative h-full w-full flex justify-center">
             <FaderTickMarks />
