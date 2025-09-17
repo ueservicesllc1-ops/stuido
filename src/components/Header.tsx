@@ -226,7 +226,7 @@ const Header: React.FC<HeaderProps> = ({
                  <Progress value={loadingProgress} className="h-2" indicatorClassName="bg-yellow-500" />
             </div>
             <span className="text-xs text-yellow-400 font-mono w-28 text-right">
-                {Math.round(loadingProgress)}%
+                {Math.round(loadingProgress || 0)}%
             </span>
         </div>
       )}

@@ -46,6 +46,7 @@ const DawPage = () => {
   const eqNodesRef = useRef<import('tone').Filter[]>([]);
   const [vuData, setVuData] = useState<Record<string, number>>({});
   const [loadingTracks, setLoadingTracks] = useState(new Set<string>());
+  const [loadedTracksCount, setLoadedTracksCount] = useState(0);
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -177,6 +178,7 @@ const DawPage = () => {
       if (!activeSongId) {
           stopAllTracks();
           setLoadingTracks(new Set());
+          setLoadedTracksCount(0);
           return;
       }
 
@@ -202,9 +204,11 @@ const DawPage = () => {
           const tracksToLoad = tracksForCurrentSong.filter(t => !trackNodesRef.current[t.id]);
           if (tracksToLoad.length === 0) {
               setLoadingTracks(new Set());
+              setLoadedTracksCount(tracksForCurrentSong.length);
               return;
           }
-
+          
+          setLoadedTracksCount(tracksForCurrentSong.length - tracksToLoad.length);
           setLoadingTracks(new Set(tracksToLoad.map(t => t.id)));
 
           const loadPromises = tracksToLoad.map(async (track) => {
@@ -230,9 +234,15 @@ const DawPage = () => {
                   }
 
                   trackNodesRef.current[track.id] = { player, panner, analyser, pitchShift };
+                  setLoadedTracksCount(prev => prev + 1);
 
               } catch (error) {
                   console.error(`Error loading track ${track.name}:`, error);
+                  setLoadingTracks(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete(track.id);
+                    return newSet;
+                  });
               }
           });
       
@@ -261,12 +271,12 @@ const DawPage = () => {
 
   useEffect(() => {
     const newPans: { [key: string]: number } = {};
-    tracks.forEach(track => {
+    activeTracks.forEach(track => {
       newPans[track.id] = pans[track.id] ?? 0;
     });
     setPans(newPans);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tracks]);
+  }, [activeSongId]);
 
 
   const updateVuMeters = useCallback(() => {
@@ -451,6 +461,11 @@ const DawPage = () => {
     Tone.Transport.seconds = newTime;
     setCurrentTime(newTime);
   };
+  
+  const totalTracksForCurrentSong = tracks.filter(t => t.songId === activeSongId).length;
+  const loadingProgress = totalTracksForCurrentSong > 0 ? (loadedTracksCount / totalTracksForCurrentSong) * 100 : 100;
+  const showLoadingBar = loadingTracks.size > 0 || (activeSongId && totalTracksForCurrentSong > 0 && loadedTracksCount < totalTracksForCurrentSong);
+
 
   return (
     <div className="grid grid-cols-[1fr_384px] grid-rows-[auto_auto_1fr] h-screen w-screen p-4 gap-4">
@@ -464,6 +479,8 @@ const DawPage = () => {
             duration={activeSong?.tracks.length ? (trackNodesRef.current[activeTracks[0]?.id]?.player.buffer.duration || 0) : 0}
             onSeek={handleSeek}
             isReadyToPlay={loadingTracks.size === 0 && !!activeSong}
+            loadingProgress={loadingProgress}
+            showLoadingBar={showLoadingBar}
             fadeOutDuration={fadeOutDuration}
             onFadeOutDurationChange={setFadeOutDuration}
             isPanVisible={isPanVisible}
