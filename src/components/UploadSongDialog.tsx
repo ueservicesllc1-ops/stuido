@@ -19,6 +19,7 @@ import { z } from 'zod';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -414,9 +415,13 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
                   )}
                 />
                 
-                <div className="space-y-2">
-                   <FormLabel>Archivos de Pistas</FormLabel>
-                    <FormControl>
+                <FormField
+                  control={form.control}
+                  name="tracks"
+                  render={() => (
+                    <FormItem>
+                      <FormLabel>Archivos de Pistas</FormLabel>
+                      <FormControl>
                         <Button 
                             type="button"
                             variant="outline"
@@ -426,9 +431,12 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
                         >
                             Seleccionar Archivos de Pistas
                         </Button>
-                    </FormControl>
-                    <input id="file-picker-input" type="file" multiple className="hidden" onChange={handleFileChange} accept={ACCEPTED_MIME_TYPES.join(',')} />
-                </div>
+                      </FormControl>
+                      <input id="file-picker-input" type="file" multiple className="hidden" onChange={handleFileChange} accept={ACCEPTED_MIME_TYPES.join(',')} />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 {fields.length > 0 && (
                   <div className="space-y-3">
@@ -464,29 +472,10 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
                          {trackStatuses[index] === 'error' && (
                             <p className="text-xs text-destructive mt-1 ml-2">{trackErrorMessages[index]}</p>
                          )}
-                         <FormField
-                              control={form.control}
-                              name={`tracks.${index}.name`}
-                              render={() => <FormMessage />}
-                          />
                       </div>
                     ))}
                   </div>
                 )}
-                 <FormField
-                    control={form.control}
-                    name="tracks"
-                    render={() => (
-                        <FormItem>
-                             {form.formState.errors.tracks && !form.formState.errors.tracks.root && fields.length === 0 && (
-                                <FormMessage>{form.formState.errors.tracks.message}</FormMessage>
-                            )}
-                             {form.formState.errors.tracks?.root?.message && (
-                                <FormMessage>{form.formState.errors.tracks.root.message}</FormMessage>
-                            )}
-                        </FormItem>
-                    )}
-                 />
               </div>
             </ScrollArea>
             <DialogFooter>
@@ -504,7 +493,5 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
 };
 
 export default UploadSongDialog;
-
-    
 
     
