@@ -10,6 +10,7 @@ interface TrackPadProps {
   isPlaying: boolean;
   isMuted: boolean;
   isSolo: boolean;
+  isAudible: boolean;
   volume: number;
   onVolumeChange: (volume: number) => void;
   onMuteToggle: () => void;
@@ -21,6 +22,7 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
   isPlaying,
   isMuted,
   isSolo,
+  isAudible,
   volume,
   onVolumeChange,
   onSoloToggle,
@@ -35,35 +37,26 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
     return upperCaseName === 'CLICK' || upperCaseName === 'CUES';
   }, [name]);
 
-  const faderLedColor = useMemo(() => {
-    if (isMuted) return "bg-destructive shadow-[0_0_3px_1px] shadow-destructive/50";
-    if (isSolo) return "bg-yellow-500 shadow-[0_0_3px_1px] shadow-yellow-500/50";
-    return "bg-amber-400 shadow-[0_0_3px_1px] shadow-amber-400/50";
-  }, [isMuted, isSolo]);
-
 
   return (
-    <div 
-        className={cn(
-            "relative flex flex-col items-center gap-2 rounded-lg border border-black/50 transition-colors h-64 justify-between p-1",
-            isPlaying ? "bg-primary/5" : "bg-input"
-        )}
-    >
-        {/* Fader */}
-        <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-10 flex flex-col items-center">
-             <Slider
-                value={volumeSliderValue}
-                max={100}
-                step={1}
-                orientation="vertical"
-                onValueChange={(val) => onValueChange(val[0])}
-                className="h-full w-4"
-                trackClassName="bg-input"
-                rangeClassName="bg-gradient-to-t from-destructive via-yellow-500 to-green-500"
-            />
-        </div>
+    <div className="flex flex-col items-center gap-2">
+      {/* Marco del Fader */}
+      <div className="relative h-64 w-16 rounded-md border border-border/50 bg-black/30 p-2 pt-3 pb-3">
+        <Slider
+            value={volumeSliderValue}
+            max={100}
+            step={1}
+            orientation="vertical"
+            onValueChange={(val) => onValueChange(val[0])}
+            className="h-full w-full"
+            trackClassName="bg-input w-1 mx-auto"
+            rangeClassName="bg-gradient-to-t from-blue-500 via-yellow-500 to-green-500"
+            thumbClassName="h-4 w-8 rounded-sm bg-foreground border-none cursor-pointer"
+        />
+      </div>
 
-      <div className="relative z-10 flex gap-1.5 w-full mt-auto">
+      {/* Contenedor de Botones */}
+      <div className="flex gap-1.5 w-full">
         <Button
           onClick={onMuteToggle}
           variant="secondary"
