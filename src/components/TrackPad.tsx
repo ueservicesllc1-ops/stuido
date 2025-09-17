@@ -46,6 +46,12 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
 
   return (
     <div className="flex flex-col items-center gap-2">
+      <div className="w-full text-center bg-black/80 border border-amber-400/20 rounded-md px-1 py-1">
+        <span className="font-mono text-sm text-amber-400 [text-shadow:0_0_8px_theme(colors.amber.400)] truncate block w-full">
+            {track.name}
+        </span>
+      </div>
+        
       <div className="relative h-40 w-20 rounded-md border border-border/20 bg-black/50 p-2 flex justify-center items-center">
         <Slider
             value={volumeSliderValue}
@@ -61,12 +67,6 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
                 <VuMeter level={vuMeterLevel} orientation="vertical" />
             )}
         </div>
-      </div>
-
-       <div className="w-full text-center mt-1 bg-black/80 border border-amber-400/20 rounded-md px-1 py-1">
-        <span className="font-mono text-sm text-amber-400 [text-shadow:0_0_8px_theme(colors.amber.400)] truncate block w-full">
-            {track.name}
-        </span>
       </div>
 
       {/* Contenedor de Botones */}
