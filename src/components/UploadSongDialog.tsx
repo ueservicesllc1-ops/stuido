@@ -32,7 +32,8 @@ import { saveSong, NewSong, TrackFile } from '@/actions/songs';
 import { Progress } from './ui/progress';
 import { Textarea } from './ui/textarea';
 
-const ACCEPTED_MIME_TYPES = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio/x-m4a', 'audio/mp3'];
+const ACCEPTED_AUDIO_TYPES = ['.mp3', '.wav', '.ogg', '.m4a', '.aac'];
+const ACCEPTED_MIME_TYPES = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/x-m4a', 'audio/aac', 'audio/mp3'];
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
 const trackSchema = z.object({
@@ -117,29 +118,39 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
     const files = event.target.files;
     if (!files) return;
 
-    const newTrackStatuses: Record<number, TrackStatus> = {};
-    const newProgress: Record<number, number> = {};
+    for (const file of Array.from(files)) {
+      // Basic client-side validation
+      if (!ACCEPTED_MIME_TYPES.includes(file.type)) {
+        toast({
+          variant: 'destructive',
+          title: 'Formato no soportado',
+          description: `El archivo "${file.name}" tiene un formato no válido.`,
+        });
+        continue; // Skip this file
+      }
+      if (file.size > MAX_FILE_SIZE) {
+         toast({
+          variant: 'destructive',
+          title: 'Archivo demasiado grande',
+          description: `El archivo "${file.name}" excede los 50MB.`,
+        });
+        continue; // Skip this file
+      }
 
-    for (const [index, file] of Array.from(files).entries()) {
-        let trackName = file.name.split('.').slice(0, -1).join('.') || file.name;
-        trackName = trackName.replace(/[\s_]/g, '-').substring(0, 10); // Sanitize name
-        
-        const newIndex = fields.length + index;
-        append({ file, name: trackName });
-        newTrackStatuses[newIndex] = 'pending';
-        newProgress[newIndex] = 0;
+      let trackName = file.name.split('.').slice(0, -1).join('.') || file.name;
+      const newIndex = fields.length;
+      append({ file, name: trackName });
+      setTrackStatuses(prev => ({...prev, [newIndex]: 'pending'}));
+      setUploadProgress(prev => ({...prev, [newIndex]: 0}));
     }
-
-    setTrackStatuses(prev => ({...prev, ...newTrackStatuses}));
-    setUploadProgress(prev => ({...prev, ...newProgress}));
 
     if (!form.getValues('name') && files.length > 0) {
-        form.setValue('name', files[0].name.split('.').slice(0, -1).join('.'));
+      form.setValue('name', files[0].name.split('.').slice(0, -1).join('.'));
     }
 
-    // Reset the input value to allow selecting the same files again
     event.target.value = '';
   };
+
 
   const uploadTrackWithProgress = (formData: FormData, index: number): Promise<{ success: boolean, track?: Omit<TrackFile, 'handle'>, error?: string }> => {
     return new Promise((resolve) => {
@@ -415,28 +426,35 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
                   )}
                 />
                 
-                <FormField
-                  control={form.control}
-                  name="tracks"
-                  render={() => (
-                    <FormItem>
-                      <FormLabel>Archivos de Pistas</FormLabel>
-                      <FormControl>
-                        <Button 
-                            type="button"
-                            variant="outline"
-                            onClick={() => (document.getElementById('file-picker-input') as HTMLInputElement).click()}
-                            disabled={isUploading}
-                            className="w-full"
-                        >
-                            Seleccionar Archivos de Pistas
-                        </Button>
-                      </FormControl>
-                      <input id="file-picker-input" type="file" multiple className="hidden" onChange={handleFileChange} accept={ACCEPTED_MIME_TYPES.join(',')} />
-                      <FormMessage />
-                    </FormItem>
+                <FormItem>
+                  <FormLabel className={form.formState.errors.tracks ? 'text-destructive' : ''}>
+                    Archivos de Pistas
+                  </FormLabel>
+                  <FormControl>
+                    <Button 
+                      type="button"
+                      variant="outline"
+                      onClick={() => (document.getElementById('file-picker-input') as HTMLInputElement).click()}
+                      disabled={isUploading}
+                      className="w-full"
+                    >
+                      Seleccionar Archivos de Pistas
+                    </Button>
+                  </FormControl>
+                  <input
+                    id="file-picker-input"
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={handleFileChange}
+                    accept={ACCEPTED_AUDIO_TYPES.join(',')}
+                  />
+                  {form.formState.errors.tracks && (
+                    <p className="text-sm font-medium text-destructive">
+                      {form.formState.errors.tracks.message}
+                    </p>
                   )}
-                />
+                </FormItem>
 
                 {fields.length > 0 && (
                   <div className="space-y-3">
@@ -480,7 +498,7 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
             </ScrollArea>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isUploading}>Cancelar</Button>
-              <Button type="submit" disabled={isUploading}>
+              <Button type="submit" disabled={isUploading || !form.formState.isValid}>
                 {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isUploading ? 'Subiendo...' : 'Subir canción'}
               </Button>
@@ -493,5 +511,4 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
 };
 
 export default UploadSongDialog;
-
     
