@@ -50,21 +50,17 @@ const DawPage = () => {
   const masterVolumeNodeRef = useRef<import('tone').Volume | null>(null);
   const eqNodesRef = useRef<import('tone').Filter[]>([]);
   const [vuData, setVuData] = useState<Record<string, number>>({});
-  const [loadingTracks, setLoadingTracks] = useState<string[]>([]);
+  const [loadingTracks, setLoadingTracks] = useState(new Set<string>());
+  
+  const [playingTracks, setPlayingTracks] = useState(new Set<string>());
 
-  const [isPlaying, setIsPlaying] = useState(false);
-  const isPlayingRef = useRef(isPlaying);
-  const [playbackPosition, setPlaybackPosition] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const animationFrameRef = useRef<number>();
   const [playbackRate, setPlaybackRate] = useState(1);
-  const [pitch, setPitch] = useState(0); // New state for pitch shifting in semitones
+  const [pitch, setPitch] = useState(0);
 
   const volumesRef = useRef<{ [key: string]: number }>({});
   const [pans, setPans] = useState<{ [key: string]: number }>({});
   const [masterVolume, setMasterVolume] = useState(100);
   const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('online');
-  const [isReadyToPlay, setIsReadyToPlay] = useState(false);
 
   const [eqBands, setEqBands] = useState([50, 50, 50, 50, 50]);
   const [fadeOutDuration, setFadeOutDuration] = useState(0.5);
@@ -118,16 +114,6 @@ const DawPage = () => {
       filter.gain.value = gainValue;
     });
   }, [eqBands]);
-
-  useEffect(() => {
-    const activeTracksForSong = tracks.filter(t => t.songId === activeSongId);
-    if (!toneRef.current) {
-        setIsReadyToPlay(false);
-        return;
-    }
-    const allTracksLoaded = activeTracksForSong.length > 0 && activeTracksForSong.every(t => trackNodesRef.current[t.id]?.player.loaded);
-    setIsReadyToPlay(allTracksLoaded && loadingTracks.length === 0);
-  }, [loadingTracks, tracks, activeSongId]);
 
   const getPrio = (trackName: string) => {
     const upperCaseName = trackName.trim().toUpperCase();
@@ -185,59 +171,84 @@ const DawPage = () => {
     }
   }, [initialSetlist]);
 
+  const stopAllTracks = useCallback(() => {
+    const Tone = toneRef.current;
+    if (!Tone) return;
+
+    Object.keys(trackNodesRef.current).forEach(trackId => {
+        const node = trackNodesRef.current[trackId];
+        if (node?.player.state === 'started') {
+            node.player.stop();
+        }
+    });
+    setPlayingTracks(new Set());
+    setVuData({});
+  }, []);
+
+
   useEffect(() => {
     if (!activeSongId) return;
 
-    handleStop(true);
+    stopAllTracks();
 
     const tracksForCurrentSong = tracks.filter(t => t.songId === activeSongId);
     if (tracksForCurrentSong.length === 0) {
-      setIsReadyToPlay(false);
-      setLoadingTracks([]);
-      setDuration(0);
+      setLoadingTracks(new Set());
       return;
     }
-
-    setLoadingTracks(tracksForCurrentSong.map(t => t.id));
-    setIsReadyToPlay(false);
+    
+    const trackIdsToLoad = new Set(tracksForCurrentSong.map(t => t.id));
+    setLoadingTracks(trackIdsToLoad);
 
     const loadAudioData = async () => {
         await initAudio();
         const Tone = toneRef.current;
         if (!Tone) return;
 
-        let maxDuration = 0;
-    
-        // Dispose existing players before loading new ones
-        Object.values(trackNodesRef.current).forEach(node => node.player.dispose());
-        trackNodesRef.current = {};
+        // Dispose existing players for tracks that are no longer active
+        const currentTrackIds = new Set(tracksForCurrentSong.map(t => t.id));
+        Object.keys(trackNodesRef.current).forEach(trackId => {
+            if (!currentTrackIds.has(trackId)) {
+                const node = trackNodesRef.current[trackId];
+                node.player.dispose();
+                node.panner.dispose();
+                node.volume.dispose();
+                node.analyser.dispose();
+                node.pitchShift.dispose();
+                delete trackNodesRef.current[trackId];
+            }
+        });
 
         const loadPromises = tracksForCurrentSong.map(async (track) => {
             try {
-                const player = new Tone.Player();
-                
+                // If player already exists, don't recreate it
+                if (trackNodesRef.current[track.id]) {
+                     setLoadingTracks(prev => {
+                        const newSet = new Set(prev);
+                        newSet.delete(track.id);
+                        return newSet;
+                    });
+                    return;
+                }
+
+                let buffer;
                 if (playbackMode === 'offline') {
                     const cachedData = await getCachedArrayBuffer(track.url);
                     if (cachedData) {
-                        const audioBuffer = await Tone.context.decodeAudioData(cachedData);
-                        await player.load(audioBuffer); // Use the buffer directly
+                        buffer = await Tone.context.decodeAudioData(cachedData);
                     } else {
-                        console.error(`Offline mode: Track ${track.name} not in cache.`);
-                        throw new Error(`Track ${track.name} not cached for offline use`);
+                        throw new Error(`Track ${track.name} not cached`);
                     }
                 } else { // Online mode
                     const proxyUrl = `/api/download?url=${encodeURIComponent(track.url)}`;
-                    await player.load(proxyUrl);
-                    // After successful online load, cache it for future offline use.
                     const response = await fetch(proxyUrl);
                     const arrayBuffer = await response.arrayBuffer();
-                    await cacheArrayBuffer(track.url, arrayBuffer);
+                    await cacheArrayBuffer(track.url, arrayBuffer.slice(0)); // Cache a clone
+                    buffer = await Tone.context.decodeAudioData(arrayBuffer);
                 }
     
-                if (player.buffer.duration > maxDuration) {
-                    maxDuration = player.buffer.duration;
-                }
-    
+                const player = new Tone.Player(buffer);
+                player.loop = true;
                 const pitchShift = new Tone.PitchShift({ pitch: pitch }).toDestination();
                 const panner = new Tone.Panner(0).connect(pitchShift);
                 const volume = new Tone.Volume(0).connect(panner);
@@ -250,27 +261,24 @@ const DawPage = () => {
             } catch (error) {
                 console.error(`Error loading track ${track.name}:`, error);
             } finally {
-                setLoadingTracks(prev => prev.filter(id => id !== track.id));
+                setLoadingTracks(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete(track.id);
+                    return newSet;
+                });
             }
         });
     
         await Promise.all(loadPromises);
-        setDuration(maxDuration);
     };
 
     loadAudioData();
 
     return () => {
-      Object.values(trackNodesRef.current).forEach(node => {
-        node.player.dispose();
-        node.panner.dispose();
-        node.volume.dispose();
-        node.analyser.dispose();
-        node.pitchShift.dispose();
-      });
-      trackNodesRef.current = {};
+      stopAllTracks();
     }
-  }, [activeSongId, tracks, playbackMode, initAudio, pitch]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSongId, tracks, playbackMode, initAudio, pitch, stopAllTracks]);
 
   useEffect(() => {
     if (activeSongId) {
@@ -284,7 +292,6 @@ const DawPage = () => {
   }, [activeSongId, songs]);
 
   useEffect(() => {
-    // Initialize volumes and pans when tracks change
     const newPans: { [key: string]: number } = {};
     tracks.forEach(track => {
       if (volumesRef.current[track.id] === undefined) {
@@ -293,39 +300,43 @@ const DawPage = () => {
       newPans[track.id] = pans[track.id] ?? 0;
     });
     setPans(newPans);
-  }, [tracks]);
+  }, [tracks, pans]);
+
 
   const updateVuMeters = useCallback(() => {
     const Tone = toneRef.current;
-    if (!isPlayingRef.current || !Tone) return;
+    if (!Tone || playingTracks.size === 0) return;
 
     const newVuData: Record<string, number> = {};
-    Object.keys(trackNodesRef.current).forEach(trackId => {
-      const node = trackNodesRef.current[trackId];
-      if (node && node.analyser) {
-        const values = node.analyser.getValue();
-        if(values instanceof Float32Array) {
-            let peak = 0;
-            for (let i = 0; i < values.length; i++) {
-                peak = Math.max(peak, Math.abs(values[i]));
+    let isAnyTrackPlaying = false;
+
+    playingTracks.forEach(trackId => {
+        const node = trackNodesRef.current[trackId];
+        if (node?.player.state === 'started') {
+            isAnyTrackPlaying = true;
+            if (node.analyser) {
+                const values = node.analyser.getValue();
+                if(values instanceof Float32Array) {
+                    let peak = 0;
+                    for (let i = 0; i < values.length; i++) {
+                        peak = Math.max(peak, Math.abs(values[i]));
+                    }
+                    const dbfs = peak > 0 ? 20 * Math.log10(peak) : -60;
+                    const meterScale = (dbfs + 60) / 60 * 100;
+                    newVuData[trackId] = Math.max(0, meterScale);
+                }
             }
-            const dbfs = peak > 0 ? 20 * Math.log10(peak) : -60;
-            const meterScale = (dbfs + 60) / 60 * 100;
-            newVuData[trackId] = Math.max(0, meterScale);
         }
-      }
     });
+
     setVuData(newVuData);
     
-    const newPosition = Tone.Transport.seconds;
-    if (newPosition <= duration) {
-      setPlaybackPosition(newPosition);
+    if (isAnyTrackPlaying) {
+      requestAnimationFrame(updateVuMeters);
     } else {
-      handleStop();
+      setVuData({}); // Clear meters if nothing is playing
     }
-
-    animationFrameRef.current = requestAnimationFrame(updateVuMeters);
-  }, [duration]);
+  }, [playingTracks]);
 
   const getGainValue = useCallback((trackId: string) => {
     const isMuted = mutedTracks.includes(trackId);
@@ -362,119 +373,43 @@ const DawPage = () => {
   
    useEffect(() => {
       const Tone = toneRef.current;
-      if (!Tone) return;
+      if (!Tone || !activeSong) return;
       Object.values(trackNodesRef.current).forEach(({ player }) => {
         player.playbackRate = playbackRate;
       });
-      if(activeSong) {
-        Tone.Transport.bpm.value = activeSong.tempo * playbackRate;
-      }
+      Tone.Transport.bpm.value = activeSong.tempo * playbackRate;
+      
   }, [playbackRate, activeSong]);
 
 
-  const handlePlay = useCallback(async () => {
+  const handleTrackPlayToggle = useCallback(async (trackId: string) => {
     const Tone = toneRef.current;
-    if (!isReadyToPlay || isPlaying || !Tone) return;
+    if (!Tone) return;
 
     await initAudio();
     if (Tone.context.state === 'suspended') {
       await Tone.context.resume();
     }
     
-    Object.values(trackNodesRef.current).forEach(({player}) => {
-        player.sync().start(0, playbackPosition);
-    });
+    const node = trackNodesRef.current[trackId];
+    if (!node) return;
 
-    Tone.Transport.seconds = playbackPosition;
-    Tone.Transport.start();
-
-    setIsPlaying(true);
-    isPlayingRef.current = true;
-    animationFrameRef.current = requestAnimationFrame(updateVuMeters);
-
-  }, [isReadyToPlay, isPlaying, playbackPosition, updateVuMeters, initAudio]);
-
-  const handleFadeOutAndStop = useCallback((onStopComplete?: () => void) => {
-    const Tone = toneRef.current;
-    if (!isPlayingRef.current || !Tone) {
-        if(onStopComplete) onStopComplete();
-        return;
-    };
-    
-    Object.values(trackNodesRef.current).forEach(node => {
-        node.volume.volume.rampTo(-Infinity, fadeOutDuration);
-    });
-
-    setTimeout(() => {
-        Tone.Transport.stop();
-        Object.values(trackNodesRef.current).forEach(node => node.player.unsync().stop());
-        setIsPlaying(false);
-        isPlayingRef.current = false;
-        if(animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-        setVuData({});
-        if (onStopComplete) {
-            onStopComplete();
-        }
-    }, fadeOutDuration * 1000);
-
-  }, [fadeOutDuration]);
-
-  const handlePause = () => {
-    const Tone = toneRef.current;
-    if (!isPlaying || !Tone) return;
-    const newPosition = Tone.Transport.seconds;
-
-    handleFadeOutAndStop(() => {
-      if (newPosition < duration) {
-        setPlaybackPosition(newPosition);
-      } else {
-        setPlaybackPosition(0);
-      }
-    });
-  };
-  
-  const handleStop = (immediate = false) => {
-    const Tone = toneRef.current;
-    if (!Tone) return;
-    
-    if (immediate) {
-        if (isPlayingRef.current) {
-            Tone.Transport.stop();
-            Object.values(trackNodesRef.current).forEach(node => node.player.unsync().stop());
-        }
-        setIsPlaying(false);
-        isPlayingRef.current = false;
-        if(animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-        setPlaybackPosition(0);
-        setVuData({});
-    } else if (isPlaying) {
-        handleFadeOutAndStop(() => {
-            setPlaybackPosition(0);
-        });
+    const newPlayingTracks = new Set(playingTracks);
+    if (newPlayingTracks.has(trackId)) {
+        node.player.stop();
+        newPlayingTracks.delete(trackId);
     } else {
-        setPlaybackPosition(0);
+        node.player.start();
+        newPlayingTracks.add(trackId);
     }
-  };
-  
-  const handleSeek = (newPosition: number) => {
-    if (!isReadyToPlay || newPosition < 0 || newPosition > duration) return;
-  
-    const wasPlaying = isPlaying;
-    if (wasPlaying) {
-      handleStop(true);
-    }
-  
-    setPlaybackPosition(newPosition);
-  
-    if (wasPlaying) {
-      setTimeout(() => {
-        handlePlay();
-      }, 50);
-    }
-  };
+    
+    setPlayingTracks(newPlayingTracks);
 
-  const handleRewind = () => handleSeek(Math.max(0, playbackPosition - 5));
-  const handleFastForward = () => handleSeek(Math.min(duration, playbackPosition + 5));
+    // Start VU meter updates if any track is playing
+    if (newPlayingTracks.size > 0 && playingTracks.size === 0) {
+        requestAnimationFrame(updateVuMeters);
+    }
+  }, [playingTracks, updateVuMeters, initAudio]);
 
   const handleMuteToggle = (trackId: string) => {
     setMutedTracks(prev => prev.includes(trackId) ? prev.filter(id => id !== trackId) : [...prev, trackId]);
@@ -488,7 +423,7 @@ const DawPage = () => {
   const handleSetlistSelected = (setlist: Setlist | null) => {
     setInitialSetlist(setlist);
     if (!setlist) {
-        handleStop(true);
+        stopAllTracks();
         setTracks([]);
         setActiveSongId(null);
     }
@@ -496,6 +431,7 @@ const DawPage = () => {
   
   const handleSongSelected = (songId: string) => {
       if (songId === activeSongId) return;
+      stopAllTracks();
       setActiveSongId(songId);
       setPlaybackRate(1);
       setPitch(0);
@@ -537,31 +473,13 @@ const DawPage = () => {
       const clampedRate = Math.max(0.5, Math.min(2, newRate));
       setPlaybackRate(clampedRate);
   };
-
-  const totalTracksForSong = tracks.filter(t => t.songId === activeSongId).length;
-  const loadedTracksCount = totalTracksForSong - loadingTracks.length;
-  const loadingProgress = totalTracksForSong > 0 ? (loadedTracksCount / totalTracksForSong) * 100 : 0;
-  const showLoadingBar = loadingTracks.length > 0 && totalTracksForSong > 0;
   
   return (
     <div className="grid grid-cols-[1fr_384px] grid-rows-[auto_auto_1fr] h-screen w-screen p-4 gap-4">
       <div className="col-span-2 row-start-1">
         <Header 
-            isPlaying={isPlaying}
-            onPlay={handlePlay}
-            onPause={handlePause}
-            onStop={() => handleStop()}
-            onRewind={handleRewind}
-            onFastForward={handleFastForward}
-            onSeek={handleSeek}
-            currentTime={playbackPosition}
-            duration={duration}
             playbackMode={playbackMode}
             onPlaybackModeChange={setPlaybackMode}
-            loadingProgress={loadingProgress}
-            showLoadingBar={showLoadingBar}
-            isReadyToPlay={isReadyToPlay}
-            songStructure={songStructure}
             masterVolume={masterVolume}
             onMasterVolumeChange={handleMasterVolumeChange}
             fadeOutDuration={fadeOutDuration}
@@ -595,6 +513,7 @@ const DawPage = () => {
               tracks={activeTracks}
               soloTracks={soloTracks}
               mutedTracks={mutedTracks}
+              playingTracks={playingTracks}
               volumes={volumesRef.current}
               pans={pans}
               loadingTracks={loadingTracks}
@@ -602,7 +521,7 @@ const DawPage = () => {
               onSoloToggle={handleSoloToggle}
               onVolumeChange={handleVolumeChange}
               onPanChange={handlePanChange}
-              isPlaying={isPlaying}
+              onTrackPlayToggle={handleTrackPlayToggle}
               vuData={vuData}
               playbackMode={playbackMode}
               isPanVisible={isPanVisible}
