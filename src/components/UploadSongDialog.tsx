@@ -30,7 +30,37 @@ import { ScrollArea } from './ui/scroll-area';
 import { saveSong, NewSong, TrackFile } from '@/actions/songs';
 import { Progress } from './ui/progress';
 import { Textarea } from './ui/textarea';
-import { setFileHandle } from '@/lib/file-handles';
+import { openDB, IDBPDatabase } from 'idb';
+
+const DB_NAME = 'fileHandleDB';
+const STORE_NAME = 'fileHandles';
+const DB_VERSION = 1;
+
+let dbPromise: Promise<IDBPDatabase> | null = null;
+
+const getDb = (): Promise<IDBPDatabase> => {
+    if (!dbPromise) {
+        dbPromise = openDB(DB_NAME, DB_VERSION, {
+            upgrade(db) {
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME);
+                }
+            },
+        });
+    }
+    return dbPromise;
+};
+
+// Guarda un FileSystemFileHandle en IndexedDB
+export const setFileHandle = async (key: string, handle: FileSystemFileHandle): Promise<void> => {
+    try {
+        const db = await getDb();
+        await db.put(STORE_NAME, handle, key);
+        console.log(`File handle saved for key: ${key}`);
+    } catch (error) {
+        console.error('Error saving file handle to IndexedDB:', error);
+    }
+};
 
 
 const ACCEPTED_AUDIO_TYPES = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio/x-m4a', 'audio/mp3'];
@@ -464,3 +494,5 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
 };
 
 export default UploadSongDialog;
+
+    

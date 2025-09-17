@@ -268,3 +268,5 @@ export async function synchronizeLyrics(songId: string, input: LyricsSyncInput):
         return { success: false, error: (error as Error).message };
     }
 }
+
+    
