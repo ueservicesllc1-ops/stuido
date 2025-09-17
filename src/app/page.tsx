@@ -515,7 +515,7 @@ const DawPage = () => {
 
 
   return (
-    <div className="grid grid-cols-[1fr_384px] grid-rows-[auto_auto_1fr] h-screen w-screen p-4 gap-4">
+    <div className="grid grid-cols-[1fr_384px] grid-rows-[auto_1fr] h-screen w-screen p-4 gap-4">
       <div className="col-span-2 row-start-1">
         <Header 
             isPlaying={isPlaying}
@@ -543,20 +543,8 @@ const DawPage = () => {
             masterVuLevel={masterVuLevel}
         />
       </div>
-
-      <div className="col-span-1 row-start-2 h-28">
-        <LyricsDisplay 
-            lyrics={songLyrics}
-            youtubeUrl={songYoutubeUrl}
-            onOpenYouTube={() => setIsYouTubePlayerOpen(true)}
-            onOpenTeleprompter={() => setIsTeleprompterOpen(true)}
-            eqBands={eqBands}
-            onEqChange={handleEqChange}
-            onReset={handleEqReset}
-        />
-      </div>
       
-      <main className="col-start-1 row-start-3 overflow-y-auto pr-2 no-scrollbar">
+      <main className="col-start-1 row-start-2 overflow-y-auto pr-2 no-scrollbar">
         {activeSongId ? (
             <MixerGrid
               tracks={activeTracks}
@@ -579,7 +567,18 @@ const DawPage = () => {
         )}
       </main>
 
-       <div className="col-start-2 row-start-3 flex flex-col gap-4">
+       <div className="col-start-2 row-start-2 flex flex-col gap-4">
+        <div className="h-28">
+          <LyricsDisplay 
+              lyrics={songLyrics}
+              youtubeUrl={songYoutubeUrl}
+              onOpenYouTube={() => setIsYouTubePlayerOpen(true)}
+              onOpenTeleprompter={() => setIsTeleprompterOpen(true)}
+              eqBands={eqBands}
+              onEqChange={handleEqChange}
+              onReset={handleEqReset}
+          />
+        </div>
         <SongList 
             initialSetlist={initialSetlist}
             activeSongId={activeSongId}
