@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from './ui/button';
@@ -13,6 +14,7 @@ const bottomRowKeys = ['1', '2', '3', '4'];
 
 type ToneModule = typeof import('tone');
 type PlayersRef = Record<string, import('tone').Player | null>;
+type SamplesRef = Record<string, Sample>;
 
 const TonicPad = () => {
   const [volume, setVolume] = useState(75);
@@ -24,6 +26,7 @@ const TonicPad = () => {
   const { toast } = useToast();
   const toneRef = useRef<ToneModule | null>(null);
   const audioPlayersRef = useRef<PlayersRef>({});
+  const samplesRef = useRef<SamplesRef>({});
   const masterVolumeNodeRef = useRef<import('tone').Volume | null>(null);
 
   const initializeAudio = useCallback(async () => {
@@ -44,9 +47,10 @@ const TonicPad = () => {
     await initializeAudio();
     const Tone = toneRef.current!;
 
-    // Dispose old players
+    // Dispose old players and clear samples
     Object.values(audioPlayersRef.current).forEach(player => player?.dispose());
     audioPlayersRef.current = {};
+    samplesRef.current = {};
 
     const { success, samples, error } = await getSamplesByGroup(groupKey);
 
@@ -64,7 +68,7 @@ const TonicPad = () => {
     const loadPromises = samples.map(async (sample) => {
         if (!sample.url || !sample.padKey || !sample.fileKey) return;
         try {
-            // Se usa la nueva server action para obtener el audio como Data URI
+            samplesRef.current[sample.padKey] = sample;
             const downloadResult = await getB2FileAsDataURI(sample.fileKey);
 
             if (!downloadResult.success || !downloadResult.dataUri) {
@@ -87,9 +91,9 @@ const TonicPad = () => {
     if (selectedGroup) {
       loadSamplesForGroup(selectedGroup);
     } else {
-       // Si no hay grupo, limpiar los players
        Object.values(audioPlayersRef.current).forEach(player => player?.dispose());
        audioPlayersRef.current = {};
+       samplesRef.current = {};
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedGroup]);
@@ -111,7 +115,7 @@ const TonicPad = () => {
   const handleGroupSelect = (key: string) => {
     const newGroup = selectedGroup === key ? null : key;
     setSelectedGroup(newGroup);
-    setActivePad(null); // Deselecciona el pad activo
+    setActivePad(null); 
   }
 
   const playSound = (padKey: string) => {
@@ -126,7 +130,6 @@ const TonicPad = () => {
             player.start();
             setActivePad(padKey);
             player.onstop = () => {
-                // Solo quitar el estado activo si este es el pad que se detuvo
                 setActivePad(currentPad => currentPad === padKey ? null : currentPad);
             }
        }
@@ -134,32 +137,49 @@ const TonicPad = () => {
        toast({ title: "Sin sonido", description: `No hay un sample asignado al pad ${padKey}.`, variant: "destructive" });
    }
   };
+  
+  const getDisplayName = () => {
+    if (activePad) {
+      return samplesRef.current[activePad]?.name || 'PLAYING...';
+    }
+    if (selectedGroup) {
+      return `GROUP ${selectedGroup}`;
+    }
+    return 'STANDBY';
+  }
 
 
   return (
-    <div className="bg-card/50 rounded-lg p-3 flex flex-col gap-2">
-      <div className="grid grid-cols-4 grid-rows-2 gap-1.5 h-32">
-        {topRowKeys.map((key) => (
-            <Button 
-                key={key} 
-                variant={selectedGroup === key ? 'default' : 'secondary'}
-                className={cn(
-                    "w-full h-full text-base font-bold",
-                    selectedGroup === key 
-                        ? "bg-yellow-500 text-black hover:bg-yellow-500/90" 
-                        : "bg-secondary hover:bg-accent"
-                )}
-                onClick={() => handleGroupSelect(key)}
-            >
-                {key}
-            </Button>
-        ))}
+    <div className="bg-card/50 rounded-lg p-3 flex flex-col gap-3">
+        <div className="bg-black/80 border border-amber-400/20 rounded-md p-2 h-12 flex items-center justify-center">
+            <span className="font-mono text-xl text-amber-400 uppercase [text-shadow:0_0_8px_theme(colors.amber.400)] truncate">
+                {getDisplayName()}
+            </span>
+        </div>
+        <div className="grid grid-cols-4 gap-2">
+            {topRowKeys.map((key) => (
+                <Button 
+                    key={key} 
+                    variant={selectedGroup === key ? 'default' : 'secondary'}
+                    className={cn(
+                        "w-full h-8 text-sm font-bold",
+                        selectedGroup === key 
+                            ? "bg-yellow-500 text-black hover:bg-yellow-500/90" 
+                            : "bg-secondary hover:bg-accent"
+                    )}
+                    onClick={() => handleGroupSelect(key)}
+                >
+                    {key}
+                </Button>
+            ))}
+        </div>
+      <div className="grid grid-cols-4 gap-2 h-20">
         {bottomRowKeys.map((key) => (
             <Button 
                 key={key} 
                 variant="secondary"
                 className={cn(
-                    "w-full h-full text-base font-bold transition-colors relative",
+                    "w-full h-full text-lg font-bold transition-colors relative",
                     !selectedGroup && "opacity-50 cursor-not-allowed",
                     activePad === key
                         ? "bg-yellow-500 text-black hover:bg-yellow-500/90"
@@ -172,7 +192,7 @@ const TonicPad = () => {
             </Button>
         ))}
       </div>
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5 pt-2">
         <Slider
             defaultValue={[volume]}
             max={100}
@@ -200,3 +220,4 @@ const TonicPad = () => {
 };
 
 export default TonicPad;
+
