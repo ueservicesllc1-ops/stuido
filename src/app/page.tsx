@@ -544,7 +544,18 @@ const DawPage = () => {
         />
       </div>
       
-      <main className="col-start-1 row-start-2 overflow-y-auto pr-2 no-scrollbar">
+      <main className="col-start-1 row-start-2 overflow-y-auto pr-2 no-scrollbar flex flex-col gap-4">
+        <div className="h-28">
+            <LyricsDisplay 
+              lyrics={songLyrics}
+              youtubeUrl={songYoutubeUrl}
+              onOpenYouTube={() => setIsYouTubePlayerOpen(true)}
+              onOpenTeleprompter={() => setIsTeleprompterOpen(true)}
+              eqBands={eqBands}
+              onEqChange={handleEqChange}
+              onReset={handleEqReset}
+            />
+        </div>
         {activeSongId ? (
             <MixerGrid
               tracks={activeTracks}
@@ -568,17 +579,6 @@ const DawPage = () => {
       </main>
 
        <div className="col-start-2 row-start-2 flex flex-col gap-4">
-        <div className="h-28">
-          <LyricsDisplay 
-              lyrics={songLyrics}
-              youtubeUrl={songYoutubeUrl}
-              onOpenYouTube={() => setIsYouTubePlayerOpen(true)}
-              onOpenTeleprompter={() => setIsTeleprompterOpen(true)}
-              eqBands={eqBands}
-              onEqChange={handleEqChange}
-              onReset={handleEqReset}
-          />
-        </div>
         <SongList 
             initialSetlist={initialSetlist}
             activeSongId={activeSongId}
