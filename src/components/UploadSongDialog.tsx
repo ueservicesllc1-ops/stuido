@@ -34,13 +34,13 @@ import { Textarea } from './ui/textarea';
 
 const ACCEPTED_AUDIO_TYPES = ['.mp3', '.wav', '.ogg', '.m4a', '.aac'];
 const ACCEPTED_MIME_TYPES = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/x-m4a', 'audio/aac', 'audio/mp3'];
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
 const trackSchema = z.object({
   file: z
     .instanceof(File)
     .refine((file) => file.size > 0, 'Se requiere un archivo.')
-    .refine((file) => file.size <= MAX_FILE_SIZE, `El tamaño máximo es 50MB.`)
+    .refine((file) => file.size <= MAX_FILE_SIZE, `El tamaño máximo es 100MB.`)
     .refine(
       (file) => ACCEPTED_MIME_TYPES.includes(file.type),
       'Formato de audio no soportado.'
@@ -132,7 +132,7 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
          toast({
           variant: 'destructive',
           title: 'Archivo demasiado grande',
-          description: `El archivo "${file.name}" excede los 50MB.`,
+          description: `El archivo "${file.name}" excede los 100MB.`,
         });
         continue; // Skip this file
       }
@@ -449,7 +449,7 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
                     onChange={handleFileChange}
                     accept={ACCEPTED_AUDIO_TYPES.join(',')}
                   />
-                  {form.formState.errors.tracks && (
+                  {form.formState.errors.tracks?.message && (
                     <p className="text-sm font-medium text-destructive">
                       {form.formState.errors.tracks.message}
                     </p>
@@ -498,7 +498,7 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
             </ScrollArea>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isUploading}>Cancelar</Button>
-              <Button type="submit" disabled={isUploading || !form.formState.isValid}>
+              <Button type="submit" disabled={isUploading || !form.formState.isDirty || !form.formState.isValid}>
                 {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isUploading ? 'Subiendo...' : 'Subir canción'}
               </Button>
@@ -511,4 +511,6 @@ const UploadSongDialog: React.FC<UploadSongDialogProps> = ({ onUploadFinished })
 };
 
 export default UploadSongDialog;
+    
+
     

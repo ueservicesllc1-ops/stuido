@@ -6,7 +6,7 @@ import type { TrackFile } from '@/actions/songs';
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: '50mb',
+      sizeLimit: '100mb',
     },
   },
 };
@@ -39,3 +39,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: error.message || 'Error interno del servidor.' }, { status: 500 });
   }
 }
+
+    
