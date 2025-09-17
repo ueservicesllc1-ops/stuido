@@ -21,8 +21,8 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
   isSolo,
   volume,
   onVolumeChange,
-  onSoloToggle,
   onMuteToggle,
+  onSoloToggle,
 }) => {
   const volumeSliderValue = useMemo(() => [volume], [volume]);
 
@@ -35,7 +35,7 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
             max={100}
             step={1}
             orientation="vertical"
-            onValueChange={(val) => onValueChange(val[0])}
+            onValueChange={(val) => onVolumeChange(val[0])}
             className="h-full w-full"
             trackClassName="bg-input w-1 mx-auto"
             rangeClassName="bg-gradient-to-t from-blue-500 to-green-500"
