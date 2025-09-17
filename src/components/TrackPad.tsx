@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useMemo } from 'react';
 import { Button } from './ui/button';
@@ -29,7 +28,8 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
 }) => {
   const volumeSliderValue = useMemo(() => [volume], [volume]);
   const isClipping = vuLevel >= 0;
-  const hasSignal = vuLevel > -Infinity;
+  // Usar un umbral realista para la señal, -48dB es un buen punto de partida.
+  const hasSignal = vuLevel > -48;
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -47,7 +47,7 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
         {/* Clip (Red) LED */}
         <div className={cn(
             "w-2 h-2 rounded-full bg-input transition-colors",
-            isClipping && "bg-destructive shadow-[0_0_4px_1px] shadow-destructive/70 animate-pulse"
+            isClipping && !isMuted && "bg-destructive shadow-[0_0_4px_1px] shadow-destructive/70 animate-pulse"
         )} />
       </div>
       {/* Marco del Fader */}

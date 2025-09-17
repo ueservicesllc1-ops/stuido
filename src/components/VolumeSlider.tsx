@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -19,7 +18,8 @@ const VolumeSlider: React.FC<VolumeSliderProps> = ({
     onVolumeChange,
 }) => {
     const isClipping = vuLevel >= 0;
-    const hasSignal = vuLevel > -Infinity;
+    // Usar un umbral realista para la señal, -48dB es un buen punto de partida.
+    const hasSignal = vuLevel > -48;
 
     return (
         <div className="flex items-center gap-3 w-full">
@@ -43,7 +43,7 @@ const VolumeSlider: React.FC<VolumeSliderProps> = ({
                     value={[volume]}
                     max={100}
                     step={1}
-                    onValueChange={(val) => onVolumeChange(val[0])}
+                    onValueChange={(val) => onValueChange(val[0])}
                     className="h-full w-full"
                     trackClassName="bg-input h-1.5"
                     rangeClassName="bg-gradient-to-r from-blue-500 to-green-500"
