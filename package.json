@@ -57,6 +57,7 @@
     "tailwind-merge": "^3.0.1",
     "tailwindcss-animate": "^1.0.7",
     "tone": "^15.0.4",
+    "wav": "^1.0.2",
     "zod": "^3.24.2"
   },
   "devDependencies": {
@@ -68,3 +69,5 @@
     "typescript": "^5"
   }
 }
+
+    
