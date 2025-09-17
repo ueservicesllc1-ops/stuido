@@ -32,7 +32,8 @@ FaderMarks.displayName = "FaderMarks";
 
 const Slider = React.forwardRef<
   React.ElementRef<typeof SliderPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root> & { 
+  Omit<React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root>, 'value'> & { 
+    value?: number[];
     rangeClassName?: string, 
     thumbClassName?: string,
     trackClassName?: string,
@@ -58,7 +59,7 @@ const Slider = React.forwardRef<
     </SliderPrimitive.Track>
     <SliderPrimitive.Thumb 
         className={cn(
-          "block h-1 w-12 rounded-sm bg-slider-thumb bg-cover bg-center cursor-pointer relative",
+          "block h-4 w-12 rounded-sm bg-slider-thumb bg-cover bg-center cursor-pointer relative",
           "ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
           thumbClassName
         )}
