@@ -162,6 +162,7 @@ const DawPage = () => {
     if (!Tone) return;
     
     Tone.Transport.stop();
+    // Don't dispose players, just stop them
     Object.values(trackNodesRef.current).forEach(node => {
       if (node.player.state === 'started') {
         node.player.stop();
@@ -188,20 +189,9 @@ const DawPage = () => {
           if (!Tone || !eqNodesRef.current.length) return;
 
           const tracksForCurrentSong = tracks.filter(t => t.songId === activeSongId);
-          const currentTrackIds = new Set(tracksForCurrentSong.map(t => t.id));
-          
-          Object.keys(trackNodesRef.current).forEach(trackId => {
-              if (!currentTrackIds.has(trackId)) {
-                  const node = trackNodesRef.current[trackId];
-                  node.player.dispose();
-                  node.panner.dispose();
-                  node.analyser.dispose();
-                  node.pitchShift.dispose();
-                  delete trackNodesRef.current[trackId];
-              }
-          });
           
           const tracksToLoad = tracksForCurrentSong.filter(t => !trackNodesRef.current[t.id]);
+          
           if (tracksToLoad.length === 0) {
               setLoadingTracks(new Set());
               setLoadedTracksCount(tracksForCurrentSong.length);
@@ -387,17 +377,30 @@ const DawPage = () => {
     }
 
     if (Tone.Transport.state !== 'started') {
-      Object.values(trackNodesRef.current).forEach(({ player }) => player.sync().start(0));
+      // Sync and start only the players for the currently active song
+      activeTracks.forEach(track => {
+        const node = trackNodesRef.current[track.id];
+        if (node && node.player) {
+          node.player.sync().start(0);
+        }
+      });
       Tone.Transport.start();
       setIsPlaying(true);
       requestAnimationFrame(updateVuMeters);
     }
-  }, [loadingTracks.size, activeSong, initAudio, updateVuMeters]);
+  }, [loadingTracks.size, activeSong, initAudio, updateVuMeters, activeTracks]);
 
   const handlePause = useCallback(() => {
     const Tone = toneRef.current;
     if (!Tone) return;
-
+    
+    // Stop all players before pausing the transport to avoid audio glitches
+    Object.values(trackNodesRef.current).forEach(({ player }) => {
+      if(player.state === 'started') {
+        player.stop();
+      }
+    });
+    
     Tone.Transport.pause();
     setIsPlaying(false);
   }, []);
