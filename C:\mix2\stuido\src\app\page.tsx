@@ -56,6 +56,7 @@ const DawPage = () => {
   const [playbackRate, setPlaybackRate] = useState(1);
   const [pitch, setPitch] = useState(0);
 
+  const [volumes, setVolumes] = useState<{ [key: string]: number }>({});
   const [vuLevels, setVuLevels] = useState<Record<string, number>>({});
   const [masterVuLevel, setMasterVuLevel] = useState(-Infinity);
   const [fadeOutDuration, setFadeOutDuration] = useState(0.5);
@@ -436,6 +437,15 @@ const DawPage = () => {
       setPitch(0);
   }
 
+  const handleVolumeChange = useCallback((trackId: string, newVol: number) => {
+    setVolumes(prev => ({...prev, [trackId]: newVol}));
+    const node = trackNodesRef.current[trackId];
+    if (node && node.volume) {
+      const newDb = newVol > 0 ? (newVol / 100) * 40 - 40 : -Infinity;
+      node.volume.volume.value = newDb;
+    }
+  }, []);
+
   const handleBpmChange = (newBpm: number) => {
       if (!activeSong || !activeSong.tempo) return;
       const newRate = newBpm / activeSong.tempo;
@@ -498,8 +508,10 @@ const DawPage = () => {
               activeSong={activeSong}
               soloTracks={soloTracks}
               mutedTracks={mutedTracks}
+              volumes={volumes}
               onMuteToggle={handleMuteToggle}
               onSoloToggle={handleSoloToggle}
+              onVolumeChange={handleVolumeChange}
               isPlaying={isPlaying}
               vuLevels={vuLevels}
             />
@@ -540,5 +552,7 @@ const DawPage = () => {
 };
 
 export default DawPage;
+
+    
 
     

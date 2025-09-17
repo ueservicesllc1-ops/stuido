@@ -10,8 +10,10 @@ interface MixerGridProps {
   activeSong: Song | undefined;
   soloTracks: string[];
   mutedTracks: string[];
+  volumes: { [key: string]: number };
   onMuteToggle: (trackId: string) => void;
   onSoloToggle: (trackId: string) => void;
+  onVolumeChange: (trackId: string, newVolume: number) => void;
   vuLevels: Record<string, number>;
   isPlaying: boolean;
 }
@@ -21,8 +23,10 @@ const MixerGrid: React.FC<MixerGridProps> = ({
   activeSong,
   soloTracks, 
   mutedTracks,
+  volumes,
   onMuteToggle, 
   onSoloToggle,
+  onVolumeChange,
   vuLevels,
   isPlaying
 }) => {
@@ -42,8 +46,10 @@ const MixerGrid: React.FC<MixerGridProps> = ({
             track={track}
             isMuted={isMuted}
             isSolo={isSolo}
+            volume={volumes[track.id] ?? 100}
             onMuteToggle={() => onMuteToggle(track.id)}
             onSoloToggle={() => onSoloToggle(track.id)}
+            onVolumeChange={(newVol) => onVolumeChange(track.id, newVol)}
             vuLevel={vuLevel}
             tempo={tempo}
             isPlaying={isPlaying}

@@ -6,14 +6,17 @@ import { cn } from '@/lib/utils';
 import { SetlistSong } from '@/actions/setlists';
 import VuMeter from './VuMeter';
 import TempoLed from './TempoLed';
+import { Slider } from './ui/slider';
 
 interface TrackPadProps {
   track: SetlistSong;
   isMuted: boolean;
   isSolo: boolean;
+  volume: number;
   vuLevel: number;
   tempo: number;
   isPlaying: boolean;
+  onVolumeChange: (volume: number) => void;
   onSoloToggle: () => void;
   onMuteToggle: () => void;
 }
@@ -22,9 +25,11 @@ const TrackPad: React.FC<TrackPadProps> = ({
   track,
   isMuted,
   isSolo,
+  volume,
   vuLevel,
   tempo,
   isPlaying,
+  onVolumeChange,
   onSoloToggle,
   onMuteToggle
 }) => {
@@ -44,7 +49,13 @@ const TrackPad: React.FC<TrackPadProps> = ({
       </div>
         
       <div className="relative h-52 w-24 rounded-md border border-border/20 bg-black/50 p-2 flex justify-center items-center">
-        {/* Slider eliminado */}
+        <Slider
+            value={[volume]}
+            max={100}
+            step={1}
+            orientation="vertical"
+            onValueChange={(val) => onVolumeChange(val[0])}
+        />
         <div className="absolute right-2 top-0 bottom-0 flex items-center">
             {isClickTrack ? (
                 <TempoLed tempo={tempo} isPlaying={isPlaying} />
