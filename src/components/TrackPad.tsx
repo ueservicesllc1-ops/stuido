@@ -58,7 +58,7 @@ const TrackPad: React.FC<React.memoExoticComponent<any>> = React.memo(({
             max={100}
             step={1}
             orientation="vertical"
-            onValueChange={(val) => onVolumeChange(val[0])}
+            onValueChange={(val) => onValueChange(val[0])}
         />
         <div className="absolute right-2 top-0 bottom-0 flex items-center">
             {isClickTrack ? (
