@@ -23,7 +23,7 @@ type TrackNodes = Record<string, {
     panner: import('tone').Panner;
     pitchShift: import('tone').PitchShift;
     volume: import('tone').Volume;
-    meter: import('tone').Meter;
+    waveform: import('tone').Waveform;
 }>;
 
 
@@ -244,9 +244,9 @@ const DawPage = () => {
                 const volume = new Tone.Volume(0);
                 const pitchShift = new Tone.PitchShift({ pitch: pitch });
                 const panner = new Tone.Panner(0);
-                const meter = new Tone.Meter();
+                const waveform = new Tone.Waveform(256);
                 
-                player.chain(volume, panner, pitchShift, meter);
+                player.chain(volume, panner, pitchShift, waveform);
                 
                 if (eqNodesRef.current.length > 0) {
                   pitchShift.connect(eqNodesRef.current[0]);
@@ -254,7 +254,7 @@ const DawPage = () => {
                   pitchShift.toDestination();
                 }
                 
-                trackNodesRef.current[track.id] = { player, panner, pitchShift, volume, meter };
+                trackNodesRef.current[track.id] = { player, panner, pitchShift, volume, waveform };
                 setLoadedTracksCount(prev => prev + 1);
 
             } catch (error) {
@@ -295,37 +295,70 @@ const DawPage = () => {
   useEffect(() => {
     let animationFrameId: number;
     const Tone = toneRef.current;
+
     if (isPlaying && Tone) {
-      const update = () => {
-        setCurrentTime(Tone.Transport.seconds);
+        const update = () => {
+            setCurrentTime(Tone.Transport.seconds);
 
-        const newVuLevels: Record<string, number> = {};
-        activeTracks.forEach(track => {
-            const node = trackNodesRef.current[track.id];
-            if (node && node.meter) {
-                newVuLevels[track.id] = node.meter.getValue() as number;
+            const newVuLevels: Record<string, number> = {};
+            activeTracks.forEach(track => {
+                const node = trackNodesRef.current[track.id];
+                if (node && node.waveform) {
+                    const values = node.waveform.getValue();
+                    let peak = 0;
+                    if (values instanceof Float32Array) {
+                        for (let i = 0; i < values.length; i++) {
+                            const absValue = Math.abs(values[i]);
+                            if (absValue > peak) {
+                                peak = absValue;
+                            }
+                        }
+                    }
+                    // Convert peak from amplitude (0-1) to dB-like scale for the meter
+                    const db = 20 * Math.log10(peak);
+                    newVuLevels[track.id] = db;
+                }
+            });
+            setVuLevels(newVuLevels);
+
+            if (masterMeterRef.current) {
+                setMasterVuLevel(masterMeterRef.current.getValue() as number);
             }
-        });
-        setVuLevels(newVuLevels);
 
-        if (masterMeterRef.current) {
-          setMasterVuLevel(masterMeterRef.current.getValue() as number);
-        }
-
-        animationFrameId = requestAnimationFrame(update);
-      };
-      update();
+            animationFrameId = requestAnimationFrame(update);
+        };
+        update();
     } else {
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-      }
+        // Slowly decay VU levels to 0 when paused/stopped
+        const decay = () => {
+            setVuLevels(prevLevels => {
+                const newLevels: Record<string, number> = {};
+                let hasActiveLevels = false;
+                for (const trackId in prevLevels) {
+                    const currentLevel = prevLevels[trackId];
+                    if (currentLevel > -60) {
+                        newLevels[trackId] = currentLevel - 2; // Decay rate
+                        hasActiveLevels = true;
+                    } else {
+                        newLevels[trackId] = -Infinity;
+                    }
+                }
+                if (hasActiveLevels) {
+                    animationFrameId = requestAnimationFrame(decay);
+                }
+                return newLevels;
+            });
+        };
+        decay();
     }
+
     return () => {
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-      }
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+        }
     };
-  }, [isPlaying, activeTracks]);
+}, [isPlaying, activeTracks]);
+
 
   const getIsMuted = useCallback((trackId: string) => {
     const isMuted = mutedTracks.includes(trackId);
