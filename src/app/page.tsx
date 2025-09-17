@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Header from '@/components/Header';
 import MixerGrid from '@/components/MixerGrid';
 import SongList from '@/components/SongList';
@@ -103,23 +103,25 @@ const DawPage = () => {
     });
   }, [eqBands]);
 
-  const getPrio = (trackName: string) => {
-    const upperCaseName = trackName.trim().toUpperCase();
-    if (upperCaseName === 'CLICK') return 1;
-    if (upperCaseName === 'CUES') return 2;
-    return 3;
-  };
-  
-  const activeTracks = tracks
-    .filter(t => t.songId === activeSongId)
-    .sort((a, b) => {
-        const prioA = getPrio(a.name);
-        const prioB = getPrio(b.name);
-        if (prioA !== prioB) {
-            return prioA - prioB;
-        }
-        return a.name.localeCompare(b.name);
-    });
+  const activeTracks = useMemo(() => {
+    const getPrio = (trackName: string) => {
+      const upperCaseName = trackName.trim().toUpperCase();
+      if (upperCaseName === 'CLICK') return 1;
+      if (upperCaseName === 'CUES') return 2;
+      return 3;
+    };
+    
+    return tracks
+      .filter(t => t.songId === activeSongId)
+      .sort((a, b) => {
+          const prioA = getPrio(a.name);
+          const prioB = getPrio(b.name);
+          if (prioA !== prioB) {
+              return prioA - prioB;
+          }
+          return a.name.localeCompare(b.name);
+      });
+  }, [tracks, activeSongId]);
 
   useEffect(() => {
     const fetchLastSetlist = async () => {
