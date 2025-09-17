@@ -9,14 +9,15 @@ interface MixerGridProps {
   tracks: SetlistSong[];
   soloTracks: string[];
   mutedTracks: string[];
+  playingTracks: Set<string>;
   volumes: { [key: string]: number };
   pans: { [key: string]: number };
-  loadingTracks: string[];
+  loadingTracks: Set<string>;
   onMuteToggle: (trackId: string) => void;
   onSoloToggle: (trackId: string) => void;
   onVolumeChange: (trackId: string, newVolume: number) => void;
   onPanChange: (trackId: string, newPan: number) => void;
-  isPlaying: boolean;
+  onTrackPlayToggle: (trackId: string) => void;
   vuData: Record<string, number>;
   playbackMode: PlaybackMode;
   isPanVisible: boolean;
@@ -25,7 +26,8 @@ interface MixerGridProps {
 const MixerGrid: React.FC<MixerGridProps> = ({ 
   tracks, 
   soloTracks, 
-  mutedTracks, 
+  mutedTracks,
+  playingTracks,
   volumes,
   pans,
   loadingTracks,
@@ -33,7 +35,7 @@ const MixerGrid: React.FC<MixerGridProps> = ({
   onSoloToggle,
   onVolumeChange,
   onPanChange,
-  isPlaying,
+  onTrackPlayToggle,
   vuData,
   playbackMode,
   isPanVisible,
@@ -45,7 +47,8 @@ const MixerGrid: React.FC<MixerGridProps> = ({
       {tracks.map(track => {
         const isMuted = mutedTracks.includes(track.id);
         const isSolo = soloTracks.includes(track.id);
-        const isLoading = loadingTracks.includes(track.id);
+        const isLoading = loadingTracks.has(track.id);
+        const isPlaying = playingTracks.has(track.id);
         const isDisabled = isLoading;
 
         const isAudible = isPlaying && !isDisabled && !isMuted && (!isSoloActive || isSolo);
@@ -55,11 +58,13 @@ const MixerGrid: React.FC<MixerGridProps> = ({
             key={track.id}
             track={track}
             isLoading={isLoading}
+            isPlaying={isPlaying}
             isMuted={isMuted}
             isSolo={isSolo}
             isAudible={isAudible}
             volume={volumes[track.id] ?? 75}
             pan={pans[track.id] ?? 0}
+            onPlayToggle={() => onTrackPlayToggle(track.id)}
             onMuteToggle={() => onMuteToggle(track.id)}
             onSoloToggle={() => onSoloToggle(track.id)}
             onVolumeChange={(newVolume) => onVolumeChange(track.id, newVolume)}
@@ -75,6 +80,3 @@ const MixerGrid: React.FC<MixerGridProps> = ({
 };
 
 export default MixerGrid;
-
-    
-
